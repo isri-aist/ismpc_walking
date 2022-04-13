@@ -172,6 +172,7 @@ protected:
         {
             const auto & controller_conf = datastore().get<ControllerConfiguration>("Controller_config");
             Configure(controller_conf);
+            Controller_Config = controller_conf;
             datastore().assign<bool>("Update_Config_trigger",false);
         }
 
