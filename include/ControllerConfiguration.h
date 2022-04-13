@@ -1,0 +1,79 @@
+#pragma once
+#include <mc_control/mc_controller.h>
+
+struct ControllerConfiguration
+{
+    double SwingFootWeight = 5000;
+    double SwingFootStiffness = 300;
+    double SupportFootWeight = 20000;
+    double SupportFootStiffness = 10000;
+    double CoM_Stiff = 100;
+    double CoM_Weight = 1000;
+    Eigen::Vector2d Std_Admittance = {1e-2,1e-2}; 
+    Eigen::Vector2d Impact_Admittance = {1e-2,1e-2};
+
+    double Controller_timestep = 5e-3;
+
+    Eigen::Vector3d CoMWeight_Dim{1,1,1};
+    Eigen::Vector3d CoMStiffness_Dim{1,1,0.1};
+    Eigen::Vector6d SwingFootWeight_Dim = Eigen::Vector6d::Ones();
+    Eigen::Vector6d SwingFootStiffness_Dim = Eigen::Vector6d::Ones();
+
+    double Ts_max = 2;
+    double T_ds_min = 0.32;
+    double T_ss_min = 0.38;
+    double Ts_min = T_ds_min + T_ss_min;
+
+    Eigen::Vector2d Footsteps_Generation_Kinematics_cstr{0.3,0.1};
+    Eigen::Vector2d Footstps_Generation_Ts_range{0.7,1.2};
+    double Footsteps_Generation_feet_distance = 0.15;
+    double Foosteps_Generation_mean_vel = 0.1;
+
+    
+    double Beta = 1e4; //1e4; 
+    Eigen::Vector2d Beta_range{1e6,1e2};
+    bool sliding_zmp_cstr_region = false;
+    double CoMz0 = 0.78; //Initial CoM height
+    double FootStepHeight = 0.025;
+    double maxVelX=0.15;
+    double minVelX=-0.15;
+    double delta = 5e-2 ; //MPC TimeStep;
+    double Tc = 1.5 ; //Control Time
+    double Tp = 4; //Preview Time
+    double Double_Step_Ratio = 0.4;
+    int Stab_P_gain = 10;
+    int Stab_I_gain = 5; //5
+
+    double MPC_ZMP_Constraint_max_size = 0.2;
+    double MPC_ZMP_Constraint_min_size = 0.01;
+    Eigen::Vector2d MPC_ZMP_Constraint_size{0.1,0.08};
+    Eigen::Vector2d MPC_Footsteps_Constraint_size{0.1,0.1};
+
+    bool Stabilizer_dcm_bias_estimator = true;
+    bool Stabilizer_dcm_filter = true;
+    sva::MotionVecd CoPMaxVel = sva::MotionVecd(Eigen::Vector3d{1.5,1.5,0.3},Eigen::Vector3d{.5,.5,0.3});
+
+    mc_rbdyn::lipm_stabilizer::StabilizerConfiguration Stab_config;
+
+
+
+    double Ts_ = 0.6 ; double Ls_ = 0.15 ; double alpha  = 0.4 ; //Average Step duration/lentgh/speed (To process the timestamp)
+
+    void update_config(){
+        Stab_config.copMaxVel.angular() =CoPMaxVel.angular();
+        Stab_config.copMaxVel.linear() = CoPMaxVel.linear();
+        Stab_config.copAdmittance = Std_Admittance;
+
+            
+        Stab_config.comHeight = CoMz0;
+        Stab_config.torsoPitch = 5*M_PI/180;
+        Stab_config.comWeight = CoM_Weight;
+        Stab_config.comStiffness = CoM_Stiff*Eigen::VectorXd::Ones(3);
+        Stab_config.comDimWeight = CoMWeight_Dim;
+        Stab_config.dcmIntegralGain = 0;
+        Stab_config.dcmBias.withDCMBias = Stabilizer_dcm_bias_estimator;
+        Stab_config.dcmBias.withDCMFilter = Stabilizer_dcm_filter;
+    }
+
+
+};
