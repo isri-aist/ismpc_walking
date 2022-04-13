@@ -144,7 +144,7 @@ protected:
         datastore().make<bool>("Stop",false);
         datastore().make<bool>("Start_Trigger",false);
         datastore().make<bool>("Stop_Trigger",false);
-
+        datastore().make<bool>("Update_Config_trigger",false);
         datastore().make<ControllerConfiguration>("Controller_config",Controller_Config);
 
     }
@@ -166,6 +166,14 @@ protected:
             datastore().assign<bool>("Stop_Trigger",false);
         }
         datastore().assign<bool>("Stop",Robot_Walking);
+
+        auto & update_trig = datastore().get<bool>("Update_Config_trigger");
+        if (update_trig)
+        {
+            const auto & controller_conf = datastore().get<ControllerConfiguration>("Controller_config");
+            Configure(controller_conf);
+            datastore().assign<bool>("Update_Config_trigger",false);
+        }
 
 
     }
