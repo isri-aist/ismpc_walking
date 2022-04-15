@@ -14,8 +14,7 @@ set(controller_HDR
   ../include/ISMPC_Solver.h
   joystick/joystick.hh
   ../include/ControllerConfiguration.h
-
-
+  ../include/MPC_state.h
 )
 
 set(CONTROLLER_NAME ismpc_walking)

@@ -169,9 +169,12 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, c
   Pf.clear();
   GenReferenceVelocity(Vx_i, Vy_i, Omega_i);
   ComputeTrajectoryOnce = true;
-  WalkingTrajectoryLoop();
+  std::thread WalkingTrajectoryThread(&Walking_controller::WalkingTrajectoryLoop, this);
+  WalkingTrajectoryThread.detach();
+  // WalkingTrajectoryLoop();
   mc_rtc::log::info("waiting for first computation");
   std::chrono::high_resolution_clock::time_point t_clock = std::chrono::high_resolution_clock::now();
+  std::condition_variable cv;
   while(WalkingTrajectory_Computing)
   {
     sleep(1);
@@ -325,12 +328,16 @@ Eigen::Vector3d Walking_controller::computeZMP()
 
 void Walking_controller::WalkingTrajectoryLoop()
 {
-  if(!WalkingTrajectory_Computing)
+  // if(!WalkingTrajectory_Computing)
+  // {
+  //   // mc_rtc::log::info("Starting Thread");
+  //   WalkingTrajectory_Computing = true;
+  //   std::thread WalkingTrajectoryThread(&Walking_controller::ComputeWalkingTrajectory, this);
+  //   WalkingTrajectoryThread.detach();
+  // }
+  while(true)
   {
-    // mc_rtc::log::info("Starting Thread");
-    WalkingTrajectory_Computing = true;
-    std::thread WalkingTrajectoryThread(&Walking_controller::ComputeWalkingTrajectory, this);
-    WalkingTrajectoryThread.detach();
+    ComputeWalkingTrajectory();
   }
   // ComputeWalkingTrajectory();
 }
@@ -342,9 +349,8 @@ void Walking_controller::ComputeWalkingTrajectory()
 
   if(ComputeTrajectoryOnce)
   {
-
     std::chrono::high_resolution_clock::time_point t_clock = std::chrono::high_resolution_clock::now();
-
+    WalkingTrajectory_Computing = true;
     if(Vx[0] != Vx_i || Vy[0] != Vy_i || Omega[0] != Omega_i)
     {
       GenReferenceVelocity(Vx_i, Vy_i, Omega_i);
@@ -377,31 +383,31 @@ void Walking_controller::ComputeWalkingTrajectory()
       N_Steps_Desired = FootStpGen.Get_Nsteps();
     }
 
-    P_traj = FootStpGen.Ref_Traj();
-    Xf = FootStpGen.Xf();
-    Yf = FootStpGen.Yf();
-    Thetaf = FootStpGen.Theta_f();
+    mpc_thread_state.P_traj = FootStpGen.Ref_Traj();
+    mpc_thread_state.Xf = FootStpGen.Xf();
+    mpc_thread_state.Yf = FootStpGen.Yf();
+    mpc_thread_state.Thetaf = FootStpGen.Theta_f();
 
-    Xf_Corr = Xf;
-    Yf_Corr = Yf;
-    if(TimeStamps.size() != 0)
+    mpc_thread_state.Xf_Corr = mpc_thread_state.Xf;
+    mpc_thread_state.Yf_Corr = mpc_thread_state.Yf;
+    if(mpc_thread_state.TimeStamps.size() != 0)
     {
 
-      if(TimeStamps[0] != FootStpGen.StepsTiming()[0])
+      if(mpc_thread_state.TimeStamps[0] != FootStpGen.StepsTiming()[0])
       {
-        t = FootStpGen.StepsTiming()[0] * t / TimeStamps[0];
+        t = FootStpGen.StepsTiming()[0] * t / mpc_thread_state.TimeStamps[0];
         countStart = count - std::round(t / controller_timestep);
       }
     }
 
-    TimeStamps = FootStpGen.StepsTiming();
-    TimeStampsIndex = FootStpGen.TimesIndex();
+    mpc_thread_state.TimeStamps = FootStpGen.StepsTiming();
+    mpc_thread_state.TimeStampsIndex = FootStpGen.TimesIndex();
     if(Swing_Foot_Contact)
     {
-      Tds = Controller_Config.Double_Step_Ratio * TimeStamps[0];
+      Tds = Controller_Config.Double_Step_Ratio * mpc_thread_state.TimeStamps[0];
     };
 
-    MPCSolver.InitStepGen(Xf, Yf, Thetaf);
+    MPCSolver.InitStepGen(mpc_thread_state.Xf, mpc_thread_state.Yf, mpc_thread_state.Thetaf);
 
     int Steps = N_Steps;
     int Steps_Desired = N_Steps_Desired;
@@ -417,13 +423,17 @@ void Walking_controller::ComputeWalkingTrajectory()
 
     if(MPCSolver.QPsucceeded())
     {
-      X_MPC = MPCSolver.X_MPC();
-      Xf_Corr = MPCSolver.Xf_Corr();
-      Y_MPC = MPCSolver.Y_MPC();
-      Yf_Corr = MPCSolver.Yf_Corr();
+      mpc_thread_state.X_MPC = MPCSolver.X_MPC();
+      mpc_thread_state.Y_MPC = MPCSolver.Y_MPC();
+      mpc_thread_state.Xf_Corr = MPCSolver.Xf_Corr();
+      mpc_thread_state.Yf_Corr = MPCSolver.Yf_Corr();
       Index = 0;
-      SupPolygon = MPCSolver.get_polynome_support();
-      Traj_ant = MPCSolver.GetAfterTc_ZMP_trajectory();
+      mpc_thread_state.SupPolygon = MPCSolver.get_polynome_support();
+      mpc_thread_state.Traj_ant = MPCSolver.GetAfterTc_ZMP_trajectory();
+    
+      std::lock_guard<std::mutex> lk(mutex_mpc_);
+      mpc_state_ = mpc_thread_state;
+      
     }
 
     ComputeTrajectoryOnce = false;
@@ -432,6 +442,7 @@ void Walking_controller::ComputeWalkingTrajectory()
     ProcessTime = time_span.count();
   }
   WalkingTrajectory_Computing = false;
+  
 }
 
 bool Walking_controller::run()
@@ -450,7 +461,7 @@ bool Walking_controller::run()
 
   joypadLoop();
   getTransformations();
-  WalkingTrajectoryLoop();
+  // WalkingTrajectoryLoop();
   StabTask->configure(Controller_Config.Stab_config);
   MPCSolver.configure(Controller_Config);
 
@@ -466,7 +477,7 @@ bool Walking_controller::run()
       ComputeTrajectoryOnce = true;
       t_k = t + controller_timestep;
     }
-    if(TimeStamps.size() != 0)
+    if(mpc_state_.TimeStamps.size() != 0)
     {
       if(t > Tds && Swing_Foot_Contact)
       {
@@ -519,10 +530,10 @@ bool Walking_controller::run()
 
   predictedZMPWorld.clear();
   predictedCoMWorld.clear();
-  for(int k = 0; k < X_MPC.size(); k++)
+  for(int k = 0; k < mpc_state_.X_MPC.size(); k++)
   {
-    predictedZMPWorld.push_back(Eigen::Vector3d{X_MPC[k][2], Y_MPC[k][2], 0.02});
-    predictedCoMWorld.push_back(Eigen::Vector3d{X_MPC[k][0], Y_MPC[k][0], 0.021});
+    predictedZMPWorld.push_back(mpc_state_.Get_ZMP_planarTarget(Index) );
+    predictedCoMWorld.push_back(mpc_state_.Get_CoM_planarTarget(Index) );
   }
 
   count += 1;
@@ -543,24 +554,23 @@ void Walking_controller::MoveCoM(double t)
 
   // mc_rtc::log::info("//Index : " + std::to_string(Index));
 
-  if(Index + 1 >= X_MPC.size())
+  if(Index + 1 >= mpc_state_.X_MPC.size())
   {
     mc_rtc::log::error_and_throw<std::runtime_error>("Control Horizon reached");
   }
 
-  Eigen::Vector3d Pcom{X_MPC[Index][0], Y_MPC[Index][0], Controller_Config.CoMz0};
-
-  zmpTarget = Eigen::Vector3d{X_MPC[Index][2], Y_MPC[Index][2], 0};
-
+  
+  Eigen::Vector3d Pcom(mpc_state_.Get_CoM_planarTarget(Index)); Pcom.z() = Controller_Config.CoMz0;
+  zmpTarget = mpc_state_.Get_ZMP_planarTarget(Index);
   Eigen::Vector3d zmpdTarget;
-  zmpdTarget.setZero();
-  zmpdTarget.x() = MPCSolver.ZMP_vel()[Index % ((int)(Controller_Config.delta / controller_timestep))];
-  zmpdTarget.y() = MPCSolver.ZMP_vel()[(Index + ((int)MPCSolver.ZMP_vel().size() / 2))
-                                       % ((int)(Controller_Config.delta / controller_timestep))];
-
-  Eigen::Vector3d Vc{X_MPC[Index][1], Y_MPC[Index][1], 0};
-
+  // zmpdTarget.setZero();
+  // zmpdTarget.x() = MPCSolver.ZMP_vel()[Index % ((int)(Controller_Config.delta / controller_timestep))];
+  // zmpdTarget.y() = MPCSolver.ZMP_vel()[(Index + ((int)MPCSolver.ZMP_vel().size() / 2))
+  //                                     % ((int)(Controller_Config.delta / controller_timestep))];
+  Eigen::Vector3d Vc(mpc_state_.Get_CoMVel_planarTarget(Index));
+  
   Eigen::Vector3d robot_vc = robot().comVelocity();
+
   double diffV_in = (Vc - robot_vc).norm();
 
   if(diffV_in > 0.12)
@@ -589,7 +599,7 @@ void Walking_controller::MoveCoM(double t)
 bool Walking_controller::MoveFeet(double t)
 {
 
-  if(TimeStamps.size() == 0)
+  if(mpc_state_.TimeStamps.size() == 0)
   {
     return 0;
   }
@@ -597,32 +607,32 @@ bool Walking_controller::MoveFeet(double t)
   PrevStepTiming = 0;
   double NextTimeStep(0);
 
-  NextTimeStep = TimeStamps[kfoot];
+  NextTimeStep = mpc_state_.get_Ts(kfoot);
   if(kfoot != 0)
   {
-    PrevStepTiming = TimeStamps[kfoot - 1];
+    PrevStepTiming = mpc_state_.get_Ts(kfoot-1);
   }
 
   X_0_SwingFootInitial.translation() = SwingFootInitialPose;
   double PrevSwingFootAngle = SwingFootInitialAngle;
   if(kfoot != 0)
   {
-    X_0_SwingFootInitial = Eigen::Vector3d{Xf_Corr(kfoot - 1), Yf_Corr(kfoot - 1), 0.00};
-    PrevSwingFootAngle = Thetaf(kfoot - 1);
+    X_0_SwingFootInitial.translation() = mpc_state_.Get_CorrectedFootstep(kfoot-1) ;
+    PrevSwingFootAngle = mpc_state_.Thetaf(kfoot - 1);
   }
   X_0_SwingFootInitial.rotation() = sva::RotZ(PrevSwingFootAngle);
 
   sva::PTransformd X_0_SwingFootTarget;
-  if(kfoot + 1 < Xf_Corr.size())
+  if(kfoot + 1 < mpc_state_.Xf_Corr.size())
   {
-    X_0_SwingFootTarget.translation() = Eigen::Vector3d{Xf_Corr(kfoot + 1), Yf_Corr(kfoot + 1), 0};
+    X_0_SwingFootTarget.translation() = mpc_state_.Get_CorrectedFootstep(kfoot+1);
   }
   else
   {
-    X_0_SwingFootTarget.translation() = Eigen::Vector3d{Xf(kfoot + 1), Yf(kfoot + 1), 0};
+    X_0_SwingFootTarget.translation() = mpc_state_.Get_PlannedFootstep(kfoot+1);
   }
 
-  X_0_SwingFootTarget.rotation() = sva::RotZ(Thetaf(kfoot + 1));
+  X_0_SwingFootTarget.rotation() = sva::RotZ(mpc_state_.Thetaf(kfoot + 1));
 
   if(Swing_Foot_Contact)
   {
@@ -748,7 +758,7 @@ bool Walking_controller::MoveFeet(double t)
       updateTasks();
 
       // PrevStepTiming = NextTimeStep;
-      if(kfoot + 1 < Xf_Corr.size())
+      if(kfoot + 1 < mpc_state_.Xf_Corr.size())
       {
         kfoot += 1;
       }
@@ -840,11 +850,10 @@ void Walking_controller::UpdateInitialVectors()
   dcmMeasured = realRobot().com() + realRobot().comVelocity() / eta();
   zmpMeasured = computeZMP();
 
-  if(X_MPC.size() != 0 && !(Stop && DoubleSupport_state))
+  if(mpc_state_.X_MPC.size() != 0 && !(Stop && DoubleSupport_state))
   {
-    Pzk = Eigen::Vector3d{X_MPC[Index][2], Y_MPC[Index][2], 0};
-    // Pck = Eigen::Vector3d{X_MPC[Index][0],Y_MPC[Index][0],Controller_Config.CoMz0};
-    // Vck = Eigen::Vector3d{X_MPC[Index][1],Y_MPC[Index][1],0};
+    Pzk = mpc_state_.Get_ZMP_planarTarget(Index);
+
   }
   if(UseRealRobot)
   {

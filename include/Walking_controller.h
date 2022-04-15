@@ -14,10 +14,13 @@
 #include "FootStepGenerator.h"
 #include "FootTrajectory.h"
 #include "ISMPC_Solver.h"
+#include "MPC_state.h"
 #include "api.h"
 #include "eigen-quadprog/eigen_quadprog_api.h"
 #include "eigen-quadprog/QuadProg.h"
 #include "ControllerConfiguration.h"
+#include <condition_variable>
+#include <mutex>
 
 struct Walking_controller_DLLAPI Walking_controller : public mc_control::MCController
 {
@@ -198,6 +201,10 @@ protected:
     
 
 private:
+
+    std::mutex mutex_mpc_;
+    MPC_state mpc_thread_state;
+    MPC_state mpc_state_;
     
     Eigen::Vector3d dcmTarget;
     Eigen::Vector3d dcmMeasured;
@@ -294,17 +301,12 @@ private:
     
     mc_rtc::Configuration config_;
 
-    Eigen::VectorXd Xf; Eigen::VectorXd Xf_Corr; //Support foot coordinates
-    Eigen::VectorXd Yf; Eigen::VectorXd Yf_Corr; //Support foot coordinates
-    Eigen::VectorXd Thetaf;
+
     std::vector<double> Vx;
     std::vector<double> Vy;
     std::vector<double> Omega;
     
-    std::vector<Eigen::Vector3d> X_MPC; //Contain 3d vectors that represents in that order the CoM the CoMd and the ZMP for each timestep
-    std::vector<Eigen::Vector3d> Y_MPC; //Contain 3d vectors that represents in that order the CoM the CoMd and the ZMP for each timestep
-    std::vector<int> TimeStampsIndex; //Index of the timing of each step 
-    std::vector<double> TimeStamps; //Timing of each step
+
     double Vx_i = 0; double Vy_i = 0 ; double Omega_i = 0;
     
     std::vector<Eigen::Vector3d> P_traj; //Vector containing the reference trajectory 
@@ -379,6 +381,8 @@ private:
     
 
 };
+
+
 
 
 

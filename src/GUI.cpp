@@ -49,9 +49,9 @@ void Walking_controller::addToGUI()
                     mc_rtc::gui::Label("Double support duration", [this]() { return this->Tds; }),
                     mc_rtc::gui::Label("Next Step Timing ",
                                        [this]() {
-                                         if(this->TimeStamps.size() != 0)
+                                         if(this->mpc_state_.TimeStamps.size() != 0)
                                          {
-                                           return this->TimeStamps[0];
+                                           return this->mpc_state_.get_Ts(0);
                                          }
                                          else
                                          {
@@ -102,7 +102,7 @@ void Walking_controller::addToGUI()
       mc_rtc::gui::Button("Compute Trajectory", [this]() { ComputeTrajectoryOnce = true; }));
 
   gui()->addElement({"Walking", "Visualization", "Reference Trajectory"},
-                    mc_rtc::gui::Trajectory("Trajectory", mc_rtc::gui::Color(1., 1., 0.), [this]() { return P_traj; }));
+                    mc_rtc::gui::Trajectory("Trajectory", mc_rtc::gui::Color(1., 1., 0.), [this]() -> const std::vector<Eigen::Vector3d> & { return mpc_state_.get_RefTraj(); }));
 
   gui()->addElement(
       {"Walking", "Visualization", "ZMP Range"},
@@ -111,8 +111,8 @@ void Walking_controller::addToGUI()
                              return Eigen::Vector3d{Pzk.x(), Pzk.y(), 0.05};
                            }),
 
-      mc_rtc::gui::Point3D("ZMP_MPC", mc_rtc::gui::PointConfig(mc_rtc::gui::Color(1, 0.5, 0.25)), [this]() {
-        return Eigen::Vector3d{X_MPC[Index](2), Y_MPC[Index](2), 0.02};
+      mc_rtc::gui::Point3D("ZMP_MPC", mc_rtc::gui::PointConfig(mc_rtc::gui::Color(1, 0.5, 0.25)), [this]() -> Eigen::Vector3d {
+        return mpc_state_.Get_ZMP_planarTarget(Index);
       }));
 
   gui()->addElement(
@@ -163,7 +163,7 @@ void Walking_controller::addToGUI()
           "CoMTrajectory",
           mc_rtc::gui::LineConfig(mc_rtc::gui::Color(1., 1., 0.), 0.01, mc_rtc::gui::LineStyle::Dotted),
           [this]() {
-            return Eigen::Vector3d{X_MPC[Index][0], Y_MPC[Index][0], Controller_Config.CoMz0};
+            return  mpc_state_.Get_CoM_planarTarget(Index);
           }),
       mc_rtc::gui::Trajectory(
           "ZMPMeasured", mc_rtc::gui::LineConfig(mc_rtc::gui::Color(0.5, 1., 0.), 0.01, mc_rtc::gui::LineStyle::Solid),
@@ -176,9 +176,10 @@ void Walking_controller::addToGUI()
           }),
       mc_rtc::gui::Trajectory("Predicted ZMP Trajectory", mc_rtc::gui::Color(0., 0., 1.),
                               [this]() -> const std::vector<Eigen::Vector3d> { return predictedZMPWorld; }),
-      mc_rtc::gui::Polygon("SupportPolygon", mc_rtc::gui::Color(1., 1., 0.), [this]() { return SupPolygon; }),
+      mc_rtc::gui::Polygon("SupportPolygon", mc_rtc::gui::Color(1., 1., 0.), [this]() -> const std::vector<Eigen::Vector3d> & { return mpc_state_.get_SupPolygon(); }),
       mc_rtc::gui::Trajectory("Predicted CoM Trajectory", mc_rtc::gui::Color(1., 0., 0.),
-                              [this]() -> const std::vector<Eigen::Vector3d> { return predictedCoMWorld; }));
+                              [this]() -> const std::vector<Eigen::Vector3d> { return predictedCoMWorld; })
+        );
 
  
 
@@ -225,12 +226,12 @@ void Walking_controller::add_FootSteps_GUI()
     }
     return polygon;
   };
-  Eigen::VectorXd xf = Xf;
-  Eigen::VectorXd yf = Yf;
-  Eigen::VectorXd thetaf = Thetaf;
-  Eigen::VectorXd xf_Corr = Xf_Corr;
-  Eigen::VectorXd yf_Corr = Yf_Corr;
-  for(int k = 0; k < Xf.size(); k++)
+  Eigen::VectorXd xf = mpc_state_.Xf;
+  Eigen::VectorXd yf = mpc_state_.Yf;
+  Eigen::VectorXd thetaf = mpc_state_.Thetaf;
+  Eigen::VectorXd xf_Corr = mpc_state_.Xf_Corr;
+  Eigen::VectorXd yf_Corr = mpc_state_.Yf_Corr;
+  for(int k = 0; k < xf.size(); k++)
   {
     if(k % 2 == 1)
     {
