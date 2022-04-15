@@ -346,7 +346,7 @@ void Walking_controller::ComputeWalkingTrajectory()
 {
 
   MPCSolver.AutoFootstepPlacement = AutoFootstepPlacement;
-
+  WalkingTrajectory_Computing = true;
   if(ComputeTrajectoryOnce)
   {
     std::chrono::high_resolution_clock::time_point t_clock = std::chrono::high_resolution_clock::now();
@@ -591,7 +591,7 @@ void Walking_controller::MoveCoM(double t)
 
   Eigen::Vector3d dcm = Pck + Vck / eta();
 
-  StabTask->target(Pcom, Vc, Ac, zmpTarget, zmpdTarget);
+  StabTask->target(Pcom, Vc, Ac, zmpTarget);
 
   Index += 1;
 }
