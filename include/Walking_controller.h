@@ -314,8 +314,8 @@ private:
     std::vector<Eigen::Vector3d> predictedZMPWorld; //Use to display ZMP
     std::vector<Eigen::Vector3d> predictedCoMWorld; //Use to display CoM
 
-    std::string supportFootName;
-    std::string swingFootName;
+    std::string supportFootName = "RightFoot";
+    std::string swingFootName = "LeftFoot";
     
     sva::PTransformd ReferenceFrame_Origin_Offset = sva::PTransformd::Identity();
 
