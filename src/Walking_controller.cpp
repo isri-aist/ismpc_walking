@@ -173,6 +173,7 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, c
   mc_rtc::log::info("waiting for first computation");
   while(WalkingTrajectory_Computing)
   {
+    sleep(1);
   }
 
   solver().addTask(StabTask);

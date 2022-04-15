@@ -19,7 +19,7 @@ collisions:
   useCommon: true
   
 controller:
-  start_at_launch: false
+  start_at_launch: true
   steps: 10
   speed: [0.1,0.05,-0.1]
   t_steps: 1.1
@@ -51,7 +51,7 @@ footstepsGeneration:
   Tp: 6
   Ts_range: [0.7,2]
   kinematics_cstr: [0.3,0.05]
-  feet_distance: 0.16
+  feet_distance: 0.2
   mean_speed: 0.1
 
 tasks:
@@ -64,7 +64,7 @@ tasks:
   stabilizer:
     com_stiff: 1e2
     com_weight: 1000
-    com_dimweight: [1.,1.,0.1]
+    com_dimweight: [1.,1.,0.3]
     com_dimstiffness: [1.,1.,1.]
     P_gain: 10
     I_gain: 5
