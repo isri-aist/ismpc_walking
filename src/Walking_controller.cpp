@@ -171,9 +171,16 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, c
   ComputeTrajectoryOnce = true;
   WalkingTrajectoryLoop();
   mc_rtc::log::info("waiting for first computation");
+  std::chrono::high_resolution_clock::time_point t_clock = std::chrono::high_resolution_clock::now();
   while(WalkingTrajectory_Computing)
   {
     sleep(1);
+    std::chrono::duration<double, std::milli> time_span = std::chrono::high_resolution_clock::now() - t_clock;
+    if (time_span.count() > 5e3)
+    {
+      mc_rtc::log::error("Exiting waiting loop");
+      WalkingTrajectory_Computing = false;
+    }
   }
 
   solver().addTask(StabTask);
