@@ -328,18 +328,10 @@ Eigen::Vector3d Walking_controller::computeZMP()
 
 void Walking_controller::WalkingTrajectoryLoop()
 {
-  // if(!WalkingTrajectory_Computing)
-  // {
-  //   // mc_rtc::log::info("Starting Thread");
-  //   WalkingTrajectory_Computing = true;
-  //   std::thread WalkingTrajectoryThread(&Walking_controller::ComputeWalkingTrajectory, this);
-  //   WalkingTrajectoryThread.detach();
-  // }
   while(true)
   {
     ComputeWalkingTrajectory();
   }
-  // ComputeWalkingTrajectory();
 }
 
 void Walking_controller::ComputeWalkingTrajectory()
@@ -351,10 +343,17 @@ void Walking_controller::ComputeWalkingTrajectory()
   {
     std::chrono::high_resolution_clock::time_point t_clock = std::chrono::high_resolution_clock::now();
     WalkingTrajectory_Computing = true;
-    if(Vx[0] != Vx_i || Vy[0] != Vy_i || Omega[0] != Omega_i)
-    {
-      GenReferenceVelocity(Vx_i, Vy_i, Omega_i);
-    }
+    // if (V.size() != 0)
+    // {
+    //   if(Vx[0] != Vx_i || Vy[0] != Vy_i || Omega[0] != Omega_i)
+    //   {
+    //     GenReferenceVelocity(Vx_i, Vy_i, Omega_i);
+    //   }
+    // }
+    // else
+    // {
+    //   GenReferenceVelocity(Vx_i, Vy_i, Omega_i);
+    // }
 
 
     // T.clear();
@@ -462,6 +461,7 @@ bool Walking_controller::run()
   joypadLoop();
   getTransformations();
   // WalkingTrajectoryLoop();
+  GenReferenceVelocity(Vx_i, Vy_i, Omega_i);
   StabTask->configure(Controller_Config.Stab_config);
   MPCSolver.configure(Controller_Config);
 
@@ -1060,7 +1060,7 @@ void Walking_controller::joypadLoop()
 
 void Walking_controller::reset(const mc_control::ControllerResetData & reset_data)
 {
-
+  // Vx_i = 0. ; Vy_i = 0. ; Omega_i = 0.;
   SwingFootTask.reset();
   SupportFootTask.reset();
   supportFootName = "RightFoot";
