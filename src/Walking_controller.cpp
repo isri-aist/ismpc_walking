@@ -73,9 +73,6 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, c
   rightSwingFootTask =
       std::make_shared<mc_tasks::SurfaceTransformTask>("RightFoot", robots(), robots().robotIndex(), 10.0, 10.);
 
-  supportFootName = "RightFoot";
-  swingFootName = "LeftFoot";
-
   SwingFootContact = mc_tasks::lipm_stabilizer::ContactState::Left;
   SupportFootContact = mc_tasks::lipm_stabilizer::ContactState::Right;
 
@@ -127,6 +124,9 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, c
                                            "L_ELBOW_P", "L_WRIST_Y", "L_WRIST_P", "L_WRIST_R"});
   armTask->selectActiveJoints(solver(), armTask_Joints);
   armTask->name("ArmPosture");
+
+  supportFootName = "RightFoot";
+  swingFootName = "LeftFoot";
 
   SupportFootPose = robot().surfacePose(supportFootName).translation();
   SupportFootPose.z() = 0;
@@ -1063,6 +1063,21 @@ void Walking_controller::reset(const mc_control::ControllerResetData & reset_dat
 
   SwingFootTask.reset();
   SupportFootTask.reset();
+  supportFootName = "RightFoot";
+  swingFootName = "LeftFoot";
+
+  SupportFootPose = robot().surfacePose(supportFootName).translation();
+  SupportFootPose.z() = 0;
+
+  Pck = robot().com();
+  Pck.z() = Controller_Config.CoMz0;
+  Pzk = robot().surfacePose(swingFootName).translation();
+  Pzk.z() = 0;
+  Puk = Pck;
+  Vck = robot().comVelocity();
+
+  SwingFootInitialPose = robot().surfacePose(swingFootName).translation();
+  X_0_SwingFootInitial = SwingFootInitialPose;
   updateTasks();
 
   Eigen::Matrix6d dof = Eigen::Matrix6d::Identity(6, 6);
