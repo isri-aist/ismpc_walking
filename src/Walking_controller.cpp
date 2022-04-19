@@ -169,8 +169,8 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, c
   Pf.clear();
   GenReferenceVelocity(Vx_i, Vy_i, Omega_i);
   ComputeTrajectoryOnce = true;
-  std::thread WalkingTrajectoryThread(&Walking_controller::WalkingTrajectoryLoop, this);
-  WalkingTrajectoryThread.detach();
+  WalkingTrajectoryThread = std::thread(&Walking_controller::WalkingTrajectoryLoop, this);
+  // WalkingTrajectoryThread.detach();
   // WalkingTrajectoryLoop();
   mc_rtc::log::info("waiting for first computation");
   std::chrono::high_resolution_clock::time_point t_clock = std::chrono::high_resolution_clock::now();
@@ -328,7 +328,7 @@ Eigen::Vector3d Walking_controller::computeZMP()
 
 void Walking_controller::WalkingTrajectoryLoop()
 {
-  while(true)
+  while(MPC_thread_on)
   {
     ComputeWalkingTrajectory();
   }
@@ -1092,6 +1092,32 @@ void Walking_controller::reset(const mc_control::ControllerResetData & reset_dat
   contactConstraint.contactConstr->addDofContact(ContactId_L, dof);
   contactConstraint.contactConstr->addDofContact(ContactId_R, dof);
   contactConstraint.contactConstr->updateDofContacts();
+
+  MPC_thread_on = false;
+  WalkingTrajectoryThread.join();
+  MPC_thread_on = true;
+
+  V.clear();
+  T.clear();
+  Pf.clear();
+  GenReferenceVelocity(Vx_i, Vy_i, Omega_i);
+  ComputeTrajectoryOnce = true;
+  
+  WalkingTrajectoryThread = std::thread(&Walking_controller::WalkingTrajectoryLoop, this);
+
+  mc_rtc::log::info("waiting for first computation after reset");
+  std::chrono::high_resolution_clock::time_point t_clock = std::chrono::high_resolution_clock::now();
+  std::condition_variable cv;
+  while(WalkingTrajectory_Computing)
+  {
+    sleep(1);
+    std::chrono::duration<double, std::milli> time_span = std::chrono::high_resolution_clock::now() - t_clock;
+    if (time_span.count() > 5e3)
+    {
+      mc_rtc::log::error("Exiting waiting loop");
+      WalkingTrajectory_Computing = false;
+    }
+  }
 
   mc_control::MCController::reset(reset_data);
 };

@@ -205,6 +205,8 @@ private:
     std::mutex mutex_mpc_;
     MPC_state mpc_thread_state;
     MPC_state mpc_state_;
+    bool MPC_thread_on = true;
+    std::thread WalkingTrajectoryThread;
     
     Eigen::Vector3d dcmTarget;
     Eigen::Vector3d dcmMeasured;
