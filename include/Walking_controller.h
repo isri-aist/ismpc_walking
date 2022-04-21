@@ -27,6 +27,8 @@ struct Walking_controller_DLLAPI Walking_controller : public mc_control::MCContr
 public : 
 
     Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, const mc_rtc::Configuration & config);
+
+    ~Walking_controller() override;
     
     void ROS_Spinner();
 
