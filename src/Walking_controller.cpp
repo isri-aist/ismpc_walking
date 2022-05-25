@@ -8,6 +8,15 @@
 #include <chrono>
 #include <unistd.h>
 
+Walking_controller::~Walking_controller()
+{
+  if(WalkingTrajectoryThread.joinable())
+  {
+    MPC_thread_on = false;
+    WalkingTrajectoryThread.join();
+  }
+}
+
 Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, const mc_rtc::Configuration & config)
 : mc_control::MCController(rm, dt)
 {

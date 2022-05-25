@@ -10,7 +10,7 @@
 #include <mc_tasks/OrientationTask.h>
 #include <mc_tasks/SurfaceTransformTask.h>
 #include <mc_control/api.h>
-#include "joystick/joystick.hh"
+#include "../src/joystick/joystick.hh"
 #include "FootStepGenerator.h"
 #include "FootTrajectory.h"
 #include "ISMPC_Solver.h"
@@ -27,6 +27,8 @@ struct Walking_controller_DLLAPI Walking_controller : public mc_control::MCContr
 public : 
 
     Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, const mc_rtc::Configuration & config);
+
+    ~Walking_controller() override;
     
     void ROS_Spinner();
 
@@ -130,9 +132,6 @@ public :
         FootStpGen.configure(Controller_Config);
     }
 
-
-
-
 protected:
     void addToGUI();
 
@@ -149,6 +148,13 @@ protected:
         datastore().make<bool>("Stop_Trigger",false);
         datastore().make<bool>("Update_Config_trigger",false);
         datastore().make<ControllerConfiguration>("Controller_config",Controller_Config);
+        
+        datastore().make<std::string>("supportFootName", "RightFoot");
+        datastore().make<std::string>("swingFootName", "LeftFoot");
+
+        datastore().make<double>("T",0.0); //Steps Timings input
+        datastore().make<double>("t",0.0); //General timing in a step
+        datastore().make<double>("Ts",0.0); // TimeStamps
 
     }
     void update_datastore(){
@@ -179,7 +185,12 @@ protected:
             datastore().assign<bool>("Update_Config_trigger",false);
         }
 
+        datastore().assign<std::string>("supportFootName",supportFootName);
+        datastore().assign<std::string>("swingFootName",swingFootName);
 
+        datastore().assign<double>("T",T[0]);
+        datastore().assign<double>("t",t);
+        datastore().assign<double>("Ts",mpc_state_.TimeStamps[0]);
     }
 
 
@@ -293,7 +304,8 @@ private:
 
     Eigen::Matrix3d R_body_world_Step = Eigen::Matrix3d::Identity(); //Orientation of floating base updated at each steps
 
-
+    std::string supportFootName = "RightFoot";
+    std::string swingFootName = "LeftFoot";
 
     FootStepGen FootStpGen; //FootStep Position generator
     ISMPC_Solver MPCSolver; 
@@ -315,10 +327,7 @@ private:
 
     std::vector<Eigen::Vector3d> predictedZMPWorld; //Use to display ZMP
     std::vector<Eigen::Vector3d> predictedCoMWorld; //Use to display CoM
-
-    std::string supportFootName = "RightFoot";
-    std::string swingFootName = "LeftFoot";
-    
+   
     sva::PTransformd ReferenceFrame_Origin_Offset = sva::PTransformd::Identity();
 
     sva::PTransformd leftFootTransformZero;
