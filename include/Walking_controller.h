@@ -67,6 +67,10 @@ public :
     /**
      * Generate the Reference Velocity for constant inputs throught the preveiw horizon
      */
+
+    void UpdateMPC_input();
+
+
     void GenReferenceVelocity(double vx, double vy, double omega);
 
     void updateTasks();
@@ -157,6 +161,7 @@ protected:
         datastore().make<double>("Ts",0.0); // TimeStamps
 
     }
+    
     void update_datastore(){
      
         datastore().assign<Eigen::Vector3d>("ZMP_target",zmpTarget);
@@ -217,6 +222,7 @@ private:
     MPC_state mpc_thread_state;
     MPC_state mpc_state_;
     bool MPC_thread_on = true;
+    bool NewThreadState = false;
     std::thread WalkingTrajectoryThread;
     
     Eigen::Vector3d dcmTarget;

@@ -34,14 +34,22 @@ controller:
       rightFootLink: "R_TOE_P_LINK"
  
 ismpc:
-  Tc: 1.5
+  Tc: 2
   Tp: 6
   delta: 5e-2
-  beta: 1e4
-  zmp_cstr_square: [0.05,0.05]
-  footsteps_cstr_square: [0.3,0.05]
+  beta: 1e5
+  beta_stab: 1e8
+  beta_traj : 1e2
+  zmp_cstr_square: [0.1,0.05]
+  zmp_cstr_square_sg_supp: [0.1,0.05]
+  next_stp_cstr_ratio: 1
+  offset: [0.0,0.0]
+  offset_sg_supp: [0.00,0.0]
+  allow_none_tail: true
+  footsteps_cstr_square: [0.2,0.03]
   double_support_ratio: 0.4
-  sliding_zmp_cstr_region: true
+  sliding_zmp_cstr_region: false
+  use_stability_task: true
   safety_thresholds:
     beta_range: [1e2,1e6]
     zmp_cstr_square_min: 0.01
