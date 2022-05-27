@@ -88,14 +88,12 @@ void ISMPC_Solver::configure(const ControllerConfiguration & config)
 
 void ISMPC_Solver::InitStepGen(std::vector<sva::PTransformd> & steps , sva::PTransformd support_foot)
 {
-  intput_steps_ = steps;
-  support_foot_pose_ = support_foot;
   m_Xf = Eigen::VectorXd::Zero(steps.size() + 1);
   m_Yf = Eigen::VectorXd::Zero(steps.size() + 1);
   m_Theta_f = Eigen::VectorXd::Zero(steps.size() + 1);
 
   Eigen::Vector3d support_pose(support_foot.translation());
-  double support_ori( - mc_rbdyn::rpyFromMat(support_foot.rotation()).z());
+  double support_ori(-mc_rbdyn::rpyFromMat(support_foot.rotation()).z());
   m_Xf(0) = support_pose.x();
   m_Yf(0) = support_pose.y();
   m_Theta_f(0) = support_ori; 
@@ -103,11 +101,13 @@ void ISMPC_Solver::InitStepGen(std::vector<sva::PTransformd> & steps , sva::PTra
   for (int k = 0 ; k < steps.size() ; k++)
   {
     Eigen::Vector3d step_k_pose(steps[k].translation());
-    double step_k_ori( - mc_rbdyn::rpyFromMat(steps[k].rotation()).z());
+    double step_k_ori(-mc_rbdyn::rpyFromMat(steps[k].rotation()).z());
     m_Xf(k+1) = step_k_pose.x();
     m_Yf(k+1) = step_k_pose.y();
     m_Theta_f(k+1) = step_k_ori;
   }
+
+  std::cout << "input xf " << m_Xf << std::endl;
 
 
 
@@ -131,7 +131,7 @@ void ISMPC_Solver::SetWalkingParameters(const Eigen::Vector3d & Pck,
   m_Tail_save = Tail;
   m_eta = sqrt(g / P_c_k.z());
   P_u_k = P_c_k + (V_c_k / m_eta);
-  m_Pfm1 = Pfm1; 
+  m_Pfm1 = Pfm1; // - Offset;
   m_timestamp = timesstp;
   N_Steps = Steps;
   N_Steps_Desired = Steps_Desired;

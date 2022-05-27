@@ -292,10 +292,6 @@ class ISMPC_Solver {
 
         Eigen::Matrix3d R_support_0 = Eigen::Matrix3d::Identity();
         Eigen::Matrix3d R_0_support = Eigen::Matrix3d::Identity();
-        std::vector<sva::PTransformd> intput_steps_;
-        sva::PTransformd support_foot_pose_;
-        sva::PTransformd initial_swing_foot_pose;
-        
         Eigen::VectorXd m_Xf ; Eigen::VectorXd m_Yf ;//Steps Coordinates. Also Include the standing foot coordinates
         Eigen::VectorXd m_Theta_f ; //Steps Angle. Also include the standing foot angle
         Eigen::VectorXd m_Xf_Corr ; Eigen::VectorXd m_Yf_Corr ; //Footstep after replanning;
