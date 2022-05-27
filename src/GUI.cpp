@@ -83,12 +83,6 @@ void Walking_controller::addToGUI()
           "Vy", [this]() -> double { return Vy_i; }, [this](const double & v) { Vy_i = v; }),
       mc_rtc::gui::NumberInput(
           "Omega", [this]() -> double { return Omega_i; }, [this](const double & v) { Omega_i = v; }),
-      mc_rtc::gui::NumberInput(
-          "x", [this]() -> double { return x; }, [this](const double & v) { x = v; }),
-      mc_rtc::gui::NumberInput(
-          "y", [this]() -> double { return y; }, [this](const double & v) { y = v; }),
-      mc_rtc::gui::NumberInput(
-          "theta", [this]() -> double { return z; }, [this](const double & v) { z = v; }),
 
       mc_rtc::gui::NumberInput(
           "Ts", [this]() -> double { return T_Steps; }, [this](const double & v) { T_Steps = v; }),
@@ -101,8 +95,6 @@ void Walking_controller::addToGUI()
                            }),
       mc_rtc::gui::Button("Compute Trajectory", [this]() { ComputeTrajectoryOnce = true; }));
 
-  gui()->addElement({"Walking", "Visualization", "Reference Trajectory"},
-                    mc_rtc::gui::Trajectory("Trajectory", mc_rtc::gui::Color(1., 1., 0.), [this]() -> const std::vector<Eigen::Vector3d> & { return mpc_state_.get_RefTraj(); }));
 
   gui()->addElement(
       {"Walking", "Visualization", "ZMP Range"},
@@ -208,12 +200,11 @@ void Walking_controller::addToGUI()
 void Walking_controller::add_FootSteps_GUI()
 {
 
-  auto footStepPolygon = [this](const Eigen::Vector3d & footstep, const sva::PTransformd & X_0_support,
-                                std::string sup) {
-    const auto & footStep = footstep;
+  auto footStepPolygon = [this](const double & x, const double & y, const double & theta,
+                                const sva::PTransformd & X_0_support, std::string sup) {
     Eigen::Vector3d footPos;
-    footPos << footStep.x(), footStep.y(), 0;
-    Eigen::Matrix3d footOri = mc_rbdyn::rpyToMat(0, 0, footStep.z());
+    footPos << x, y, 0;
+    Eigen::Matrix3d footOri = mc_rbdyn::rpyToMat(0, 0, theta);
     sva::PTransformd X_support_foot(footOri, footPos);
     const auto & surface = robot().surface(sup);
     const auto & points = surface.points();
@@ -226,55 +217,53 @@ void Walking_controller::add_FootSteps_GUI()
     }
     return polygon;
   };
-  Eigen::VectorXd xf = mpc_state_.Xf;
-  Eigen::VectorXd yf = mpc_state_.Yf;
-  Eigen::VectorXd thetaf = mpc_state_.Thetaf;
-  Eigen::VectorXd xf_Corr = mpc_state_.Xf_Corr;
-  Eigen::VectorXd yf_Corr = mpc_state_.Yf_Corr;
-  for(int k = 0; k < xf.size(); k++)
-  {
-    if(k % 2 == 1)
-    {
-      gui()->addElement(
-          {"Walking", "Visualization", "FootStep"},
-          mc_rtc::gui::Polygon(
-              "NextFootStep" + std::to_string(k), mc_rtc::gui::Color(0., 1., 0.),
-              [this, k, footStepPolygon, xf, yf, thetaf]() {
-                return footStepPolygon(Eigen::Vector3d{xf(k), yf(k), thetaf(k)}, X_0_support, supportFootName);
-              }));
-    }
-    else
-    {
-      gui()->addElement(
-          {"Walking", "Visualization", "FootStep"},
-          mc_rtc::gui::Polygon(
-              "NextFootStep" + std::to_string(k), mc_rtc::gui::Color(0., 1., 0.),
-              [this, k, footStepPolygon, xf, yf, thetaf]() {
-                return footStepPolygon(Eigen::Vector3d{xf(k), yf(k), thetaf(k)}, X_0_support, swingFootName);
-              }));
-    }
-  }
-  for(int k = 0; k < 2; k++)
-  {
-    if(k % 2 == 1)
-    {
-      gui()->addElement({"Walking", "Visualization", "FootStep"},
-                        mc_rtc::gui::Polygon("Corrected Footstep" + std::to_string(k), mc_rtc::gui::Color(0., 0., 1.),
-                                             [this, k, footStepPolygon, xf_Corr, yf_Corr, thetaf]() {
-                                               return footStepPolygon(
-                                                   Eigen::Vector3d{xf_Corr(k), yf_Corr(k), thetaf(k)}, X_0_support,
-                                                   supportFootName);
-                                             }));
-    }
-    else
-    {
-      gui()->addElement(
-          {"Walking", "Visualization", "FootStep"},
-          mc_rtc::gui::Polygon(
-              "Corrected Footstep" + std::to_string(k), mc_rtc::gui::Color(0., 0., 1.),
-              [this, k, footStepPolygon, xf_Corr, yf_Corr, thetaf]() {
-                return footStepPolygon(Eigen::Vector3d{xf_Corr(k), yf_Corr(k), thetaf(k)}, X_0_support, swingFootName);
-              }));
-    }
-  }
+
+  gui()->addElement(
+      {"Walking", "Visualization", "FootStep"},
+      mc_rtc::gui::Polygon("Corrected Footsteps", mc_rtc::gui::Color(0., 0., 1.),
+                           [this, footStepPolygon]() -> std::vector<std::vector<Eigen::Vector3d>> {
+                             const Eigen::VectorXd & thetaf = mpc_state_.getThetaf();
+                             const Eigen::VectorXd & xf_Corr = mpc_state_.getXf_corr();
+                             const Eigen::VectorXd & yf_Corr = mpc_state_.getYf_corr();
+                             std::vector<std::vector<Eigen::Vector3d>> Output;
+                             for(int k = 0; k < xf_Corr.size(); k++)
+                             {
+                               if(k % 2 == 1)
+                               {
+                                 Output.push_back(footStepPolygon(xf_Corr(k), yf_Corr(k), thetaf(k), this->X_0_support,
+                                                                  this->supportFootName));
+                               }
+                               else
+                               {
+                                 Output.push_back(footStepPolygon(xf_Corr(k), yf_Corr(k), thetaf(k), this->X_0_support,
+                                                                  this->swingFootName));
+                               }
+                             }
+                             return Output;
+                           }));
+  gui()->addElement(
+      {"Walking", "Visualization", "FootStep"},
+      mc_rtc::gui::Polygon("Planned Footsteps", mc_rtc::gui::Color(0., 1., 0.),
+                           [this, footStepPolygon]() -> std::vector<std::vector<Eigen::Vector3d>> {
+         
+                             std::vector<std::vector<Eigen::Vector3d>> Output;
+                             for(int k = 0; k < mpc_state_.planner_steps.size(); k++)
+                             {
+                              double x = mpc_state_.planner_steps[k].translation().x(); 
+                              double y = mpc_state_.planner_steps[k].translation().y(); 
+                              double ori = - mc_rbdyn::rpyFromMat(mpc_state_.planner_steps[k].rotation()).z();
+                               if(k % 2 == 1)
+                               {
+
+                                 Output.push_back(footStepPolygon(x, y, ori, this->X_0_support,
+                                                                  this->supportFootName));
+                               }
+                               else
+                               {
+                                 Output.push_back(footStepPolygon(x, y, ori , this->X_0_support,
+                                                                  this->swingFootName));
+                               }
+                             }
+                             return Output;
+                           }));
 }

@@ -152,10 +152,12 @@ struct MPC_state
     Eigen::Vector3d Pu;
     Eigen::Vector3d w; //Perturbation
     std::vector<double> input_T;
-    std::vector<Eigen::Vector3d> input_Pf;
-    std::vector<std::vector<double>> input_V;
-    Eigen::Vector3d input_P_fm1;
+    std::vector<sva::MotionVecd> input_v_;
+    std::vector<sva::PTransformd> planner_steps;
+    std::vector<double> input_timesteps_; //Input desired steps timings
+    std::vector<sva::PTransformd> input_steps_; //Input desired FootSteps positions 
     std::string input_Support_FootName;
+    Eigen::Vector3d input_P_fm1;
     Eigen::Vector3d SupportFootPose;
 
 };

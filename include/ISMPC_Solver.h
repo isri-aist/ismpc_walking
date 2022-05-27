@@ -33,9 +33,9 @@ class ISMPC_Solver {
 
         /**
          * Initialize the footsteps parameters for the MPC
-         * @tparam Xf, Yf, Thetaf : Footsteps coordinates throught time 
+         * @tparam Footsteps coordinates throught time 
          */
-        void InitStepGen( const Eigen::VectorXd & Xf, const Eigen::VectorXd & Yf, const Eigen::VectorXd & Thetaf);
+        void InitStepGen( std::vector<sva::PTransformd> & steps , sva::PTransformd support_foot);
 
         /**
          * Set the robot walking charateristics
@@ -46,7 +46,7 @@ class ISMPC_Solver {
          * @tparam Steps_Desired, steps choosen to be performed, the number of steps done must be updated manually with Steps 
          */
         void SetWalkingParameters(const Eigen::Vector3d & Pck,const Eigen::Vector3d & Vck, const Eigen::Vector3d & Pzk, const Eigen::Vector3d & Pfm1  , 
-                                    const std::vector<double> & timesstp, const std::vector<int> & timesindx, std::string Tail, int Steps_Desired, int Steps);
+                                    const std::vector<double> & timesstp, std::string Tail, int Steps_Desired, int Steps);
         
         /**
          * Compute the CoM, CoMd, ZMP trajectory for previously set Walking parameters
@@ -292,6 +292,10 @@ class ISMPC_Solver {
 
         Eigen::Matrix3d R_support_0 = Eigen::Matrix3d::Identity();
         Eigen::Matrix3d R_0_support = Eigen::Matrix3d::Identity();
+        std::vector<sva::PTransformd> intput_steps_;
+        sva::PTransformd support_foot_pose_;
+        sva::PTransformd initial_swing_foot_pose;
+        
         Eigen::VectorXd m_Xf ; Eigen::VectorXd m_Yf ;//Steps Coordinates. Also Include the standing foot coordinates
         Eigen::VectorXd m_Theta_f ; //Steps Angle. Also include the standing foot angle
         Eigen::VectorXd m_Xf_Corr ; Eigen::VectorXd m_Yf_Corr ; //Footstep after replanning;

@@ -1,12 +1,4 @@
 #include "Walking_controller.h"
-#include <mc_observers/KinematicInertialObserver.h>
-#include <mc_observers/ObserverPipeline.h>
-#include <mc_rbdyn/RobotLoader.h>
-#include <mc_rbdyn/rpy_utils.h>
-#include <mc_rtc/logging.h>
-#include <mc_solver/ConstraintSetLoader.h>
-#include <chrono>
-#include <unistd.h>
 
 Walking_controller::~Walking_controller()
 {
@@ -20,7 +12,7 @@ Walking_controller::~Walking_controller()
 Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, const mc_rtc::Configuration & config)
 : mc_control::MCController(rm, dt)
 {
-
+  
   Controller_Config.Stab_config = robot().module().defaultLIPMStabilizerConfiguration();
   if(robot().name() == "hrp4cr")
   {
@@ -30,7 +22,6 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, c
   mc_rtc::log::info("Default CoM gain {}", Controller_Config.Stab_config.comStiffness);
 
   MPCSolver = ISMPC_Solver(dt, Controller_Config.delta, Controller_Config.Tp, Controller_Config.Tc);
-  FootStpGen = FootStepGen();
 
   Configure(Controller_Config);
   Configure(config);
@@ -63,7 +54,10 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, c
   solver().addConstraintSet(kinematicsConstraint);
   solver().addConstraintSet(dynamicsConstraint);
 
-  solver().setContacts({{robots(), 0, 1, "LeftFoot", "AllGround"}, {robots(), 0, 1, "RightFoot", "AllGround"}});
+  Eigen::Vector6d dof;
+  dof << 0, 0, 1, 1, 1, 0;
+  addContact({robot().name(), "ground", "RightFoot", "AllGround", 0.7, dof});
+  addContact({robot().name(), "ground", "LeftFoot", "AllGround", 0.7, dof});
 
   predictedZMPWorld.clear();
   predictedCoMWorld.clear();
@@ -99,18 +93,6 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, c
   mc_rtc::log::info("Contact Weight : {}", Controller_Config.Stab_config.contactWeight);
   mc_rtc::log::info("Contact Stiffness : {}", Controller_Config.Stab_config.contactStiffness);
 
-  // Stab_config.comStiffness = Eigen::Vector3d{1000,1000,1000};
-  // Stab_config.comWeight = 200;
-  // Stab_config.torsoStiffness = 5;
-  // Stab_config.torsoWeight = 200;
-  // Stab_config.pelvisStiffness = 5;
-  // Stab_config.pelvisWeight = 200;
-  // postureTask->stiffness(1);
-  // postureTask->weight(5);
-  // SwingFootWeight = 500;
-  // SwingFootStiffness = 300;
-  // SupportFootWeight = 20000;
-  // SupportFootStiffness = 10000;
 
   StabTask = std::make_shared<mc_tasks::lipm_stabilizer::StabilizerTask>(solver().robots(), solver().realRobots(),
                                                                          solver().robots().robotIndex(), solver().dt());
@@ -140,24 +122,12 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, c
   SupportFootPose = robot().surfacePose(supportFootName).translation();
   SupportFootPose.z() = 0;
 
-  Pck = robot().com();
-  Pck.z() = Controller_Config.CoMz0;
-  Pzk = robot().surfacePose(swingFootName).translation();
-  Pzk.z() = 0;
-  Puk = Pck;
-  Vck = robot().comVelocity();
 
   SwingFootInitialPose = robot().surfacePose(swingFootName).translation();
   X_0_SwingFootInitial = SwingFootInitialPose;
 
   SwingFootAcc.setZero();
   SwingFootVel.setZero();
-
-  if(!joystick.isFound())
-  {
-    joystickConnected = false;
-    mc_rtc::log::warning("WARNING: NO JOYPAD DETECTED");
-  }
 
   create_datastore();
   getTransformations();
@@ -173,33 +143,12 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, c
     Vy_i = v.y();
     Omega_i = v.z();
   }
-  mpc_state_.input_V.clear();
-  mpc_state_.input_T.clear();
-  mpc_state_.input_Pf.clear();
-  GenReferenceVelocity(Vx_i, Vy_i, Omega_i);
-  ComputeTrajectoryOnce = true;
-  MPCSolver.Allow_none(true);
-  std::thread WalkingTrajectoryThread(&ControllerFootGen::WalkingTrajectoryLoop, this);
-  WalkingTrajectoryThread.detach();
-  mc_rtc::log::info("waiting for first computation");
-  sleep(1);
-  while(WalkingTrajectory_Computing)
-  {
-    sleep(1);
-    std::chrono::duration<double, std::milli> time_span = std::chrono::high_resolution_clock::now() - t_clock;
-    if(time_span.count() > 5e3)
-    {
-      mc_rtc::log::error("Exiting waiting loop");
-      WalkingTrajectory_Computing = false;
-    }
-  }
+  
   MPCSolver.Allow_none(Controller_Config.MPC_allow_None);
 
   solver().addTask(StabTask);
-
   solver().addTask(leftSwingFootTask);
   solver().addTask(rightSwingFootTask);
-
   solver().addTask(postureTask);
   solver().addTask(armTask);
   updateTasks();
@@ -335,22 +284,52 @@ Eigen::Vector3d Walking_controller::computeZMP()
   return zmp;
 }
 
-void Walking_controller::WalkingTrajectoryLoop()
+void Walking_controller::wait_for_mpc_thread()
 {
-  while(true)
+  if (!MPC_thread_on)
   {
-    if(!WalkingTrajectory_Computing)
+    mc_rtc::log::info("waiting for plugin");
+    while (!datastore().has("footsteps_planner::planner_config"))
     {
-      ComputeWalkingTrajectory();
+      sleep(1);
+    }
+    MPC_thread_on = true;
+    ComputeTrajectoryOnce = true;
+    WalkingTrajectory_Computing = true;
+    WalkingTrajectoryThread = std::thread(&Walking_controller::WalkingTrajectoryLoop, this);
+    WalkingTrajectoryThread.detach();
+
+    std::cout << WalkingTrajectory_Computing << std::endl;
+    mc_rtc::log::info("waiting for first computation");
+    std::chrono::high_resolution_clock::time_point t_clock = std::chrono::high_resolution_clock::now();
+    while(WalkingTrajectory_Computing)
+    {
+      sleep(1);
+      std::chrono::duration<double, std::milli> time_span = std::chrono::high_resolution_clock::now() - t_clock;
+      if (time_span.count() > 5e3)
+      {
+        mc_rtc::log::error("Exiting waiting loop");
+        WalkingTrajectory_Computing = false;
+      }
     }
   }
-  // ComputeWalkingTrajectory();
+}
+
+void Walking_controller::WalkingTrajectoryLoop()
+{
+  while(MPC_thread_on)
+  {
+
+    ComputeWalkingTrajectory();
+    
+  }
 }
 
 void Walking_controller::ComputeWalkingTrajectory()
 {
-
-  if(ComputeTrajectoryOnce)
+  
+  WalkingTrajectory_Computing = true;
+  if(ComputeTrajectoryOnce && datastore().has("footsteps_planner::planner_config"))
   {
     {
       std::lock_guard<std::mutex> lk_copy_state(mutex_mpc_);
@@ -358,33 +337,35 @@ void Walking_controller::ComputeWalkingTrajectory()
       UpdateMPC_input();
       mpc_thread_state = mpc_state_;
     }
-    WalkingTrajectory_Computing = true;
+    
     std::chrono::high_resolution_clock::time_point t_clock = std::chrono::high_resolution_clock::now();
 
     MPCSolver.AutoFootstepPlacement = AutoFootstepPlacement;
 
-    FootStpGen.Init(mpc_thread_state.input_Support_FootName, mpc_thread_state.SupportFootPose, mpc_thread_state.input_V,
-                    mpc_thread_state.input_T, mpc_thread_state.input_Pf);
 
-    FootStpGen.GetFoosteps();
-
-    if(mpc_thread_state.input_Pf.size() != 0)
+    if(mpc_thread_state.input_steps_.size() != 0)
     {
       N_Steps = 0;
-      N_Steps_Desired = FootStpGen.Get_Nsteps();
+      N_Steps_Desired = mpc_state_.input_steps_.size();
     }
 
-    if(mpc_thread_state.TimeStamps.size() != 0)
-    {
 
-      if(mpc_thread_state.TimeStamps[0] != FootStpGen.StepsTiming()[0])
-      {
-        t = FootStpGen.StepsTiming()[0] * t / mpc_thread_state.TimeStamps[0];
-        countStart = count - std::round(t / controller_timestep);
-      }
-    }
+    mpc_thread_state.input_steps_.clear() ; mpc_thread_state.input_timesteps_.clear();
+    datastore().assign<std::vector<sva::MotionVecd>>("footsteps_planner::input_vel",mpc_thread_state.input_v_);
+    datastore().assign<std::vector<sva::PTransformd>>("footsteps_planner::input_steps",mpc_thread_state.input_steps_);
+    datastore().assign<std::string>("footsteps_planner::support_foot_name",mpc_thread_state.input_Support_FootName);
+    datastore().assign<sva::PTransformd>("footsteps_planner::support_foot_pose",mpc_thread_state.SupportFootPose);
+    datastore().assign<std::vector<double>>("footsteps_planner::input_time_steps",mpc_thread_state.input_timesteps_);
 
-    MPCSolver.InitStepGen(FootStpGen.Xf(), FootStpGen.Yf(), FootStpGen.Theta_f());
+    mc_rtc::DataStore & data_s(datastore());
+    auto & lambda = datastore().get<std::function<void(mc_rtc::DataStore*)>>("footstep_planner::compute_plan");
+    lambda(&data_s);
+
+    mpc_thread_state.planner_steps = datastore().get<std::vector<sva::PTransformd>>("footsteps_planner::output_steps");
+    std::vector<double> & timesteps = datastore().get<std::vector<double>>("footsteps_planner::output_time_steps");
+    Tds = Controller_Config.Double_Step_Ratio * timesteps[0];
+
+    MPCSolver.InitStepGen(mpc_thread_state.planner_steps,robot().surfacePose(supportFootName));
 
     int Steps = N_Steps;
     int Steps_Desired = N_Steps_Desired;
@@ -402,7 +383,7 @@ void Walking_controller::ComputeWalkingTrajectory()
     }
 
     MPCSolver.SetWalkingParameters(mpc_thread_state.Pck, mpc_thread_state.Vck, mpc_thread_state.Pzk,
-                                   mpc_thread_state.input_P_fm1, FootStpGen.StepsTiming(), FootStpGen.TimesIndex(),
+                                   mpc_thread_state.input_P_fm1, timesteps,
                                    tail, N_Steps_Desired, N_Steps);
 
     // MPCSolver.Puk(mpc_thread_state.Pu);
@@ -419,12 +400,10 @@ void Walking_controller::ComputeWalkingTrajectory()
     if(MPCSolver.QPsucceeded())
     {
       std::lock_guard<std::mutex> lk_copy_state(mutex_mpc_);
-      mpc_thread_state.TimeStamps = FootStpGen.StepsTiming();
-      mpc_thread_state.TimeStampsIndex = FootStpGen.TimesIndex();
-      mpc_thread_state.P_traj = FootStpGen.Ref_Traj();
-      mpc_thread_state.Xf = FootStpGen.Xf();
-      mpc_thread_state.Yf = FootStpGen.Yf();
-      mpc_thread_state.Thetaf = FootStpGen.Theta_f();
+      mpc_thread_state.TimeStamps = timesteps;
+      mpc_thread_state.Xf = MPCSolver.Xf_Corr();
+      mpc_thread_state.Yf = MPCSolver.Yf_Corr();
+      mpc_thread_state.Thetaf = Eigen::VectorXd::Zero(mpc_thread_state.Yf.size());
       mpc_thread_state.QPSuccess = true;
       mpc_thread_state.X_MPC = MPCSolver.X_MPC();
       mpc_thread_state.Y_MPC = MPCSolver.Y_MPC();
@@ -453,23 +432,16 @@ void Walking_controller::ComputeWalkingTrajectory()
     }
 
     ComputeTrajectoryOnce = false;
-    WalkingTrajectory_Computing = false;
   }
+  WalkingTrajectory_Computing = false;
 }
 
 void Walking_controller::UpdateMPC_input()
 {
-  if(Vx[0] != Vx_i || Vy[0] != Vy_i || Omega[0] != Omega_i)
-  {
-    GenReferenceVelocity(Vx_i, Vy_i, Omega_i);
-  }
 
-
-  // mpc._state_.input_T.clear();
-  // mpc._state_.input_V.clear();
-  // double angle = z*M_PI/180.;
-  // Eigen::Vector3d Step_Target = Eigen::Vector3d{x,y,angle};
-  mpc_state_.input_Pf.clear();
+  GenReferenceVelocity(Vx_i, Vy_i, Omega_i);
+  
+  mpc_state_.input_steps_;
   // mpc._state_.input_Pf.push_back(Step_Target);
   mpc_state_.input_Support_FootName = supportFootName;
   mpc_state_.SupportFootPose = robot().surfacePose(supportFootName).translation();
@@ -482,11 +454,11 @@ void Walking_controller::UpdateMPC_input()
 
 bool Walking_controller::run()
 {
+  wait_for_mpc_thread();
 
   std::chrono::duration<double, std::milli> time_span = std::chrono::high_resolution_clock::now() - t_clock;
   ControllerLoopTime = time_span.count();
   t_clock = std::chrono::high_resolution_clock::now();
-  
   if(NewThreadState)
   {
     std::lock_guard<std::mutex> lk_copy_state(mutex_mpc_);
@@ -498,8 +470,6 @@ bool Walking_controller::run()
 
   t = (count - countStart) * controller_timestep;
 
-  // Update state variable
-  joypadLoop();
   getTransformations();
 
   if(!(Stop && Swing_Foot_Contact))
@@ -531,7 +501,7 @@ bool Walking_controller::run()
 
     Eigen::Vector3d StaticPose(
         (robot().surfacePose("LeftFoot").translation() + robot().surfacePose("RightFoot").translation()) / 2);
-    StaticPose.z() = Controller_Config.CoMz0;
+    StaticPose.z() = Controller_Config.Stab_config.comHeight;
     StabTask->staticTarget(StaticPose);
     StabTask->comStiffness(Eigen::Vector3d::Ones() * 10);
     t_k = 0;
@@ -566,7 +536,6 @@ bool Walking_controller::run()
 
   count += 1;
 
-  // StabTask->Set_Tconv(T_conv);
 
   gui()->removeCategory({"Walking", "Visualization", "FootStep"});
   add_FootSteps_GUI();
@@ -588,7 +557,7 @@ void Walking_controller::MoveCoM(double t)
   }
 
   
-  Eigen::Vector3d Pcom(mpc_state_.Get_CoM_planarTarget(Index)); Pcom.z() = Controller_Config.CoMz0;
+  Eigen::Vector3d Pcom(mpc_state_.Get_CoM_planarTarget(Index)); Pcom.z() = Controller_Config.Stab_config.comHeight;
   zmpTarget = mpc_state_.Get_ZMP_planarTarget(Index);
   Eigen::Vector3d zmpdTarget;
   // zmpdTarget.setZero();
@@ -679,10 +648,6 @@ bool Walking_controller::MoveFeet(double t)
   if(Swing_Foot_Contact)
   {
 
-    if(t > 0.1)
-    {
-      T_conv = 0.2;
-    }
 
     if(t > (PrevStepTiming + Tds) - 0.15 && DoubleSupport_state) // t > (PrevStepTiming + Tds)  - 0.1 &&
     {
@@ -700,7 +665,9 @@ bool Walking_controller::MoveFeet(double t)
       StabTask->setContacts({SupportState});
       DoubleSupport_state = false;
 
-      solver().setContacts({{robots(), 0, 1, supportFootName, "AllGround"}});
+      Eigen::Vector6d dof;
+      dof << 0, 0, 1, 1, 1, 0;
+      removeContact({robot().name(), "ground", swingFootName, "AllGround", 0.7, dof});
 
       Swing_Foot_Contact = false;
 
@@ -714,7 +681,6 @@ bool Walking_controller::MoveFeet(double t)
 
       // t_lift += offset;
 
-      T_conv = 0.2;
     }
   }
 
@@ -753,9 +719,6 @@ bool Walking_controller::MoveFeet(double t)
 
     {
 
-      T_conv = 0.05;
-      StabTask->copAdmittance(Controller_Config.Impact_Admittance);
-
       t_contact = t;
 
       StabTask->setContacts(
@@ -767,16 +730,10 @@ bool Walking_controller::MoveFeet(double t)
       // mc_rtc::log::info("Locking " + swingFootName + "at t : " + std::to_string(t));
       mc_rtc::log::info("T_contact - T_steps : {}", t - NextTimeStep);
 
-      // }
-      // if( (Step_Time  >= SingleSupportDuration) &&
-      //                                     !Swing_Foot_Contact &&
-      //                                     DoubleSupport_state )
-      // {
 
-      solver().setContacts({{robots(), 0, 1, "LeftFoot", "AllGround"}, {robots(), 0, 1, "RightFoot", "AllGround"}});
-      // StabTask->setContacts({mc_tasks::lipm_stabilizer::ContactState::Left,mc_tasks::lipm_stabilizer::ContactState::Right});
-      StabTask->copAdmittance(Controller_Config.Std_Admittance);
-      StabTask->contactStiffness(Controller_Config.Stab_config.contactStiffness);
+      Eigen::Vector6d dof;
+      dof << 0, 0, 1, 1, 1, 0;
+      addContact({robot().name(), "ground", swingFootName, "AllGround", 0.7, dof});
 
 
       mc_rtc::log::success("Locked " + swingFootName);
@@ -894,26 +851,20 @@ void Walking_controller::UpdateInitialVectors()
     // Pzk = Pzk*(1-K) + K*computeInSupportFootFlat(computeZMP());
   }
 
-  Pck.z() = Controller_Config.CoMz0;
+  Pck.z() = Controller_Config.Stab_config.comHeight;
   Vck.z() = 0;
   Pzk.z() = 0;
 }
 
 void Walking_controller::GenReferenceVelocity(double vx, double vy, double omega)
 {
-  Vx.clear();
-  Vy.clear();
-  Omega.clear();
+
+  mpc_state_.input_v_.clear();
   for(int k = 0; k < (int)2 * std::round(Controller_Config.Tp / Controller_Config.delta); k++)
   {
-    Vx.push_back(vx);
-    Vy.push_back(vy);
-    Omega.push_back(omega);
+    mpc_state_.input_v_.push_back(sva::MotionVecd(Eigen::Vector3d{0,0,omega} , Eigen::Vector3d{vx,vy,0}));
   }
-  V.clear();
-  V.push_back(Vx);
-  V.push_back(Vy);
-  V.push_back(Omega);
+
 }
 
 void Walking_controller::updateTasks()
@@ -965,127 +916,6 @@ void Walking_controller::switchFootSupport()
   }
 }
 
-void Walking_controller::joypadLoop()
-{
-  if(joystickConnected)
-  {
-    // Stop = (vRefX==0 && vRefY == 0);
-
-    Vx_i = vRefX;
-    Vy_i = vRefY;
-    Omega_i = omegaRef;
-
-    if(joystick.sample(&event) || vRefX != 0 || vRefY != 0)
-    {
-      if(event.isButton())
-      {
-        if(event.number == 2 && event.value == 1)
-        {
-          std::cout << "UNUSED" << std::endl;
-        }
-        if(event.number == 1 && event.value == 1)
-        {
-          std::cout << "STOP" << std::endl;
-          Stop = true;
-        }
-        if(event.number == 0 && event.value == 1)
-        {
-          std::cout << "START" << std::endl;
-          if(Stop && Swing_Foot_Contact)
-          {
-            Stop = false;
-            t_k = 0;
-            ComputeTrajectoryOnce = true;
-          }
-        }
-
-        if(event.number == 3 && event.value == 1)
-        {
-          std::cout << "EMERGENCY" << std::endl;
-          emergencyFlag = true;
-        }
-
-        if(event.number == 5 && event.value == 1)
-        {
-          if(maxVelX <= 0.25)
-          {
-            maxVelX += 0.05;
-            minVelX = -maxVelX;
-          }
-          // std::cout << "maxVelX = " << maxVelX << std::endl;
-        }
-        if(event.number == 4 && event.value == 1)
-        {
-          if(maxVelX >= 0.15)
-          {
-            maxVelX -= 0.05;
-            minVelX = -maxVelX;
-          }
-          // std::cout << "maxVelX = " << maxVelX << std::endl;
-        }
-      }
-
-      if(event.isAxis() || vRefX != 0 || vRefY != 0)
-      {
-        if(event.number == 1)
-        {
-          double value = -event.value;
-          vRefY = (maxVelX - minVelX) * (value + 32767) / (32767 * 2) + minVelX;
-          if(abs(vRefY) < 0.02)
-          {
-            vRefY = 0;
-          }
-          // std::cout << "vRefX = " << vRefX << std::endl;
-          // if(vRefX<-0.2)
-          //   vRefX=-0.2;
-        }
-        if(event.number == 3)
-        {
-          double value = -event.value;
-          double maxVel = 0.1;
-          double minVel = -0.1;
-          omegaRef = (maxVel - minVel) * (value + 32767) / (32767 * 2) + minVel;
-          if(abs(omegaRef) < 0.03)
-          {
-            omegaRef = 0;
-          }
-          // std::cout << "omegaRef = " << omegaRef << std::endl;
-        }
-
-        if(event.number == 2)
-        {
-          double value = -event.value;
-          double maxVel = 0;
-          double minVel = -0.15;
-          vRefX = (maxVel - minVel) * (value + 32767) / (32767 * 2) + minVel;
-          if(abs(vRefX) < 0.02)
-          {
-            vRefX = 0;
-          }
-
-          // std::cout << "vRefX = " << vRefY << std::endl;
-        }
-
-        if(event.number == 5)
-        {
-          double value = event.value;
-          double maxVel = 0.15;
-          double minVel = 0;
-          vRefX = (maxVel - minVel) * (value + 32767) / (32767 * 2) + minVel;
-
-          if(abs(vRefX) < 0.02)
-          {
-            vRefX = 0;
-          }
-
-          // std::cout << "vRefX = " << vRefY << std::endl;
-        }
-      }
-    }
-    PrevVrefX = vRefX;
-  }
-}
-
 void Walking_controller::reset(const mc_control::ControllerResetData & reset_data)
 {
   // Vx_i = 0. ; Vy_i = 0. ; Omega_i = 0.;
@@ -1094,11 +924,16 @@ void Walking_controller::reset(const mc_control::ControllerResetData & reset_dat
   supportFootName = "RightFoot";
   swingFootName = "LeftFoot";
 
+  mpc_state_.input_v_.clear();
+  mpc_state_.input_timesteps_.clear();
+  mpc_state_.input_steps_.clear();
+
+
   SupportFootPose = robot().surfacePose(supportFootName).translation();
   SupportFootPose.z() = 0;
 
   Pck = robot().com();
-  Pck.z() = Controller_Config.CoMz0;
+  Pck.z() = Controller_Config.Stab_config.comHeight;
   Pzk = robot().surfacePose(swingFootName).translation();
   Pzk.z() = 0;
   Puk = Pck;
@@ -1108,45 +943,20 @@ void Walking_controller::reset(const mc_control::ControllerResetData & reset_dat
   X_0_SwingFootInitial = SwingFootInitialPose;
   updateTasks();
 
-  Eigen::Matrix6d dof = Eigen::Matrix6d::Identity(6, 6);
-  dof(0, 0) = 0;
-  dof(1, 1) = 0;
-  dof(5, 5) = 0;
-  // dof = Eigen::Matrix6d::Zero(6,6);
-  tasks::qp::ContactId ContactId_R;
-  tasks::qp::ContactId ContactId_L;
-  ContactId_R = mc_rbdyn::Contact(robots(), 0, 1, "RightFoot", "AllGround").contactId(robots());
-  ContactId_L = mc_rbdyn::Contact(robots(), 0, 1, "LeftFoot", "AllGround").contactId(robots());
-  contactConstraint.contactConstr->addDofContact(ContactId_L, dof);
-  contactConstraint.contactConstr->addDofContact(ContactId_R, dof);
-  contactConstraint.contactConstr->updateDofContacts();
+  Eigen::Vector6d dof;
+  dof << 0, 0, 1, 1, 1, 0;
+  addContact({robot().name(), "ground", "RightFoot", "AllGround", 0.7, dof});
+  addContact({robot().name(), "ground", "LeftFoot", "AllGround", 0.7, dof});
 
-  MPC_thread_on = false;
-  WalkingTrajectoryThread.join();
-  MPC_thread_on = true;
-
-  V.clear();
-  T.clear();
-  Pf.clear();
-  GenReferenceVelocity(Vx_i, Vy_i, Omega_i);
-  ComputeTrajectoryOnce = true;
-  
-  WalkingTrajectoryThread = std::thread(&Walking_controller::WalkingTrajectoryLoop, this);
-
-  mc_rtc::log::info("waiting for first computation after reset");
-  std::chrono::high_resolution_clock::time_point t_clock = std::chrono::high_resolution_clock::now();
-  std::condition_variable cv;
-  while(WalkingTrajectory_Computing)
+  if (MPC_thread_on)
   {
-    sleep(1);
-    std::chrono::duration<double, std::milli> time_span = std::chrono::high_resolution_clock::now() - t_clock;
-    if (time_span.count() > 5e3)
-    {
-      mc_rtc::log::error("Exiting waiting loop");
-      WalkingTrajectory_Computing = false;
-    }
+    MPC_thread_on = false;
+    WalkingTrajectoryThread.join();
   }
 
   mc_control::MCController::reset(reset_data);
+
+  mc_rtc::log::info("waiting for plugin");
+
 };
 

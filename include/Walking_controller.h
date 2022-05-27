@@ -1,4 +1,12 @@
 #pragma once
+#include <mc_observers/KinematicInertialObserver.h>
+#include <mc_observers/ObserverPipeline.h>
+#include <mc_rbdyn/RobotLoader.h>
+#include <mc_rbdyn/rpy_utils.h>
+#include <mc_rtc/logging.h>
+#include <mc_solver/ConstraintSetLoader.h>
+#include <chrono>
+#include <unistd.h>
 #include <mc_control/mc_controller.h>
 #include <mc_tasks/lipm_stabilizer/StabilizerTask.h>
 #include <mc_tasks/AddRemoveContactTask.h>
@@ -10,8 +18,7 @@
 #include <mc_tasks/OrientationTask.h>
 #include <mc_tasks/SurfaceTransformTask.h>
 #include <mc_control/api.h>
-#include "../src/joystick/joystick.hh"
-#include "FootStepGenerator.h"
+#include <mc_control/fsm/Controller.h>
 #include "FootTrajectory.h"
 #include "ISMPC_Solver.h"
 #include "MPC_state.h"
@@ -58,7 +65,6 @@ public :
     void ComputeWalkingTrajectory();
     void WalkingTrajectoryLoop();
     void switchFootSupport();
-    void joypadLoop();
     void UpdateFootRatio();
     /**
      * Update the values of Pck Vck and Pzk from the robot
@@ -109,14 +115,6 @@ public :
         Controller_Config.SwingFootStiffness_Dim = config("tasks")("swingfoot_dimstiffness");
         Controller_Config.SwingFootWeight_Dim = config("tasks")("swingfoot_dimweight");
 
-        Controller_Config.CoM_Stiff = config("tasks")("stabilizer")("com_stiff");
-        Controller_Config.CoM_Weight = config("tasks")("stabilizer")("com_weight");
-        Controller_Config.CoMStiffness_Dim = config("tasks")("stabilizer")("com_dimstiffness");
-        Controller_Config.CoMWeight_Dim = config("tasks")("stabilizer")("com_dimweight");
-        Controller_Config.Stab_P_gain = config("tasks")("stabilizer")("P_gain");
-        Controller_Config.Stab_I_gain = config("tasks")("stabilizer")("I_gain");
-        Controller_Config.Impact_Admittance = config("tasks")("stabilizer")("impact_admittance");
-        Controller_Config.Std_Admittance = config("tasks")("stabilizer")("std_admittance");
         
         Configure(Controller_Config);
 
@@ -124,7 +122,6 @@ public :
 
     void Configure(const ControllerConfiguration & config){
         Controller_Config = config;
-        Controller_Config.update_config();
         Controller_Config.Beta = std::min(Controller_Config.Beta_range(1),std::max(Controller_Config.Beta_range(0),Controller_Config.Beta));
         Controller_Config.MPC_ZMP_Constraint_size.x() = std::min(Controller_Config.MPC_ZMP_Constraint_max_size,
                                                                  std::max(Controller_Config.MPC_ZMP_Constraint_min_size,
@@ -133,7 +130,6 @@ public :
                                                                  std::max(Controller_Config.MPC_ZMP_Constraint_min_size,
                                                                  Controller_Config.MPC_ZMP_Constraint_size.y()));
         MPCSolver.configure(Controller_Config);
-        FootStpGen.configure(Controller_Config);
     }
 
 protected:
@@ -192,11 +188,16 @@ protected:
 
         datastore().assign<std::string>("supportFootName",supportFootName);
         datastore().assign<std::string>("swingFootName",swingFootName);
-
-        datastore().assign<double>("T",T[0]);
+        if (mpc_state_.input_timesteps_.size() != 0){
+            datastore().assign<double>("T",mpc_state_.input_timesteps_[0]);
+        }
         datastore().assign<double>("t",t);
-        datastore().assign<double>("Ts",mpc_state_.TimeStamps[0]);
+        if (mpc_state_.TimeStamps.size() != 0){
+            datastore().assign<double>("Ts",mpc_state_.TimeStamps[0]);
+        }
     }
+
+    void wait_for_mpc_thread();
 
 
     std::shared_ptr<mc_tasks::lipm_stabilizer::StabilizerTask> StabTask;    
@@ -221,7 +222,7 @@ private:
     std::mutex mutex_mpc_;
     MPC_state mpc_thread_state;
     MPC_state mpc_state_;
-    bool MPC_thread_on = true;
+    bool MPC_thread_on = false;
     bool NewThreadState = false;
     std::thread WalkingTrajectoryThread;
     
@@ -238,10 +239,9 @@ private:
     Eigen::VectorXd Traj_ant;
 
     double eta(){
-        return std::sqrt(std::abs(mc_rtc::constants::gravity.z())/Controller_Config.CoMz0);
+        return std::sqrt(std::abs(mc_rtc::constants::gravity.z())/Controller_Config.Stab_config.comHeight);
     }
 
-    double T_conv = 0.1;
 
     std::chrono::high_resolution_clock::time_point t_clock;
 
@@ -279,10 +279,6 @@ private:
     double t_stop = 0;   
     int count_stop = 0;
 
-    std::vector<std::vector<double>> V; //Input Reference velocity vector, contains in that order : the x-direction, the y-directon velocity, the rotating velocity
-    std::vector<double> T{T_Steps}; //Input desired steps timings
-    std::vector<Eigen::Vector3d> Pf; //Input desired FootSteps positions (angle in .z())
-
     Eigen::Vector3d SwingFootAcc;
     Eigen::Vector3d SwingFootVel;
     sva::PTransformd X_0_SwingFootInitial; //Swing Foot Pose Before Swinging
@@ -313,7 +309,6 @@ private:
     std::string supportFootName = "RightFoot";
     std::string swingFootName = "LeftFoot";
 
-    FootStepGen FootStpGen; //FootStep Position generator
     ISMPC_Solver MPCSolver; 
     FootTrajectory SwingFootTrajectory;
 
@@ -322,14 +317,8 @@ private:
     mc_rtc::Configuration config_;
 
 
-    std::vector<double> Vx;
-    std::vector<double> Vy;
-    std::vector<double> Omega;
-    
-
     double Vx_i = 0; double Vy_i = 0 ; double Omega_i = 0;
     
-    std::vector<Eigen::Vector3d> P_traj; //Vector containing the reference trajectory 
 
     std::vector<Eigen::Vector3d> predictedZMPWorld; //Use to display ZMP
     std::vector<Eigen::Vector3d> predictedCoMWorld; //Use to display CoM
@@ -389,8 +378,6 @@ private:
     double minVelX=-0.15;
     double vRefX = 0 ; double vRefY = 0 ; double omegaRef = 0;
     double PrevVrefX = 0 ;
-    Joystick joystick;
-    JoystickEvent event;
     bool joystickConnected = true;
     //For Joystick }
     

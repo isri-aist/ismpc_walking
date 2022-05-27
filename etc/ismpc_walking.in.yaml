@@ -19,7 +19,7 @@ collisions:
   useCommon: true
   
 controller:
-  start_at_launch: true
+  start_at_launch: false
   steps: 10
   speed: [0.1,0.05,-0.1]
   t_steps: 1.1
@@ -79,6 +79,9 @@ tasks:
     D_gain: 0
     std_admittance: [0.01,0.01]
     impact_admittance: [0.01,0.01]
+  
+
+Plugins: [footsteps_planner_plugin]
 
   
   

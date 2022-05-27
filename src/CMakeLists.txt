@@ -1,18 +1,15 @@
 set(controller_SRC
   Walking_controller.cpp
-  FootStepGenerator.cpp
   FootTrajectory.cpp
   ISMPC_Solver.cpp
   GUI.cpp
-  joystick/joystick.cc
+  
 )
 
 set(controller_HDR
   ../include/Walking_controller.h
-  ../include/FootStepGenerator.h
   ../include/FootTrajectory.h  
   ../include/ISMPC_Solver.h
-  joystick/joystick.hh
   ../include/ControllerConfiguration.h
   ../include/MPC_state.h
 )

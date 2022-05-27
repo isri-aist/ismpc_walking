@@ -86,17 +86,31 @@ void ISMPC_Solver::configure(const ControllerConfiguration & config)
   mc_rtc::log::info("Stability Task {}", Use_Stability_Task);
 }
 
-void ISMPC_Solver::InitStepGen(const Eigen::VectorXd & Xf, const Eigen::VectorXd & Yf, const Eigen::VectorXd & Thetaf)
+void ISMPC_Solver::InitStepGen(std::vector<sva::PTransformd> & steps , sva::PTransformd support_foot)
 {
-  m_Xf = Xf;
-  m_Yf = Yf;
+  intput_steps_ = steps;
+  support_foot_pose_ = support_foot;
+  m_Xf = Eigen::VectorXd::Zero(steps.size() + 1);
+  m_Yf = Eigen::VectorXd::Zero(steps.size() + 1);
+  m_Theta_f = Eigen::VectorXd::Zero(steps.size() + 1);
 
-  Offset = Eigen::Vector3d::Zero();
-  // Offset = Eigen::Vector3d{m_Xf(0), m_Yf(0), 0};
+  Eigen::Vector3d support_pose(support_foot.translation());
+  double support_ori( - mc_rbdyn::rpyFromMat(support_foot.rotation()).z());
+  m_Xf(0) = support_pose.x();
+  m_Yf(0) = support_pose.y();
+  m_Theta_f(0) = support_ori; 
 
-  // m_Xf -= Eigen::VectorXd::Ones(m_Xf.rows()) * Offset.x();
-  // m_Yf -= Eigen::VectorXd::Ones(m_Yf.rows()) * Offset.y();
-  m_Theta_f = Thetaf;
+  for (int k = 0 ; k < steps.size() ; k++)
+  {
+    Eigen::Vector3d step_k_pose(steps[k].translation());
+    double step_k_ori( - mc_rbdyn::rpyFromMat(steps[k].rotation()).z());
+    m_Xf(k+1) = step_k_pose.x();
+    m_Yf(k+1) = step_k_pose.y();
+    m_Theta_f(k+1) = step_k_ori;
+  }
+
+
+
   R_support_0 = sva::RotZ(-m_Theta_f(0));
   R_0_support = R_support_0.transpose();
 }
@@ -106,7 +120,6 @@ void ISMPC_Solver::SetWalkingParameters(const Eigen::Vector3d & Pck,
                                         const Eigen::Vector3d & Pzk,
                                         const Eigen::Vector3d & Pfm1,
                                         const std::vector<double> & timesstp,
-                                        const std::vector<int> & timesindx,
                                         std::string Tail,
                                         int Steps_Desired,
                                         int Steps)
@@ -118,9 +131,8 @@ void ISMPC_Solver::SetWalkingParameters(const Eigen::Vector3d & Pck,
   m_Tail_save = Tail;
   m_eta = sqrt(g / P_c_k.z());
   P_u_k = P_c_k + (V_c_k / m_eta);
-  m_Pfm1 = Pfm1; // - Offset;
+  m_Pfm1 = Pfm1; 
   m_timestamp = timesstp;
-  m_timesIndex = timesindx;
   N_Steps = Steps;
   N_Steps_Desired = Steps_Desired;
 
@@ -499,10 +511,6 @@ void ISMPC_Solver::FootSteps_Constraints()
 void ISMPC_Solver::AntTailTrajectory()
 {
   int PreviewSize = m_P - m_C;
-  // if(m_timestamp.size() != 0)
-  // {
-  //   PreviewSize = m_timesIndex[m_timesIndex.size() - 1] - m_C;
-  // }
   AfterTc_ZMP_trajectory;
   AfterTc_ZMP_trajectory.resize(2 * PreviewSize, 1);
   AfterTc_ZMP_trajectory.setZero();
