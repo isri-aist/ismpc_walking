@@ -65,7 +65,6 @@ public :
     void ComputeWalkingTrajectory();
     void WalkingTrajectoryLoop();
     void switchFootSupport();
-    void UpdateFootRatio();
     /**
      * Update the values of Pck Vck and Pzk from the robot
     */
@@ -74,10 +73,7 @@ public :
      * Generate the Reference Velocity for constant inputs throught the preveiw horizon
      */
 
-    void UpdateMPC_input();
-
-
-    void GenReferenceVelocity(double vx, double vy, double omega);
+    void UpdatePlanner_input();
 
     void updateTasks();
 
@@ -100,12 +96,22 @@ public :
         Controller_Config.Double_Step_Ratio = config("ismpc")("double_support_ratio");
         Controller_Config.sliding_zmp_cstr_region = config("ismpc")("sliding_zmp_cstr_region");
         Controller_Config.delta =  config("ismpc")("delta");
+        Controller_Config.MPC_ZMP_next_stp_cstr_ratio = config("ismpc")("next_stp_cstr_ratio");
+        Controller_Config.MPC_ZMP_cstr_square_offset = config("ismpc")("offset");
+        Controller_Config.MPC_allow_None = config("ismpc")("allow_none_tail");
+        Controller_Config.Tc = config("ismpc")("Tc");
+        Controller_Config.delta = config("ismpc")("delta");
+        Controller_Config.use_stability_task = config("ismpc")("use_stability_task");
+        Controller_Config.Beta_stab  = config("ismpc")("beta_stab");
+        Controller_Config.Beta_traj = config("ismpc")("beta_traj");
+        Controller_Config.MPC_ZMP_cstr_square_offset_sg_supp = config("ismpc")("offset_sg_supp");
+        Controller_Config.MPC_ZMP_Constraint_size_sg_supp = config("ismpc")("zmp_cstr_square_sg_supp");
 
-        Controller_Config.Tp = config("footstepsGeneration")("Tp");
-        Controller_Config.Footstps_Generation_Ts_range = config("footstepsGeneration")("Ts_range");
-        Controller_Config.Footsteps_Generation_Kinematics_cstr = config("footstepsGeneration")("kinematics_cstr");
-        Controller_Config.Footsteps_Generation_feet_distance = config("footstepsGeneration")("feet_distance");
-        Controller_Config.Foosteps_Generation_mean_vel = config("footstepsGeneration")("mean_speed");
+        Controller_Config.Tp = config("footsteps_planner")("Tp");
+        Controller_Config.Footstps_Generation_Ts_range = config("footsteps_planner")("Ts_limit");
+        Controller_Config.Footsteps_Generation_Kinematics_cstr = config("footsteps_planner")("kinematics_cstr");
+        Controller_Config.Footsteps_Generation_feet_distance = config("footsteps_planner")("feet_distance");
+        Controller_Config.Foosteps_Generation_mean_vel = config("footsteps_planner")("mean_speed");
         
 
         Controller_Config.SwingFootStiffness = config("tasks")("swingfoot_stiffness");
@@ -122,6 +128,8 @@ public :
 
     void Configure(const ControllerConfiguration & config){
         Controller_Config = config;
+        // Controller_Config.update_config();
+         
         Controller_Config.Beta = std::min(Controller_Config.Beta_range(1),std::max(Controller_Config.Beta_range(0),Controller_Config.Beta));
         Controller_Config.MPC_ZMP_Constraint_size.x() = std::min(Controller_Config.MPC_ZMP_Constraint_max_size,
                                                                  std::max(Controller_Config.MPC_ZMP_Constraint_min_size,
@@ -134,6 +142,8 @@ public :
 
 protected:
     void addToGUI();
+
+    void AddToLog();
 
     void add_FootSteps_GUI();
 
@@ -202,12 +212,6 @@ protected:
 
     std::shared_ptr<mc_tasks::lipm_stabilizer::StabilizerTask> StabTask;    
 
-
-    // std::shared_ptr<mc_tasks::CoMTask> CoMTask;
-
-    mc_tasks::lipm_stabilizer::ContactState SwingFootContact;
-    mc_tasks::lipm_stabilizer::ContactState SupportFootContact;
-
     std::shared_ptr<mc_tasks::OrientationTask> left_foot_ori;
     std::shared_ptr<mc_tasks::SurfaceTransformTask> SwingFootTask;
     std::shared_ptr<mc_tasks::SurfaceTransformTask> SupportFootTask;
@@ -255,6 +259,7 @@ private:
     bool UpperBody_Control_right = false; //Enable UpperBody Control
     bool HandMoionPrediction_On = false; //Enable UpperBody Control Prediction
     bool UseRealRobot = false; //To use the real robots data
+    bool UseMPCState = true;
     bool Stop = true ; //If true, the robot is at stop or the robot is about to stop at next step;
     bool Robot_Walking = false; //If false, the robot is not moving;
     bool ComputeTrajectoryOnce = true; 
@@ -294,15 +299,11 @@ private:
     int Index = 0; //Index of the target CoM CoMd ZMP in the vector returned by the MPC 
     bool Swing_Foot_Contact = true ; 
     bool DoubleSupport_state = true;
-    std::string Tail; //Velocity tail, either "Periodic" Or "Truncated"
-    Eigen::Vector3d CoM0; //Initial CoM Position for the MPC 
-    Eigen::Vector3d Pzk;  //Initial ZMP Position for the MPC
-    Eigen::Vector3d Pck;  //Initial CoM Position for the MPC 
-    Eigen::Vector3d Puk;
-    Eigen::Vector3d Vck; //Initial CoM Speed for the MPC
-    Eigen::Vector3d SupportFootPose; // Initial  Foot Support at the time of computation
 
-    Eigen::Vector3d Pz; //ZMP Position
+    bool Use_w = false;
+    std::string Tail = "Anticipative"; //Velocity tail, either "Periodic" Or "Truncated"
+
+    Eigen::Vector3d SupportFootPose; // Initial  Foot Support at the time of computation
 
     Eigen::Matrix3d R_body_world_Step = Eigen::Matrix3d::Identity(); //Orientation of floating base updated at each steps
 
@@ -319,10 +320,6 @@ private:
 
     double Vx_i = 0; double Vy_i = 0 ; double Omega_i = 0;
     
-
-    std::vector<Eigen::Vector3d> predictedZMPWorld; //Use to display ZMP
-    std::vector<Eigen::Vector3d> predictedCoMWorld; //Use to display CoM
-   
     sva::PTransformd ReferenceFrame_Origin_Offset = sva::PTransformd::Identity();
 
     sva::PTransformd leftFootTransformZero;
@@ -370,6 +367,9 @@ private:
     unsigned int rightLegIndex = 0;
 
     std::vector<std::string> SwingFootJoints;
+
+    Eigen::Vector6d footcontact_dof;
+
 
     int kfoot = 0; //Current Support Foot
 

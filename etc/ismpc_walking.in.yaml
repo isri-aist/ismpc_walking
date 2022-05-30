@@ -19,10 +19,10 @@ collisions:
   useCommon: true
   
 controller:
-  start_at_launch: false
+  start_at_launch: true
   steps: 10
-  speed: [0.1,0.05,-0.1]
-  t_steps: 1.1
+  speed: [0,0.0,0]
+  t_steps: 2
   robot:
     hrp4:
       torsoBodyName: "torso"
@@ -46,21 +46,24 @@ ismpc:
   offset: [0.0,0.0]
   offset_sg_supp: [0.00,0.0]
   allow_none_tail: true
-  footsteps_cstr_square: [0.2,0.03]
+  footsteps_cstr_square: [0.3,0.05]
   double_support_ratio: 0.4
-  sliding_zmp_cstr_region: false
-  use_stability_task: true
+  sliding_zmp_cstr_region: true
+  use_stability_task: false
   safety_thresholds:
     beta_range: [1e2,1e6]
     zmp_cstr_square_min: 0.01
     zmp_cstr_square_max: 0.2
 
-footstepsGeneration:
+footsteps_planner:
   Tp: 6
-  Ts_range: [0.7,2]
+  delta: 0.05
+  Ts_limit: [0.7,2]
   kinematics_cstr: [0.3,0.05]
   feet_distance: 0.2
   mean_speed: 0.1
+  robot_height: 150
+  max_rotation: 0.17
 
 tasks:
   swingfoot_stiffness: 300
@@ -69,16 +72,53 @@ tasks:
   swingfoot_dimstiffness: [1.,1.,1.,1.,1.,1.]
   supportfoot_stiffness: 20000
   supportfoot_weight: 10000
-  stabilizer:
-    com_stiff: 1e2
-    com_weight: 1000
-    com_dimweight: [1.,1.,0.3]
-    com_dimstiffness: [1.,1.,1.]
-    P_gain: 10
-    I_gain: 5
-    D_gain: 0
-    std_admittance: [0.01,0.01]
-    impact_admittance: [0.01,0.01]
+
+stabilizer:
+  robot:
+    hrp4cr:
+      stabilizer:
+        dcm_tracking:
+          gains:
+            prop: 4
+            integral: 5
+            deriv: 0.2
+        admittance:
+          cop: [0.03, 0.04]
+          maxVel:
+            angular: [3., 3., 3.]
+            linear: [1., 1., 1.]
+        tasks:
+          contact:
+            damping: 300.
+          torso:
+            stiffness: 2
+            weight: 500
+          com:
+            stiffness: [1000.,1000.,100.]
+            weight: 1000.
+            hieght: 0.817
+        dcm_bias:
+          dcmMeasureErrorStd: 0.001
+          biasDriftPerSecondStd: 0.0001
+          zmpMeasureErrorStd: 0.0005
+          biasLimit: [0.05, 0.02]
+          withDCMBias: true
+
+    hrp4:
+      stabilizer:
+        # admittance:
+        #   maxVel:
+        #     angular: [3., 3., 3.]
+        #     linear: [1., 1., 1.]
+        tasks:
+          torso:
+            pitch: 0.12
+            stiffness: 2
+            weight: 500
+          com:
+            stiffness: [1000.,1000.,100.]
+            weight: 1000.
+            hieght: 0.78
   
 
 Plugins: [footsteps_planner_plugin]

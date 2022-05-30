@@ -1,8 +1,11 @@
 set(controller_SRC
   Walking_controller.cpp
+  move_feet.cpp
+  robot_state.cpp
   FootTrajectory.cpp
   ISMPC_Solver.cpp
   GUI.cpp
+  logs.cpp
   
 )
 

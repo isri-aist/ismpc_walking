@@ -13,13 +13,11 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, c
 : mc_control::MCController(rm, dt)
 {
   
-  Controller_Config.Stab_config = robot().module().defaultLIPMStabilizerConfiguration();
-  if(robot().name() == "hrp4cr")
-  {
-    Controller_Config.Stab_config.comActiveJoints.push_back("CHEST_R");
-    Controller_Config.Stab_config.comActiveJoints.push_back("CHEST_P");
-  }
-  mc_rtc::log::info("Default CoM gain {}", Controller_Config.Stab_config.comStiffness);
+  mc_rbdyn::lipm_stabilizer::StabilizerConfiguration Stabiconfig(robot().module().defaultLIPMStabilizerConfiguration());
+  const auto & s_config = config("stabilizer")("robot")(robot().name())("stabilizer");
+  Stabiconfig.load(s_config);
+  Controller_Config.Stab_config = Stabiconfig;
+  Controller_Config.Controller_timestep = dt;
 
   MPCSolver = ISMPC_Solver(dt, Controller_Config.delta, Controller_Config.Tp, Controller_Config.Tc);
 
@@ -30,15 +28,6 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, c
   rConfig("rightFootLink", RightFootLinkName_);
   rConfig("leftFootLink", LeftFootLinkName_);
 
-  // auto rm0 = mc_rbdyn::RobotLoader::get_robot_module("HRP4");
-  // for(const auto & j : rm0->mb.joints())
-  // {
-  //   if(j.dof() == 1 && !j.isMimic())
-  //   {
-  //     std::cout << "- " << j.name() << "\n";
-  //   }
-  // }
-
   mc_rtc::log::info(robots().envIndex());
   controller_timestep = dt;
   config_.load(config);
@@ -47,25 +36,18 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, c
   datastore().make_call("KinematicAnchorFrame::" + robot().name(), [this](const mc_rbdyn::Robot & robot) {
     return sva::interpolate(robot.surfacePose("LeftFoot"), robot.surfacePose("RightFoot"), LeftFootRatio);
   });
-  PrevLeftFootRatio = 0.5;
 
   solver().addConstraintSet(*constraint);
   solver().addConstraintSet(contactConstraint);
   solver().addConstraintSet(kinematicsConstraint);
   solver().addConstraintSet(dynamicsConstraint);
 
-  Eigen::Vector6d dof;
-  dof << 0, 0, 1, 1, 1, 0;
-  addContact({robot().name(), "ground", "RightFoot", "AllGround", 0.7, dof});
-  addContact({robot().name(), "ground", "LeftFoot", "AllGround", 0.7, dof});
-
-  predictedZMPWorld.clear();
-  predictedCoMWorld.clear();
+  footcontact_dof << 0, 0, 1, 1, 1, 0;
+  addContact({robot().name(), "ground", "RightFoot", "AllGround", 0.7, footcontact_dof});
+  addContact({robot().name(), "ground", "LeftFoot", "AllGround", 0.7, footcontact_dof});
 
   rightShoulderIndex = robot().jointIndexByName("R_SHOULDER_P");
   rightLegIndex = robot().jointIndexByName("R_HIP_P");
-
-  mc_rtc::log::info("AnkleIndex : {} ", robot().jointIndexByName("L_ANKLE_P"));
 
   leftShoulderIndex = robot().jointIndexByName("L_SHOULDER_P");
   leftLegIndex = robot().jointIndexByName("L_HIP_P");
@@ -75,44 +57,18 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, c
 
   rightSwingFootTask =
       std::make_shared<mc_tasks::SurfaceTransformTask>("RightFoot", robots(), robots().robotIndex(), 10.0, 10.);
-
-  SwingFootContact = mc_tasks::lipm_stabilizer::ContactState::Left;
-  SupportFootContact = mc_tasks::lipm_stabilizer::ContactState::Right;
-
-  Tail = "Anticipative";
-
-  for(int k = 0; k < Controller_Config.Stab_config.comActiveJoints.size(); k++)
-  {
-    mc_rtc::log::info(Controller_Config.Stab_config.comActiveJoints[k]);
-  }
-
-  mc_rtc::log::info("CoM Weight : {} ", Controller_Config.Stab_config.comWeight);
-  mc_rtc::log::info("CoM Stiff : {}", Controller_Config.Stab_config.comStiffness.y());
-  mc_rtc::log::info("DCM P : {}", Controller_Config.Stab_config.dcmPropGain);
-  mc_rtc::log::info("DCM I : {}", Controller_Config.Stab_config.dcmIntegralGain);
-  mc_rtc::log::info("Contact Weight : {}", Controller_Config.Stab_config.contactWeight);
-  mc_rtc::log::info("Contact Stiffness : {}", Controller_Config.Stab_config.contactStiffness);
-
-
+ 
   StabTask = std::make_shared<mc_tasks::lipm_stabilizer::StabilizerTask>(solver().robots(), solver().realRobots(),
                                                                          solver().robots().robotIndex(), solver().dt());
 
   StabTask->configure(Controller_Config.Stab_config);
-
-  mc_rtc::log::info("CoM Height : {} ", robot().com().z());
-
   StabTask->reset();
-
-  Controller_Config.Stab_config.copMaxVel.angular() = Eigen::Vector3d{1.5, 1.5, 0.3};
-  Controller_Config.Stab_config.copMaxVel.linear() = Eigen::Vector3d{.5, .5, 0.3};
 
   postureTask->stiffness(1);
   postureTask->weight(5);
 
   armTask = std::make_shared<mc_tasks::PostureTask>(solver(), robots().robotIndex(), 100, 10);
-  std::vector<std::string> armTask_Joints({"R_SHOULDER_P", "L_SHOULDER_P", "R_SHOULDER_R", "R_ELBOW_P", "R_WRIST_Y",
-                                           "R_WRIST_P", "R_WRIST_R", "L_SHOULDER_R", "R_SHOULDER_Y", "L_SHOULDER_Y",
-                                           "L_ELBOW_P", "L_WRIST_Y", "L_WRIST_P", "L_WRIST_R"});
+  std::vector<std::string> armTask_Joints({"R_SHOULDER_P", "L_SHOULDER_P"});
   armTask->selectActiveJoints(solver(), armTask_Joints);
   armTask->name("ArmPosture");
 
@@ -121,7 +77,6 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, c
 
   SupportFootPose = robot().surfacePose(supportFootName).translation();
   SupportFootPose.z() = 0;
-
 
   SwingFootInitialPose = robot().surfacePose(swingFootName).translation();
   X_0_SwingFootInitial = SwingFootInitialPose;
@@ -153,135 +108,9 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, c
   solver().addTask(armTask);
   updateTasks();
   addToGUI();
+  AddToLog();
 
   mc_rtc::log::success("Controller init done ");
-}
-
-void Walking_controller::getTransformations()
-{
-  // X_world_floatingbase = robot().surfacePose("RightFoot");
-  // X_world_floatingbase = robot().mbc().bodyPosW[robot().bodyIndexByName("base_link")];
-
-  // floatingbaseWorldPos = X_world_floatingbase.translation();
-  // floatingbaseWorldOri = X_world_floatingbase.rotation().transpose();
-  // if(t == 0)
-  // {
-  //   R_body_world_Step = floatingbaseWorldOri;
-  // }
-  // floatingbaseWorldRPY << mc_rbdyn::rpyFromMat(floatingbaseWorldOri.inverse());
-
-  X_0_leftFoot = robot().surfacePose("LeftFoot");
-  X_0_rightFoot = robot().surfacePose("RightFoot");
-
-  R_0_leftFoot = X_0_leftFoot.rotation();
-  R_leftFoot_0 = X_0_leftFoot.rotation().transpose();
-  T_leftFoot_0 = X_0_leftFoot.translation();
-
-  R_0_rightFoot = X_0_rightFoot.rotation();
-  R_rightFoot_0 = X_0_rightFoot.rotation().transpose();
-  T_rightFoot_0 = X_0_rightFoot.translation();
-
-  if(supportFootName == "LeftFoot")
-  {
-    X_0_support = X_0_leftFoot;
-    X_0_swing = X_0_rightFoot;
-    X_support_0 = X_0_leftFoot.inv();
-    R_0_support = X_0_leftFoot.rotation();
-    T_0_support = X_support_0.translation();
-    R_support_0 = R_0_support.inverse();
-    T_support_0 = X_0_support.translation();
-    R_swing_0 = R_rightFoot_0;
-    T_swing_0 = T_rightFoot_0;
-  }
-  else
-  {
-    X_0_support = X_0_rightFoot;
-    X_0_swing = X_0_leftFoot;
-    X_support_0 = X_0_rightFoot.inv();
-    R_0_support = X_0_rightFoot.rotation();
-    T_0_support = X_support_0.translation();
-    R_support_0 = R_0_support.inverse();
-    T_support_0 = X_0_support.translation();
-    R_swing_0 = R_leftFoot_0;
-    T_swing_0 = T_leftFoot_0;
-  }
-  R_0_swing = R_swing_0.inverse();
-  X_0_support_real = realRobot().surfacePose(supportFootName);
-  X_support_0_real = X_0_support_real.inv();
-  R_support_0_real = X_0_support_real.rotation().inverse();
-  T_support_0_real = X_0_support_real.translation();
-
-  R_0_support_real = X_0_support_real.rotation();
-  T_0_support_real = X_support_0_real.translation();
-
-  // Compute support foot with flat floor assumption
-  const auto & real_r = realRobot();
-  const auto & X_world_real_support = real_r.surface(supportFootName).X_0_s(real_r);
-  const Eigen::Vector3d & realRPY = mc_rbdyn::rpyFromMat(X_world_real_support.rotation().inverse());
-  const Eigen::Matrix3d & orientationAroundZ = mc_rbdyn::rpyToMat(0, 0, realRPY(2));
-  Eigen::Vector3d positionXY;
-  positionXY << X_world_real_support.translation().x(), X_world_real_support.translation().y(), 0.;
-  X_0_support_flat = sva::PTransformd(orientationAroundZ.inverse(), positionXY);
-
-}
-
-Eigen::Vector3d Walking_controller::computeInSupportFootFlat(const Eigen::Vector3d & t_world)
-{
-  // const auto & com = t_world.eval();
-  // sva::PTransformd X_0_com(com);
-  // const auto X_s_com = X_0_com * X_0_support_flat.inv();
-  // return X_s_com.translation();
-
-  return (t_world - T_support_0_real) - T_0_support;
-}
-
-Eigen::Vector3d Walking_controller::computeVelocityInSupportFoot(const Eigen::Vector3d & v_world)
-{
-  const auto & r = realRobot();
-  const Eigen::Vector3d comV = v_world;
-  const Eigen::Matrix3d R_0_support = r.surface(supportFootName).X_0_s(r).rotation();
-  const Eigen::Vector3d comVInSupportFrame = R_0_support * comV;
-  return comVInSupportFrame;
-}
-
-sva::ForceVecd Walking_controller::measuredContactWrench()
-{
-  sva::ForceVecd netWrench{Eigen::Vector6d::Zero()};
-  for(std::string sensorName : {"LeftFootForceSensor", "RightFootForceSensor"})
-  {
-    const auto & sensor = robot().forceSensor(sensorName);
-    if(sensor.force()[2] > 1.)
-    {
-      // XXX double check this
-      netWrench += sensor.worldWrench(realRobot());
-    }
-  }
-  return netWrench;
-}
-
-Eigen::Vector3d Walking_controller::computeZMP()
-{
-  // XXX double check which robot to use as reference
-  const auto & measuredWrench = measuredContactWrench();
-  const Eigen::Vector3d & force = measuredWrench.force();
-  // We're walking, there should always be at least the weight of the robot
-  if(force.z() < 100)
-  {
-    // mc_rtc::log::error_and_throw<std::runtime_error>("ZMP cannot be computed, force too small {}",
-    // force.transpose());
-    // mc_rtc::log::error("ZMP cannot be computed, force too small {}", force.transpose());
-  }
-  const Eigen::Vector3d & moment_0 = measuredWrench.couple();
-
-  // Arbitrary frame on the floor
-  const sva::PTransformd & floor = sva::PTransformd::Identity();
-  const Eigen::Vector3d & floor_p = floor.translation();
-  // normal vector to ZMP to ZMP plane
-  const Eigen::Vector3d & floor_n = floor.rotation().row(2);
-
-  Eigen::Vector3d moment_p = moment_0 - floor_p.cross(force);
-  Eigen::Vector3d zmp = floor_p + floor_n.cross(moment_p) / floor_n.dot(force);
-  return zmp;
 }
 
 void Walking_controller::wait_for_mpc_thread()
@@ -334,7 +163,7 @@ void Walking_controller::ComputeWalkingTrajectory()
     {
       std::lock_guard<std::mutex> lk_copy_state(mutex_mpc_);
       UpdateInitialVectors();
-      UpdateMPC_input();
+      UpdatePlanner_input();
       mpc_thread_state = mpc_state_;
     }
     
@@ -349,23 +178,23 @@ void Walking_controller::ComputeWalkingTrajectory()
       N_Steps_Desired = mpc_state_.input_steps_.size();
     }
 
-
-    mpc_thread_state.input_steps_.clear() ; mpc_thread_state.input_timesteps_.clear();
     datastore().assign<std::vector<sva::MotionVecd>>("footsteps_planner::input_vel",mpc_thread_state.input_v_);
     datastore().assign<std::vector<sva::PTransformd>>("footsteps_planner::input_steps",mpc_thread_state.input_steps_);
     datastore().assign<std::string>("footsteps_planner::support_foot_name",mpc_thread_state.input_Support_FootName);
-    datastore().assign<sva::PTransformd>("footsteps_planner::support_foot_pose",mpc_thread_state.SupportFootPose);
+    datastore().assign<sva::PTransformd>("footsteps_planner::support_foot_pose",mpc_thread_state.X_0_SupportFoot);
     datastore().assign<std::vector<double>>("footsteps_planner::input_time_steps",mpc_thread_state.input_timesteps_);
 
     mc_rtc::DataStore & data_s(datastore());
     auto & lambda = datastore().get<std::function<void(mc_rtc::DataStore*)>>("footstep_planner::compute_plan");
     lambda(&data_s);
 
-    mpc_thread_state.planner_steps = datastore().get<std::vector<sva::PTransformd>>("footsteps_planner::output_steps");
+    std::vector<sva::PTransformd> & planned_steps_ = datastore().get<std::vector<sva::PTransformd>>("footsteps_planner::output_steps");
+    // for (int k = 0 ; k < planned_steps_.size() ; k++)
+    // {
+    //   std::cout << "step " << k << ": " << planned_steps_[k].translation() << std::endl;
+    // }
     std::vector<double> & timesteps = datastore().get<std::vector<double>>("footsteps_planner::output_time_steps");
     Tds = Controller_Config.Double_Step_Ratio * timesteps[0];
-
-    MPCSolver.InitStepGen(mpc_thread_state.planner_steps,robot().surfacePose(supportFootName));
 
     int Steps = N_Steps;
     int Steps_Desired = N_Steps_Desired;
@@ -382,17 +211,16 @@ void Walking_controller::ComputeWalkingTrajectory()
       mc_rtc::log::warning("[ISMPC] Approaching Control Horizon, Tail temporary switched to None");
     }
 
-    MPCSolver.SetWalkingParameters(mpc_thread_state.Pck, mpc_thread_state.Vck, mpc_thread_state.Pzk,
-                                   mpc_thread_state.input_P_fm1, timesteps,
-                                   tail, N_Steps_Desired, N_Steps);
+    MPCSolver.init_MPC(mpc_thread_state , planned_steps_, timesteps , Tail , Steps_Desired,Steps);
 
     // MPCSolver.Puk(mpc_thread_state.Pu);
-    // if (Use_w){
-    //   MPCSolver.Disturbance(mpc_thread_state.w);
-    // }
-    // else{MPCSolver.Disturbance(Eigen::Vector3d::Zero());}
 
-    MPCSolver.GetWalkingParameters(PrevStepTiming, t_k, Tds);
+    if (Use_w){
+      MPCSolver.Disturbance(mpc_thread_state.w);
+    }
+    else{MPCSolver.Disturbance(Eigen::Vector3d::Zero());}
+
+    MPCSolver.GetWalkingParameters(mpc_thread_state.t_k, Tds);
 
     std::chrono::duration<double, std::milli> time_span = std::chrono::high_resolution_clock::now() - t_clock;
     ProcessTime = time_span.count();
@@ -401,14 +229,11 @@ void Walking_controller::ComputeWalkingTrajectory()
     {
       std::lock_guard<std::mutex> lk_copy_state(mutex_mpc_);
       mpc_thread_state.TimeStamps = timesteps;
-      mpc_thread_state.Xf = MPCSolver.Xf_Corr();
-      mpc_thread_state.Yf = MPCSolver.Yf_Corr();
-      mpc_thread_state.Thetaf = Eigen::VectorXd::Zero(mpc_thread_state.Yf.size());
+      mpc_thread_state.planned_steps_ = planned_steps_;
+      mpc_thread_state.opti_steps = MPCSolver.optimal_steps();
       mpc_thread_state.QPSuccess = true;
       mpc_thread_state.X_MPC = MPCSolver.X_MPC();
       mpc_thread_state.Y_MPC = MPCSolver.Y_MPC();
-      mpc_thread_state.Xf_Corr = MPCSolver.Xf_Corr();
-      mpc_thread_state.Yf_Corr = MPCSolver.Yf_Corr();
       mpc_thread_state.Index = (int)(ProcessTime * 1e-3 / controller_timestep);
       mpc_thread_state.SupPolygon = MPCSolver.get_polynome_support();
       mpc_thread_state.Traj_ant = MPCSolver.GetAfterTc_ZMP_trajectory();
@@ -416,12 +241,10 @@ void Walking_controller::ComputeWalkingTrajectory()
       mpc_thread_state.stab_error = MPCSolver.stability_error();
       mpc_thread_state.Pu_max = MPCSolver.Puk_max().segment(0, 2);
       mpc_thread_state.Pu_min = MPCSolver.Puk_min().segment(0, 2);
-      // mc_rtc::log::info("Xf {}",mpc_thread_state.Xf);
-      // mc_rtc::log::info("Yf {}",mpc_thread_state.Yf);
+
 
       kfoot = 0;
       NewThreadState = true;
-      // std::cout << "Index: " << Index << std::endl;
     }
     else
     {
@@ -436,14 +259,22 @@ void Walking_controller::ComputeWalkingTrajectory()
   WalkingTrajectory_Computing = false;
 }
 
-void Walking_controller::UpdateMPC_input()
+void Walking_controller::UpdatePlanner_input()
 {
-
-  GenReferenceVelocity(Vx_i, Vy_i, Omega_i);
+  mpc_state_.input_v_.clear();
+  for(int k = 0; k < (int)2 * std::round(Controller_Config.Tp / Controller_Config.delta); k++)
+  {
+    mpc_state_.input_v_.push_back(sva::MotionVecd(Eigen::Vector3d{0,0,Omega_i} , Eigen::Vector3d{Vx_i,Vy_i,0}));
+  }
   
-  mpc_state_.input_steps_;
+  mpc_state_.input_timesteps_ = {T_Steps , 2 * T_Steps};
+  mpc_state_.input_steps_.clear();
   // mpc._state_.input_Pf.push_back(Step_Target);
   mpc_state_.input_Support_FootName = supportFootName;
+  mpc_state_.X_0_SupportFoot = sva::PTransformd(sva::RotZ(mc_rbdyn::rpyFromMat(robot().surfacePose(supportFootName).rotation()).z()) ,
+                                                robot().surfacePose(supportFootName).translation());
+  mpc_state_.X_0_Initial_SwingFoot = sva::PTransformd(sva::RotZ(mc_rbdyn::rpyFromMat(robot().surfacePose(swingFootName).rotation()).z()) ,
+                                                      robot().surfacePose(swingFootName).translation());
   mpc_state_.SupportFootPose = robot().surfacePose(supportFootName).translation();
   mpc_state_.SupportFootPose.z() = mc_rbdyn::rpyFromMat(robot().surfacePose(supportFootName).rotation()).z();
 
@@ -474,12 +305,12 @@ bool Walking_controller::run()
 
   if(!(Stop && Swing_Foot_Contact))
   {
-    // StabTask->dcmGains(Controller_Config.Stab_P_gain,Stab_I_gain,0);
 
-    if(t - t_k + controller_timestep > Controller_Config.delta)
+    if(t - t_k >= Controller_Config.delta)
     {
       ComputeTrajectoryOnce = true;
-      t_k = t + controller_timestep;
+      std::lock_guard<std::mutex> lk_copy_state(mutex_mpc_);
+      t_k += Controller_Config.delta  ;
     }
     MoveCoM(t);
     MoveFeet(t);
@@ -526,14 +357,6 @@ bool Walking_controller::run()
 
   //} ARM SWING
 
-  predictedZMPWorld.clear();
-  predictedCoMWorld.clear();
-  for(int k = 0; k < mpc_state_.X_MPC.size(); k++)
-  {
-    predictedZMPWorld.push_back(mpc_state_.Get_ZMP_planarTarget(Index) );
-    predictedCoMWorld.push_back(mpc_state_.Get_CoM_planarTarget(Index) );
-  }
-
   count += 1;
 
 
@@ -541,7 +364,6 @@ bool Walking_controller::run()
   add_FootSteps_GUI();
   bool ret = mc_control::MCController::run();
 
-  UpdateFootRatio();
   update_datastore();
   return ret;
 }
@@ -551,369 +373,100 @@ void Walking_controller::MoveCoM(double t)
 
   // mc_rtc::log::info("//Index : " + std::to_string(Index));
 
-  if(Index + 1 >= mpc_state_.X_MPC.size())
+  if(mpc_state_.Index + 1 >= mpc_state_.X_MPC.size())
   {
     mc_rtc::log::error_and_throw<std::runtime_error>("Control Horizon reached");
   }
 
-  
-  Eigen::Vector3d Pcom(mpc_state_.Get_CoM_planarTarget(Index)); Pcom.z() = Controller_Config.Stab_config.comHeight;
-  zmpTarget = mpc_state_.Get_ZMP_planarTarget(Index);
-  Eigen::Vector3d zmpdTarget;
-  // zmpdTarget.setZero();
-  // zmpdTarget.x() = MPCSolver.ZMP_vel()[Index % ((int)(Controller_Config.delta / controller_timestep))];
-  // zmpdTarget.y() = MPCSolver.ZMP_vel()[(Index + ((int)MPCSolver.ZMP_vel().size() / 2))
-  //                                     % ((int)(Controller_Config.delta / controller_timestep))];
-  Eigen::Vector3d Vc(mpc_state_.Get_CoMVel_planarTarget(Index));
-  
-  Eigen::Vector3d robot_vc = robot().comVelocity();
+  Eigen::Vector3d Pcom(mpc_state_.Get_CoM_planarTarget(mpc_state_.Index));
+  Pcom.z() = Controller_Config.Stab_config.comHeight + X_0_support_real.translation().z();
+  zmpTarget = mpc_state_.Get_ZMP_planarTarget(mpc_state_.Index);
 
-  double diffV_in = (Vc - robot_vc).norm();
+  Eigen::Vector3d Vc(mpc_state_.Get_CoMVel_planarTarget(mpc_state_.Index));
 
-  if(diffV_in > 0.12)
-  {
-    // Vc = robot_vc - Eigen::Vector3d{0,0,robot_vc.z()};
-    // mc_rtc::log::info("diff V input {}", diffV_in);
-    StabTask->comStiffness(30 * Eigen::VectorXd::Ones(3));
-  }
-  else
-  {
-    StabTask->comStiffness(Controller_Config.CoM_Stiff * Eigen::VectorXd::Ones(3));
-  }
+  const Eigen::Vector3d & robot_vc = robot().comVelocity();
+  const Eigen::Vector3d & realrobot_vc = realRobot().comVelocity();
+
+  double diffV_in = std::abs((Vc - robot_vc).y());
+
 
   Eigen::Vector3d Ac = std::pow(eta(), 2) * (Pcom - zmpTarget);
+
   Ac.z() = 0;
-
   dcmTarget = Pcom + Vc / eta();
-
-  Eigen::Vector3d dcm = Pck + Vck / eta();
 
   StabTask->target(Pcom, Vc, Ac, zmpTarget);
 
-  Index += 1;
-}
-
-bool Walking_controller::MoveFeet(double t)
-{
-
-  if(mpc_state_.TimeStamps.size() == 0)
   {
-    return 0;
+    std::lock_guard<std::mutex> lk_copy_state(mutex_mpc_);
+    mpc_state_.Index += 1;
   }
-
-  PrevStepTiming = 0;
-  double NextTimeStep(0);
-
-  NextTimeStep = mpc_state_.get_Ts(kfoot);
-  if(kfoot != 0)
-  {
-    PrevStepTiming = mpc_state_.get_Ts(kfoot-1);
-  }
-
-  X_0_SwingFootInitial.translation() = SwingFootInitialPose;
-  double PrevSwingFootAngle = SwingFootInitialAngle;
-  if(kfoot != 0)
-  {
-    X_0_SwingFootInitial.translation() = mpc_state_.Get_CorrectedFootstep(kfoot-1) ;
-    PrevSwingFootAngle = mpc_state_.Thetaf(kfoot - 1);
-  }
-  X_0_SwingFootInitial.rotation() = sva::RotZ(PrevSwingFootAngle);
-
-  sva::PTransformd X_0_SwingFootTarget;
-  if(kfoot + 1 < mpc_state_.Xf_Corr.size())
-  {
-    X_0_SwingFootTarget.translation() = mpc_state_.Get_CorrectedFootstep(kfoot+1);
-  }
-  else
-  {
-    X_0_SwingFootTarget.translation() = mpc_state_.Get_PlannedFootstep(kfoot+1);
-  }
-
-  X_0_SwingFootTarget.rotation() = sva::RotZ(mpc_state_.Thetaf(kfoot + 1));
-
-  if(Swing_Foot_Contact)
-  {
-    t_lift = PrevStepTiming + Tds;
-  }
-
-  Eigen::Vector3d SupportFootPose = robot().surfacePose(supportFootName).translation();
-  SupportFootPose.z() = mc_rbdyn::rpyFromMat(robot().surfacePose(supportFootName).rotation()).z();
-
-  std::pair<mc_tasks::lipm_stabilizer::ContactState, sva::PTransformd> SupportState(
-      SupportFootContact, robot().surfacePose(supportFootName));
-
-  std::string sensorName = swingFootName + "ForceSensor";
-  const auto & sensor = robot().forceSensor(sensorName);
-
-  if(Swing_Foot_Contact)
-  {
-
-
-    if(t > (PrevStepTiming + Tds) - 0.15 && DoubleSupport_state) // t > (PrevStepTiming + Tds)  - 0.1 &&
-    {
-
-      // StabTask->setContacts({SupportState});
-
-      // StabTask->copAdmittance(Controller_Config.Std_Admittance);
-    }
-
-    if(t > PrevStepTiming + Tds)
-    {
-
-      mc_rtc::log::success("lifting " + swingFootName);
-
-      StabTask->setContacts({SupportState});
-      DoubleSupport_state = false;
-
-      Eigen::Vector6d dof;
-      dof << 0, 0, 1, 1, 1, 0;
-      removeContact({robot().name(), "ground", swingFootName, "AllGround", 0.7, dof});
-
-      Swing_Foot_Contact = false;
-
-      t_lift = t;
-
-      std::string swingFootLinkName = LeftFootLinkName_;
-      if(swingFootName == "RightFoot")
-      {
-        swingFootLinkName = RightFootLinkName_;
-      }
-
-      // t_lift += offset;
-
-    }
-  }
-
-  double offset = 0;
-  double SingleSupportDuration = (NextTimeStep - t_lift) + offset;
-  double height_off = 0;
-  SwingFootTrajectory.set_Z_ContactOffset(height_off);
-
-  SwingFootTrajectory.getSwingFootTrajectory(X_0_SwingFootTarget, X_0_SwingFootInitial, t,
-                                             Controller_Config.FootStepHeight, SingleSupportDuration, t_lift,
-                                             controller_timestep);
-
-  SwingFootVel = SwingFootTrajectory.GetVelocity().linear();
-  SwingFootAcc = SwingFootTrajectory.GetAccel().linear();
-  sva::PTransformd X_0_FootTask_Target = SwingFootTrajectory.GetTrajectory();
-
-  Eigen::Matrix3d R_0_swing = X_0_FootTask_Target.rotation();
-  sva::MotionVecd V_0_FootTask_Target = SwingFootTrajectory.GetVelocity();
-
-  SwingFootTask->target(X_0_FootTask_Target);
-  SwingFootTask->refVelB(sva::PTransformd(X_0_swing.rotation()) * V_0_FootTask_Target);
-
-  if(!Swing_Foot_Contact)
-  {
-
-    double Step_Time = t - t_lift;
-    double swing_foot_height = robot().surfacePose(swingFootName).translation().z();
-    double support_foot_height = robot().surfacePose(supportFootName).translation().z();
-    double foot_diff_height =
-        (realRobot().surfacePose(swingFootName).translation() - realRobot().surfacePose(supportFootName).translation())
-            .z();
-
-    bool TouchDown = (sensor.force().norm() > 42 || swing_foot_height < 1e-3);
-
-    if(((Step_Time > 0.25 && TouchDown) || Step_Time >= SingleSupportDuration) && !DoubleSupport_state)
-
-    {
-
-      t_contact = t;
-
-      StabTask->setContacts(
-          {mc_tasks::lipm_stabilizer::ContactState::Left, mc_tasks::lipm_stabilizer::ContactState::Right});
-      DoubleSupport_state = true;
-
-      mc_rtc::log::info("height : {} ", swing_foot_height);
-      mc_rtc::log::info("touchdown : {} ", TouchDown);
-      // mc_rtc::log::info("Locking " + swingFootName + "at t : " + std::to_string(t));
-      mc_rtc::log::info("T_contact - T_steps : {}", t - NextTimeStep);
-
-
-      Eigen::Vector6d dof;
-      dof << 0, 0, 1, 1, 1, 0;
-      addContact({robot().name(), "ground", swingFootName, "AllGround", 0.7, dof});
-
-
-      mc_rtc::log::success("Locked " + swingFootName);
-
-      Swing_Foot_Contact = true;
-      switchFootSupport();
-      updateTasks();
-
-      // PrevStepTiming = NextTimeStep;
-      if(kfoot + 1 < mpc_state_.Xf_Corr.size())
-      {
-        kfoot += 1;
-      }
-
-      SwingFootInitialPose = robot().surfacePose(swingFootName).translation();
-      SwingFootInitialAngle = mc_rbdyn::rpyFromMat(robot().surfacePose(swingFootName).rotation()).z();
-
-      reset_MPC_states();
-    }
-  }
-
-  if(DoubleSupport_state)
-  {
-
-    Eigen::Vector3d pos;
-    double yaw;
-
-    pos = robot().surfacePose(supportFootName).translation();
-    pos.z() = 0.0;
-    yaw = mc_rbdyn::rpyFromMat(robot().surfacePose(supportFootName).rotation()).z();
-    SupportFootTask->target(sva::PTransformd(sva::RotZ(yaw), pos));
-    SupportFootTask->refVelB(sva::MotionVecd::Zero());
-    SupportFootTask->refAccel(sva::MotionVecd::Zero());
-
-    pos = robot().surfacePose(swingFootName).translation();
-    pos.z() = 0.0;
-    yaw = mc_rbdyn::rpyFromMat(robot().surfacePose(swingFootName).rotation()).z();
-    SwingFootTask->target(sva::PTransformd(sva::RotZ(yaw), pos));
-    SwingFootTask->refVelB(sva::MotionVecd::Zero());
-    SwingFootTask->refAccel(sva::MotionVecd::Zero());
-  }
-
-  return 0;
-}
-
-void Walking_controller::UpdateFootRatio()
-{
-
-  double ratio_obj = 0;
-  if(supportFootName == "RightFoot")
-  {
-    ratio_obj = 1;
-  }
-
-  if(t > Tds || Stop)
-  {
-
-    double ratio = StabTask->leftFootRatio();
-
-    // mc_rtc::log::info(ratio);
-    sva::PTransformd Prev_Anchor =
-        sva::interpolate(robot().surfacePose("LeftFoot"), robot().surfacePose("RightFoot"), LeftFootRatio);
-    sva::PTransformd Anchor =
-        sva::interpolate(robot().surfacePose("LeftFoot"), robot().surfacePose("RightFoot"), ratio);
-    if((Prev_Anchor.translation() - Anchor.translation()).norm() > 0.01)
-    {
-      LeftFootRatio += 0.01 * (ratio - LeftFootRatio) / std::abs(ratio - LeftFootRatio);
-    }
-    else
-    {
-      LeftFootRatio = ratio;
-    }
-    PrevLeftFootRatio = LeftFootRatio;
-  }
-  else
-  {
-    LeftFootRatio = PrevLeftFootRatio + t * (ratio_obj - PrevLeftFootRatio) / (Tds);
-  }
-  // mc_rtc::log::info(LeftFootRatio);
-  // mc_rtc::log::info("//");
-
-  LeftFootRatio = std::min(1.0, std::max(0.0, LeftFootRatio));
-
-  // LeftFootRatio = StabTask->leftFootRatio();
 }
 
 void Walking_controller::UpdateInitialVectors()
 {
+  mpc_state_.t_k = t_k;
+  mpc_state_.Pzk = Eigen::Vector3d{0,0,1}.cross( robot().com().cross(robot().mass()*mc_rtc::constants::gravity) ) /
+                        ( (robot().mass()*(mc_rtc::constants::gravity - robot().comAcceleration())).transpose() *
+                        Eigen::Vector3d{0,0,1} );
 
-  Pck = robot().com();
-  Vck = robot().comVelocity();
+  int indx = std::max(0, mpc_state_.Index);
 
-  // Pzk = Eigen::Vector3d{0,0,1}.cross( robot().com().cross(robot().mass()*mc_rtc::constants::gravity) ) /
-  //                       ( (robot().mass()*(mc_rtc::constants::gravity - robot().comAcceleration())).transpose() *
-  //                       Eigen::Vector3d{0,0,1} );
-
-  // Pzk = Pck;
-
-  dcmMeasured = realRobot().com() + realRobot().comVelocity() / eta();
-  zmpMeasured = computeZMP();
-
-  if(mpc_state_.X_MPC.size() != 0 && !(Stop && DoubleSupport_state))
+  if(UseMPCState && mpc_state_.X_MPC.size() != 0 && Robot_Walking)
   {
-    Pzk = mpc_state_.Get_ZMP_planarTarget(Index);
-
+    mpc_state_.Pck = mpc_state_.Get_CoM_planarTarget(indx);
+    mpc_state_.Vck = mpc_state_.Get_CoMVel_planarTarget(indx);
+    mpc_state_.Pzk = mpc_state_.Get_ZMP_planarTarget(indx);
+    mpc_state_.Pu = mpc_state_.Pck + mpc_state_.Vck/eta(); 
+    // std::cout << "using MPC" << std::endl;
   }
-  if(UseRealRobot)
+  else if(UseRealRobot)
   {
-    double K = 1;
+    if (DoubleSupport_state && true)
+    {
+      double K = 1;
+      // Pck = Pck * (1 - K) + K * computeInSupportFootFlat(realRobot().com());
+      // Vck = Vck * (1 - K) + K * computeVelocityInSupportFoot(realRobot().comVelocity());
+      mpc_state_.Pck = robot().com() * (1 - K) + K * realRobot().com();
+      mpc_state_.Vck = robot().comVelocity() * (1 - K) + K * realRobot().comVelocity();
+      // mpc_state_.Pzk = mpc_state_.Get_ZMP_planarTarget(indx) * (1 - K) + K * computeInSupportFootFlat(computeZMP());
 
-    // Pck = Pck * (1 - K) + K * computeInSupportFootFlat(realRobot().com());
-    // Vck = Vck * (1 - K) + K * computeVelocityInSupportFoot(realRobot().comVelocity());
-    Pck = Pck * (1 - K) + K * realRobot().com();
-    Vck = Vck * (1 - K) + K * realRobot().comVelocity();
-    // Pzk = Pzk*(1-K) + K*computeInSupportFootFlat(computeZMP());
-  }
+      // mpc_state_.Pu = StabTask->measuredDCMUnbiased();
+    }
+    else
+    {
+      mpc_state_.Pck = mpc_state_.Get_CoM_planarTarget(indx);
+      mpc_state_.Vck = mpc_state_.Get_CoMVel_planarTarget(indx);
+      mpc_state_.Pzk = mpc_state_.Get_ZMP_planarTarget(indx);      
+    }
 
-  Pck.z() = Controller_Config.Stab_config.comHeight;
-  Vck.z() = 0;
-  Pzk.z() = 0;
-}
 
-void Walking_controller::GenReferenceVelocity(double vx, double vy, double omega)
-{
-
-  mpc_state_.input_v_.clear();
-  for(int k = 0; k < (int)2 * std::round(Controller_Config.Tp / Controller_Config.delta); k++)
-  {
-    mpc_state_.input_v_.push_back(sva::MotionVecd(Eigen::Vector3d{0,0,omega} , Eigen::Vector3d{vx,vy,0}));
-  }
-
-}
-
-void Walking_controller::updateTasks()
-{
-  std::vector<std::string> SupportFootJoints;
-  if(supportFootName == "LeftFoot")
-  {
-
-    SupportFootTask = leftSwingFootTask;
-    SwingFootTask = rightSwingFootTask;
   }
   else
   {
-
-    SupportFootTask = rightSwingFootTask;
-    SwingFootTask = leftSwingFootTask;
+    mpc_state_.Pck = robot().com();
+    mpc_state_.Vck = robot().comVelocity();
+    // mpc_state_.Pzk = mpc_state_.Get_ZMP_planarTarget(indx);
+    mpc_state_.Pu = mpc_state_.Pck + mpc_state_.Vck/eta(); 
   }
-  Eigen::MatrixXd dimW(Eigen::VectorXd::Zero(6));
-  dimW(5) = 1;
-  SwingFootTask->weight(Controller_Config.SwingFootWeight);
-  SwingFootTask->dimWeight(Eigen::VectorXd::Ones(6));
-  SwingFootTask->stiffness(Controller_Config.SwingFootStiffness);
-  SupportFootTask->weight(Controller_Config.SupportFootWeight);
-  SupportFootTask->stiffness(Controller_Config.SupportFootStiffness * dimW);
+  
 
-  // Eigen::VectorXd dimW_com(Eigen::VectorXd::Ones(3)); dimW_com(2) = 0.1;
-  // CoMTask->dimWeight(dimW_com);
-}
-
-void Walking_controller::switchFootSupport()
-{
-  if(supportFootName == "LeftFoot")
+  if(mpc_state_.X_MPC.size() != 0 && Robot_Walking)
   {
-    supportFootName = "RightFoot";
-    swingFootName = "LeftFoot";
 
-    SwingFootContact = mc_tasks::lipm_stabilizer::ContactState::Left;
-    SupportFootContact = mc_tasks::lipm_stabilizer::ContactState::Right;
+    mpc_state_.Pzk = mpc_state_.Get_ZMP_planarTarget(indx);
+    
   }
-
   else
   {
-
-    supportFootName = "LeftFoot";
-    swingFootName = "RightFoot";
-
-    SwingFootContact = mc_tasks::lipm_stabilizer::ContactState::Right;
-    SupportFootContact = mc_tasks::lipm_stabilizer::ContactState::Left;
+    mpc_state_.Pzk = mpc_state_.Pck;
   }
+
+  mpc_state_.w = - (StabTask->measuredDCM() - mpc_state_.Pu) + - (StabTask->measuredZMP() - mpc_state_.Pzk); 
+
+  mpc_state_.Pck.z() = Controller_Config.Stab_config.comHeight;
+  mpc_state_.Vck.z() = 0;
+  mpc_state_.Pzk.z() = 0;
 }
 
 void Walking_controller::reset(const mc_control::ControllerResetData & reset_data)
@@ -932,23 +485,21 @@ void Walking_controller::reset(const mc_control::ControllerResetData & reset_dat
   SupportFootPose = robot().surfacePose(supportFootName).translation();
   SupportFootPose.z() = 0;
 
-  Pck = robot().com();
-  Pck.z() = Controller_Config.Stab_config.comHeight;
-  Pzk = robot().surfacePose(swingFootName).translation();
-  Pzk.z() = 0;
-  Puk = Pck;
-  Vck = robot().comVelocity();
+  mpc_state_.Pck = robot().com();
+  mpc_state_.Pck.z() = Controller_Config.Stab_config.comHeight;
+  mpc_state_.Pzk = robot().surfacePose(swingFootName).translation();
+  mpc_state_.Pzk.z() = 0;
+  mpc_state_.Pu = mpc_state_.Pck;
+  mpc_state_.Vck = robot().comVelocity();
 
   SwingFootInitialPose = robot().surfacePose(swingFootName).translation();
   X_0_SwingFootInitial = SwingFootInitialPose;
   updateTasks();
 
-  Eigen::Vector6d dof;
-  dof << 0, 0, 1, 1, 1, 0;
-  addContact({robot().name(), "ground", "RightFoot", "AllGround", 0.7, dof});
-  addContact({robot().name(), "ground", "LeftFoot", "AllGround", 0.7, dof});
+  addContact({robot().name(), "ground", "RightFoot", "AllGround", 0.7, footcontact_dof});
+  addContact({robot().name(), "ground", "LeftFoot", "AllGround", 0.7, footcontact_dof});
 
-  if (MPC_thread_on)
+  if (WalkingTrajectoryThread.joinable())
   {
     MPC_thread_on = false;
     WalkingTrajectoryThread.join();
@@ -956,7 +507,6 @@ void Walking_controller::reset(const mc_control::ControllerResetData & reset_dat
 
   mc_control::MCController::reset(reset_data);
 
-  mc_rtc::log::info("waiting for plugin");
 
 };
 

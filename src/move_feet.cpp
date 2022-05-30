@@ -17,26 +17,22 @@ bool Walking_controller::MoveFeet(double t)
     PrevStepTiming = mpc_state_.get_Ts(kfoot-1);
   }
 
-  X_0_SwingFootInitial.translation() = SwingFootInitialPose;
-  double PrevSwingFootAngle = SwingFootInitialAngle;
+  X_0_SwingFootInitial = mpc_state_.X_0_Initial_SwingFoot;
   if(kfoot != 0)
   {
-    X_0_SwingFootInitial.translation() = mpc_state_.Get_CorrectedFootstep(kfoot-1) ;
-    PrevSwingFootAngle = mpc_state_.Thetaf(kfoot - 1);
+    X_0_SwingFootInitial = mpc_state_.Get_CorrectedFootstep(kfoot-1) ;
   }
-  X_0_SwingFootInitial.rotation() = sva::RotZ(PrevSwingFootAngle);
 
   sva::PTransformd X_0_SwingFootTarget;
-  if(kfoot + 1 < mpc_state_.Xf_Corr.size())
+  if(kfoot < mpc_state_.opti_steps.size())
   {
-    X_0_SwingFootTarget.translation() = mpc_state_.Get_CorrectedFootstep(kfoot+1);
+    X_0_SwingFootTarget = mpc_state_.Get_CorrectedFootstep(kfoot);
   }
   else
   {
-    X_0_SwingFootTarget.translation() = mpc_state_.Get_PlannedFootstep(kfoot+1);
+    X_0_SwingFootTarget = mpc_state_.Get_PlannedFootstep(kfoot);
   }
 
-  X_0_SwingFootTarget.rotation() = sva::RotZ(mpc_state_.Thetaf(kfoot + 1));
 
   if(Swing_Foot_Contact)
   {
@@ -133,7 +129,7 @@ bool Walking_controller::MoveFeet(double t)
       updateTasks();
 
       // PrevStepTiming = NextTimeStep;
-      if(kfoot + 1 < mpc_state_.Xf_Corr.size())
+      if(kfoot + 1 < mpc_state_.planned_steps().size())
       {
         kfoot += 1;
       }

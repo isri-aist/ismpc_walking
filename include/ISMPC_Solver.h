@@ -1,10 +1,12 @@
 #pragma once
 #include <mc_control/api.h>
 #include <mc_control/mc_controller.h>
+#include "MPC_state.h"
 #include <thread>
 #include "eigen-quadprog/eigen_quadprog_api.h"
 #include "eigen-quadprog/QuadProg.h"
 #include "ControllerConfiguration.h"
+#include <Eigen/StdVector>
 
 
 class ISMPC_Solver {
@@ -30,12 +32,8 @@ class ISMPC_Solver {
          * @tparam Beta : Weight of the footsteps position in the QP cost function
          */
         void Init(double delta_controller ,double delta, double Tp, double Tc, double Beta);
-
-        /**
-         * Initialize the footsteps parameters for the MPC
-         * @tparam Footsteps coordinates throught time 
-         */
-        void InitStepGen( std::vector<sva::PTransformd> & steps , sva::PTransformd support_foot);
+        
+        void init_MPC(const MPC_state & mpc_state , const std::vector<sva::PTransformd> & steps , const std::vector<double> & timesstp, std::string Tail, int Steps_Desired, int Step );
 
         /**
          * Set the robot walking charateristics
@@ -54,7 +52,7 @@ class ISMPC_Solver {
          * @tparam t_k, time of the computation
          * @tparam Tds,  double support duration
          */
-        void GetWalkingParameters(double PrevStepTime, double t_k, double Tds);
+        void GetWalkingParameters(double t_k, double Tds);
         
         /**
          * @brief Set The constraints region for the ZMP (during each delta time) and the footsteps in the robot frame
@@ -98,31 +96,15 @@ class ISMPC_Solver {
         const std::string & Tail() const noexcept{
             return m_Tail;
         }
-        const Eigen::VectorXd & Xf(){
-            return m_Xf ;//+ Eigen::VectorXd::Ones(m_Xf.size()) * Offset.x();;
 
-        }
-        const Eigen::VectorXd & Yf(){
-            return m_Yf ;  //+ Eigen::VectorXd::Ones(m_Yf.size()) * Offset.y();;
+        const std::vector<sva::PTransformd> & inputs_steps() const noexcept
+        {
+            return input_steps_;
         }
 
-        /**
-         * Return the corrected footsteps
-         */ 
-        const Eigen::VectorXd & Xf_Corr(){
-
-            return m_Xf_Corr;// + Eigen::VectorXd::Ones(m_Xf_Corr.size()) * Offset.x();
-        }
-
-        /**
-         * Return the corrected footsteps
-         */ 
-        const Eigen::VectorXd & Yf_Corr(){
-
-            return m_Yf_Corr ;//+ Eigen::VectorXd::Ones(m_Yf_Corr.size()) * Offset.y();;
-        }
-        const Eigen::VectorXd & Thetaf() const noexcept{
-            return m_Theta_f;
+        const std::vector<sva::PTransformd> & optimal_steps() const noexcept
+        {
+            return corr_steps_;
         }
 
         /**
@@ -292,12 +274,13 @@ class ISMPC_Solver {
 
         Eigen::Matrix3d R_support_0 = Eigen::Matrix3d::Identity();
         Eigen::Matrix3d R_0_support = Eigen::Matrix3d::Identity();
-        Eigen::VectorXd m_Xf ; Eigen::VectorXd m_Yf ;//Steps Coordinates. Also Include the standing foot coordinates
-        Eigen::VectorXd m_Theta_f ; //Steps Angle. Also include the standing foot angle
-        Eigen::VectorXd m_Xf_Corr ; Eigen::VectorXd m_Yf_Corr ; //Footstep after replanning;
         Eigen::VectorXd m_ZMP_vel; //Computed ZMP velocity in world frame
         std::vector<double> m_timestamp; //Step TimesStamp Computed at the footStep Generation
-        std::vector<int> m_timesIndex; // TimeStep Index Computed at the footStep Generation
+
+        sva::PTransformd X_0_support_foot;
+        sva::PTransformd X_0_swing_foot_initial;
+        std::vector<sva::PTransformd> input_steps_;
+        std::vector<sva::PTransformd> corr_steps_;
 
         Eigen::Vector3d P_u_k_min; //Min initial DCM coordinates in support Foot Frame
         Eigen::Vector3d P_u_k_max; //Max initial DCM coordinates in support Foot Frame
@@ -411,18 +394,45 @@ class ISMPC_Solver {
 class Rectangle {
 
     public :
-        Rectangle(const Eigen::Vector3d & center, const Eigen::Vector3d & size){
-            _center = center; _angle = _center.z(); _size = size;
+
+        Rectangle(double ori , const Eigen::Vector2d & size)
+        {
+            _center = Eigen::Vector3d::Zero();
+            _angle = ori;
+            _size.segment(0,2) = size;
+            compute_rect();
+
+        }
+
+        Rectangle(const sva::PTransformd & pose , const Eigen::Vector2d & size )
+        {
+            _center = pose.translation(); _center.z() = 0;
+            _angle = mc_rbdyn::rpyFromMat(pose.rotation()).z();
+            _size.segment(0,2) = size;
+            compute_rect();
+        }
+
+        Rectangle(const Eigen::Vector3d & center, const Eigen::Vector2d & size){
+            _center = center; _angle = _center.z(); _size.segment(0,2) = size;
             _center.z() = 0;
+        }
+        void compute_rect()
+        {
+
             R.setZero();
             R(0,0) = cos(_angle) ; R(0,1) = -sin(_angle);
             R(1,0) = sin(_angle) ; R(1,1) =  cos(_angle);
             R(2,2) = 1;
-            upper_left_corner  = _center + R * Eigen::Vector3d{-size.x()/2, size.y()/2,0};
-            upper_right_corner = _center + R * Eigen::Vector3d{size.x()/2, size.y()/2,0};
-            lower_left_corner  = _center + R * Eigen::Vector3d{-size.x()/2,-size.y()/2,0};
-            lower_right_corner = _center + R * Eigen::Vector3d{size.x()/2,-size.y()/2,0};
+            upper_left_corner  = _center + R * Eigen::Vector3d{-_size.x()/2, _size.y()/2,0};
+            upper_right_corner = _center + R * Eigen::Vector3d{_size.x()/2, _size.y()/2,0};
+            lower_left_corner  = _center + R * Eigen::Vector3d{-_size.x()/2,-_size.y()/2,0};
+            lower_right_corner = _center + R * Eigen::Vector3d{_size.x()/2,-_size.y()/2,0};
 
+        }
+        void add_offset(const Eigen::Vector3d & offset)
+        {
+            _center += Eigen::Vector3d{offset.x() , offset.y(),0};
+            compute_rect();
         }
         ~Rectangle() = default;
 

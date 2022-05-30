@@ -38,32 +38,29 @@ struct MPC_state
 
     }
 
-    Eigen::Vector3d Get_CorrectedFootstep(int indx, bool add_orientation = false)
+    sva::PTransformd & Get_CorrectedFootstep(int indx)
     {
-        if(indx < Xf_Corr.size() )
-        {
-            if (add_orientation)
-            {
-                return Eigen::Vector3d{Xf_Corr(indx),Yf_Corr(indx),0};
-            }
-            return Eigen::Vector3d{Xf_Corr(indx),Yf_Corr(indx),Thetaf(indx)};
-        }
-        std::cout << "[Corr Footsteps access] Warning wrong index returning 0 vector" << std::endl;
-        return Eigen::Vector3d::Zero();
+     
+        return opti_steps[indx];
+        
+        
     }
 
-    Eigen::Vector3d Get_PlannedFootstep(int indx, bool add_orientation = false)
+     sva::PTransformd & Get_PlannedFootstep(int indx)
     {
-        if(indx < Xf.size() )
-        {
-            if (add_orientation)
-            {
-                return Eigen::Vector3d{Xf(indx),Yf(indx),0};
-            }
-            return Eigen::Vector3d{Xf(indx),Yf(indx),Thetaf(indx)};
-        }
-        std::cout << "[Footsteps access] Warning wrong index returning 0 vector" << std::endl;
-        return Eigen::Vector3d::Zero();
+       
+        return planned_steps_[indx];
+        
+    }
+
+    const std::vector<sva::PTransformd> & planned_steps() const noexcept
+    {
+        return planned_steps_;
+    }
+
+    const std::vector<sva::PTransformd> & optimal_steps() const noexcept
+    {
+        return opti_steps;
     }
     
     const std::vector<Eigen::Vector3d> & get_SupPolygon()
@@ -91,26 +88,6 @@ struct MPC_state
         return TimeStamps[indx];
     }
 
-    const Eigen::VectorXd & getXf()
-    {
-        return Xf;
-    }
-    const Eigen::VectorXd & getYf()
-    {
-        return Yf;
-    }
-    const Eigen::VectorXd & getThetaf()
-    {
-        return Thetaf;
-    }
-    const Eigen::VectorXd & getXf_corr()
-    {
-        return Xf_Corr;
-    }
-    const Eigen::VectorXd & getYf_corr()
-    {
-        return Yf_Corr;
-    }
     const Eigen::Vector3d & getPzk()
     {
         return Pzk;
@@ -126,11 +103,7 @@ struct MPC_state
     
 
 
-    Eigen::VectorXd Xf = Eigen::VectorXd::Zero(2); 
-    Eigen::VectorXd Xf_Corr = Eigen::VectorXd::Zero(2); ; //Support foot coordinates
-    Eigen::VectorXd Yf = Eigen::VectorXd::Zero(2); ; 
-    Eigen::VectorXd Yf_Corr = Eigen::VectorXd::Zero(2); ; //Support foot coordinates
-    Eigen::VectorXd Thetaf = Eigen::VectorXd::Zero(2); ;
+
     std::vector<Eigen::Vector3d> X_MPC; //Contain 3d vectors that represents in that order the CoM the CoMd and the ZMP for each timestep
     std::vector<Eigen::Vector3d> Y_MPC; //Contain 3d vectors that represents in that order the CoM the CoMd and the ZMP for each timestep
     std::vector<Eigen::Vector3d> SupPolygon;
@@ -146,18 +119,21 @@ struct MPC_state
     Eigen::Vector2d Pu_max;
     int Index = 0;
 
+    double t_k = 0;
     Eigen::Vector3d Pck;
     Eigen::Vector3d Vck;
     Eigen::Vector3d Pzk;
     Eigen::Vector3d Pu;
     Eigen::Vector3d w; //Perturbation
-    std::vector<double> input_T;
     std::vector<sva::MotionVecd> input_v_;
-    std::vector<sva::PTransformd> planner_steps;
+    std::vector<sva::PTransformd> input_steps_;
+    std::vector<sva::PTransformd> planned_steps_;
     std::vector<double> input_timesteps_; //Input desired steps timings
-    std::vector<sva::PTransformd> input_steps_; //Input desired FootSteps positions 
+    std::vector<sva::PTransformd> opti_steps; 
     std::string input_Support_FootName;
     Eigen::Vector3d input_P_fm1;
     Eigen::Vector3d SupportFootPose;
+    sva::PTransformd X_0_SupportFoot;
+    sva::PTransformd X_0_Initial_SwingFoot;
 
 };
