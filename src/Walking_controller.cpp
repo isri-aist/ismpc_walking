@@ -25,6 +25,7 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, c
   Configure(config);
 
   auto rConfig = config("controller")("robot")(robot().name());
+  rConfig("torsoBodyName", torsoBodyName_);
   rConfig("rightFootLink", RightFootLinkName_);
   rConfig("leftFootLink", LeftFootLinkName_);
 
@@ -94,9 +95,9 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, c
     N_Steps_Desired = config("controller")("steps");
     T_Steps = config("controller")("t_steps");
     Eigen::Vector3d v = config("controller")("speed");
-    Vx_i = v.x();
-    Vy_i = v.y();
-    Omega_i = v.z();
+    
+    datastore().assign<double>("ismpc_walking::input_timestep",T_Steps);
+    datastore().assign<Eigen::Vector3d>("ismpc_walking::input_vel",v);
   }
   
   MPCSolver.Allow_none(Controller_Config.MPC_allow_None);
@@ -264,7 +265,7 @@ void Walking_controller::UpdatePlanner_input()
   mpc_state_.input_v_.clear();
   for(int k = 0; k < (int)2 * std::round(Controller_Config.Tp / Controller_Config.delta); k++)
   {
-    mpc_state_.input_v_.push_back(sva::MotionVecd(Eigen::Vector3d{0,0,Omega_i} , Eigen::Vector3d{Vx_i,Vy_i,0}));
+    mpc_state_.input_v_.push_back(sva::MotionVecd(Eigen::Vector3d{0,0,reference_velocity.z()} , Eigen::Vector3d{reference_velocity.x(),reference_velocity.y(),0}));
   }
   
   mpc_state_.input_timesteps_ = {T_Steps , 2 * T_Steps};
@@ -471,7 +472,7 @@ void Walking_controller::UpdateInitialVectors()
 
 void Walking_controller::reset(const mc_control::ControllerResetData & reset_data)
 {
-  // Vx_i = 0. ; Vy_i = 0. ; Omega_i = 0.;
+
   SwingFootTask.reset();
   SupportFootTask.reset();
   supportFootName = "RightFoot";

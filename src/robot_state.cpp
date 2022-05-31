@@ -66,6 +66,10 @@ void Walking_controller::getTransformations()
   positionXY << X_world_real_support.translation().x(), X_world_real_support.translation().y(), 0.;
   X_0_support_flat = sva::PTransformd(orientationAroundZ.inverse(), positionXY);
 
+  const auto & X_0_torso_link = robot().bodyPosW(torsoBodyName_);
+  const auto & X_0_torso_reference = ReferenceFrame_Origin_Offset * X_0_torso_link;
+
+
 }
 
 Eigen::Vector3d Walking_controller::computeInSupportFootFlat(const Eigen::Vector3d & t_world)

@@ -77,11 +77,6 @@ public :
 
     void updateTasks();
 
-    void reset_MPC_states(){
-      t_k = 0 ; countStart = count + 1; kfoot = 0; 
-      ComputeTrajectoryOnce = true;    
-
-    }
 
     ControllerConfiguration Controller_Config;
 
@@ -149,62 +144,72 @@ protected:
 
     void create_datastore(){
 
-        datastore().make<Eigen::Vector3d>("ZMP_target", Eigen::Vector3d::Zero());
-        datastore().make<Eigen::Vector3d>("DCM_target", Eigen::Vector3d::Zero());
-        datastore().make<Eigen::Vector3d>("ZMP", Eigen::Vector3d::Zero());
-        datastore().make<Eigen::Vector3d>("DCM", Eigen::Vector3d::Zero());
-        datastore().make<bool>("Stop",false);
-        datastore().make<bool>("Start_Trigger",false);
-        datastore().make<bool>("Stop_Trigger",false);
-        datastore().make<bool>("Update_Config_trigger",false);
-        datastore().make<ControllerConfiguration>("Controller_config",Controller_Config);
+        datastore().make<Eigen::Vector3d>("ismpc_walking::ZMP_target", Eigen::Vector3d::Zero());
+        datastore().make<Eigen::Vector3d>("ismpc_walking::DCM_target", Eigen::Vector3d::Zero());
+        datastore().make<Eigen::Vector3d>("ismpc_walking::ZMP", Eigen::Vector3d::Zero());
+        datastore().make<Eigen::Vector3d>("ismpc_walking::DCM", Eigen::Vector3d::Zero());
+        datastore().make<bool>("ismpc_walking::Stop",false);
+        datastore().make<bool>("ismpc_walking::Start_Trigger",false);
+        datastore().make<bool>("ismpc_walking::Stop_Trigger",false);
+        datastore().make<bool>("ismpc_walking::Update_Config_trigger",false);
+        datastore().make<ControllerConfiguration>("ismpc_walking::Controller_config",Controller_Config);
         
-        datastore().make<std::string>("supportFootName", "RightFoot");
-        datastore().make<std::string>("swingFootName", "LeftFoot");
+        datastore().make<std::string>("ismpc_walking::supportFootName", "RightFoot");
+        datastore().make<std::string>("ismpc_walking::swingFootName", "LeftFoot");
 
-        datastore().make<double>("T",0.0); //Steps Timings input
-        datastore().make<double>("t",0.0); //General timing in a step
-        datastore().make<double>("Ts",0.0); // TimeStamps
+        datastore().make<double>("ismpc_walking::T_step_in",0.0); //Steps Timings input
+        datastore().make<double>("ismpc_walking::t",0.0); //General timing in a step
+        datastore().make<double>("ismpc_walking::Ts",0.0); // TimeStamps
+
+        datastore().make<Eigen::Vector3d>("ismpc_walking::input_vel",Eigen::Vector3d::Zero()); 
+        datastore().make<double>("ismpc_walking::input_timestep",1.0); 
+        datastore().make<int>("ismpc_walking::steps_target",-1); 
+
 
     }
     
     void update_datastore(){
      
-        datastore().assign<Eigen::Vector3d>("ZMP_target",zmpTarget);
-        datastore().assign<Eigen::Vector3d>("DCM_target",dcmTarget);
-        datastore().assign<Eigen::Vector3d>("DCM",StabTask->measuredDCM());
-        datastore().assign<Eigen::Vector3d>("ZMP",StabTask->measuredZMP());
-        auto & start_trigg = datastore().get<bool>("Start_Trigger");
+        datastore().assign<Eigen::Vector3d>("ismpc_walking::ZMP_target",zmpTarget);
+        datastore().assign<Eigen::Vector3d>("ismpc_walking::DCM_target",dcmTarget);
+        datastore().assign<Eigen::Vector3d>("ismpc_walking::DCM",StabTask->measuredDCM());
+        datastore().assign<Eigen::Vector3d>("ismpc_walking::ZMP",StabTask->measuredZMP());
+        auto & start_trigg = datastore().get<bool>("ismpc_walking::Start_Trigger");
         if (start_trigg && !Robot_Walking){
             t_k = 0 ; ComputeTrajectoryOnce = true; Stop = false;
             Robot_Walking = true;
-            datastore().assign<bool>("Start_Trigger",false);
+            datastore().assign<bool>("ismpc_walking::Start_Trigger",false);
         }
-        auto & stop_trigg = datastore().get<bool>("Stop_Trigger");
+        auto & stop_trigg = datastore().get<bool>("ismpc_walking::Stop_Trigger");
         if (stop_trigg && Robot_Walking){
             Stop = true;
-            datastore().assign<bool>("Stop_Trigger",false);
+            datastore().assign<bool>("ismpc_walking::Stop_Trigger",false);
         }
-        datastore().assign<bool>("Stop",Robot_Walking);
+        datastore().assign<bool>("ismpc_walking::Stop",Robot_Walking);
 
-        auto & update_trig = datastore().get<bool>("Update_Config_trigger");
+        auto & update_trig = datastore().get<bool>("ismpc_walking::Update_Config_trigger");
         if (update_trig)
         {
-            const auto & controller_conf = datastore().get<ControllerConfiguration>("Controller_config");
+            const auto & controller_conf = datastore().get<ControllerConfiguration>("ismpc_walking::Controller_config");
             Configure(controller_conf);
             Controller_Config = controller_conf;
-            datastore().assign<bool>("Update_Config_trigger",false);
+            datastore().assign<bool>("ismpc_walking::Update_Config_trigger",false);
         }
 
-        datastore().assign<std::string>("supportFootName",supportFootName);
-        datastore().assign<std::string>("swingFootName",swingFootName);
+        datastore().assign<std::string>("ismpc_walking::supportFootName",supportFootName);
+        datastore().assign<std::string>("ismpc_walking::swingFootName",swingFootName);
         if (mpc_state_.input_timesteps_.size() != 0){
-            datastore().assign<double>("T",mpc_state_.input_timesteps_[0]);
+            datastore().assign<double>("ismpc_walking::T_step_in",mpc_state_.input_timesteps_[0]);
         }
-        datastore().assign<double>("t",t);
+        datastore().assign<double>("ismpc_walking::t",t);
         if (mpc_state_.TimeStamps.size() != 0){
-            datastore().assign<double>("Ts",mpc_state_.TimeStamps[0]);
+            datastore().assign<double>("ismpc_walking::Ts",mpc_state_.TimeStamps[0]);
         }
+
+        T_Steps = datastore().get<double>("ismpc_walking::input_timestep");
+        reference_velocity = datastore().get<Eigen::Vector3d>("ismpc_walking::input_vel");
+        N_Steps_Desired = datastore().get<int>("ismpc_walking::steps_target"); 
+
     }
 
     void wait_for_mpc_thread();
@@ -237,6 +242,7 @@ private:
     Eigen::Vector3d zmpMeasured;
     Eigen::Vector2d supportMin;
     Eigen::Vector2d supportMax;
+    std::string torsoBodyName_ = "";
     std::string LeftFootLinkName_ = "";
     std::string RightFootLinkName_ = "";
 
@@ -254,10 +260,7 @@ private:
     bool User_Foot_Contact = true; //Both user feets are on the ground
     
     double x = 0.4 ; double y = 0.1 ; double z = 30; //Coordinate for a specified footstep position
-    
-    bool UpperBody_Control_left = false; //Enable UpperBody Control
-    bool UpperBody_Control_right = false; //Enable UpperBody Control
-    bool HandMoionPrediction_On = false; //Enable UpperBody Control Prediction
+
     bool UseRealRobot = false; //To use the real robots data
     bool UseMPCState = true;
     bool Stop = true ; //If true, the robot is at stop or the robot is about to stop at next step;
@@ -265,7 +268,8 @@ private:
     bool ComputeTrajectoryOnce = true; 
     bool WalkingTrajectory_Computing = false;
     bool emergencyFlag = false; //Stop controller run loop
-    bool AutoFootstepPlacement = true; //To enable the Autofootstep placement MPC 
+    bool AutoFootstepPlacement = true; //To enable the Autofootstep placement MPC
+    
 
     
     double LeftFootRatio = 0.5; double PrevLeftFootRatio = 0.5;
@@ -287,6 +291,7 @@ private:
     Eigen::Vector3d SwingFootAcc;
     Eigen::Vector3d SwingFootVel;
     sva::PTransformd X_0_SwingFootInitial; //Swing Foot Pose Before Swinging
+    sva::PTransformd X_0_SwingFootInitial_real;
     
     Eigen::Vector3d SwingFootInitialPose; //Previous Swing Foot pose at the time of the MPC computation 
 
@@ -319,6 +324,7 @@ private:
 
 
     double Vx_i = 0; double Vy_i = 0 ; double Omega_i = 0;
+    Eigen::Vector3d reference_velocity;
     
     sva::PTransformd ReferenceFrame_Origin_Offset = sva::PTransformd::Identity();
 
@@ -382,6 +388,8 @@ private:
     //For Joystick }
     
     std::vector<Eigen::Vector3d> SupPolygon;
+
+
     
 
 };

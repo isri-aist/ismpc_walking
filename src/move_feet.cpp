@@ -83,8 +83,21 @@ bool Walking_controller::MoveFeet(double t)
   SwingFootAcc = SwingFootTrajectory.GetAccel().linear();
   sva::PTransformd X_0_FootTask_Target = SwingFootTrajectory.GetTrajectory();
 
-  Eigen::Matrix3d R_0_swing = X_0_FootTask_Target.rotation();
   sva::MotionVecd V_0_FootTask_Target = SwingFootTrajectory.GetVelocity();
+
+  const Eigen::Vector3d & SwingFoot_rpy_real = mc_rbdyn::rpyFromMat(realRobot().surfacePose(swingFootName).rotation());
+  Eigen::Vector3d SwingFoot_rpy_initial_real = mc_rbdyn::rpyFromMat(X_0_SwingFootInitial_real.rotation());
+  const Eigen::Vector3d & SwingFoot_rpy_target = mc_rbdyn::rpyFromMat(X_0_FootTask_Target.rotation());
+  Eigen::Vector3d SwingFoot_delta_rpy = SwingFoot_rpy_real - SwingFoot_rpy_initial_real;
+  SwingFoot_delta_rpy.z() = 0.;
+  SwingFoot_rpy_initial_real.z() = 0.;
+
+  if(UseRealRobot)
+  {
+    X_0_FootTask_Target.rotation() =
+        mc_rbdyn::rpyToMat(SwingFoot_rpy_initial_real - SwingFoot_delta_rpy + SwingFoot_rpy_target);
+    // X_0_FootTask_Target.rotation() = mc_rbdyn::rpyToMat( -SwingFoot_delta_rpy + SwingFoot_rpy_target);
+  }
 
   SwingFootTask->target(X_0_FootTask_Target);
   SwingFootTask->refVelB(sva::PTransformd(X_0_swing.rotation()) * V_0_FootTask_Target);
@@ -129,15 +142,19 @@ bool Walking_controller::MoveFeet(double t)
       updateTasks();
 
       // PrevStepTiming = NextTimeStep;
-      if(kfoot + 1 < mpc_state_.planned_steps().size())
+      // if(kfoot + 1 < mpc_state_.planned_steps().size())
+      // {
+      //   kfoot += 1;
+      // }
+
+      N_Steps += 1;
+      if(N_Steps == N_Steps_Desired)
       {
-        kfoot += 1;
+        Stop = true;
       }
+      t_k = 0;
+      countStart = count - 1;
 
-      SwingFootInitialPose = robot().surfacePose(swingFootName).translation();
-      SwingFootInitialAngle = mc_rbdyn::rpyFromMat(robot().surfacePose(swingFootName).rotation()).z();
-
-      reset_MPC_states();
     }
   }
 
@@ -160,6 +177,10 @@ bool Walking_controller::MoveFeet(double t)
     SwingFootTask->target(sva::PTransformd(sva::RotZ(yaw), pos));
     SwingFootTask->refVelB(sva::MotionVecd::Zero());
     SwingFootTask->refAccel(sva::MotionVecd::Zero());
+  
+    SwingFootInitialPose = robot().surfacePose(swingFootName).translation();
+    SwingFootInitialAngle = mc_rbdyn::rpyFromMat(robot().surfacePose(swingFootName).rotation()).z();
+
   }
 
   return 0;
