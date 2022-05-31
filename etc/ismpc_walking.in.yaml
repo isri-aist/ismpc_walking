@@ -19,7 +19,7 @@ collisions:
   useCommon: true
   
 controller:
-  start_at_launch: true
+  start_at_launch: false
   steps: 10
   speed: [0,0.0,0]
   t_steps: 2
@@ -48,7 +48,7 @@ ismpc:
   allow_none_tail: true
   footsteps_cstr_square: [0.3,0.05]
   double_support_ratio: 0.4
-  sliding_zmp_cstr_region: true
+  sliding_zmp_cstr_region: false
   use_stability_task: false
   safety_thresholds:
     beta_range: [1e2,1e6]
