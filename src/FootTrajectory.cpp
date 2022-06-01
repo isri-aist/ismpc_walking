@@ -1,4 +1,4 @@
-#include "../include/FootTrajectory.h"
+#include "../include/ismpc_walking/FootTrajectory.h"
 
 FootTrajectory::FootTrajectory(){};
 

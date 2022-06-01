@@ -1,4 +1,4 @@
-#include "ISMPC_Solver.h"
+#include "../include/ismpc_walking/ISMPC_Solver.h"
 
 ISMPC_Solver::ISMPC_Solver() {}
 

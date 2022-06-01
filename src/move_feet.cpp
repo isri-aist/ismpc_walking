@@ -1,4 +1,4 @@
-#include "Walking_controller.h"
+#include "../include/ismpc_walking/Walking_controller.h"
 
 bool Walking_controller::MoveFeet(double t)
 {

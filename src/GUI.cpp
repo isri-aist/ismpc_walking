@@ -1,4 +1,4 @@
-#include "Walking_controller.h"
+#include "../include/ismpc_walking/Walking_controller.h"
 
 inline double floorn(double x, int n)
 {

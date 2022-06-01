@@ -1,4 +1,4 @@
-#include "Walking_controller.h"
+#include "../include/ismpc_walking/Walking_controller.h"
 
 Walking_controller::~Walking_controller()
 {
@@ -111,7 +111,7 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, c
   addToGUI();
   AddToLog();
 
-  mc_rtc::log::success("Controller init done ");
+  mc_rtc::log::success("ismpc_walking controller init done ");
 }
 
 void Walking_controller::wait_for_mpc_thread()
