@@ -29,7 +29,7 @@
 #include <condition_variable>
 #include <mutex>
 
-struct Walking_controller_DLLAPI Walking_controller : public mc_control::MCController
+struct Walking_controller_DLLAPI Walking_controller : public mc_control::fsm::Controller
 {
 public : 
 
@@ -37,46 +37,9 @@ public :
 
     ~Walking_controller() override;
     
-    void ROS_Spinner();
-
     bool run() override;
 
     void reset(const mc_control::ControllerResetData & reset_data) override;
-
-    void getTransformations();
-    Eigen::Vector3d computeInSupportFootFlat(const Eigen::Vector3d & t_world);
-    Eigen::Vector3d computeVelocityInSupportFoot(const Eigen::Vector3d & v_world);
-    sva::ForceVecd measuredContactWrench();
-    Eigen::Vector3d computeZMP();
-    /**
-     * Update the stabilizer task with the ISMPC outputs stored in X_MPC and Y_MPC vectors
-     */
-    void MoveCoM(double t);
-    /**
-     * Handle the contact of the foot and the trajectory depending on the planned footsteps
-     */ 
-    bool MoveFeet(double t);
-    /**
-     * Compute the planned footsteps/timings and the CoM/ZMP trajectory
-     * Footsteps coordinates are stored in XfCorr/YfCorr/ThetafCorr 
-     * CoM/ZMP trajectory is stored in X_MPC and Y_MPC vectors that contains for each timestep a 3d vector with in that order 
-     * the CoM, the CoMd, and the ZMP  
-     */
-    void ComputeWalkingTrajectory();
-    void WalkingTrajectoryLoop();
-    void switchFootSupport();
-    /**
-     * Update the values of Pck Vck and Pzk from the robot
-    */
-    void UpdateInitialVectors();
-    /**
-     * Generate the Reference Velocity for constant inputs throught the preveiw horizon
-     */
-
-    void UpdatePlanner_input();
-
-    void updateTasks();
-
 
     ControllerConfiguration Controller_Config;
 
@@ -136,6 +99,41 @@ public :
     }
 
 protected:
+
+    void getTransformations();
+    Eigen::Vector3d computeInSupportFootFlat(const Eigen::Vector3d & t_world);
+    Eigen::Vector3d computeVelocityInSupportFoot(const Eigen::Vector3d & v_world);
+    sva::ForceVecd measuredContactWrench();
+    Eigen::Vector3d computeZMP();
+    /**
+     * Update the stabilizer task with the ISMPC outputs stored in X_MPC and Y_MPC vectors
+     */
+    void MoveCoM(double t);
+    /**
+     * Handle the contact of the foot and the trajectory depending on the planned footsteps
+     */ 
+    bool MoveFeet(double t);
+    /**
+     * Compute the planned footsteps/timings and the CoM/ZMP trajectory
+     * Footsteps coordinates are stored in XfCorr/YfCorr/ThetafCorr 
+     * CoM/ZMP trajectory is stored in X_MPC and Y_MPC vectors that contains for each timestep a 3d vector with in that order 
+     * the CoM, the CoMd, and the ZMP  
+     */
+    void ComputeWalkingTrajectory();
+    void WalkingTrajectoryLoop();
+    void switchFootSupport();
+    /**
+     * Update the values of Pck Vck and Pzk from the robot
+    */
+    void UpdateInitialVectors();
+    /**
+     * Generate the Reference Velocity for constant inputs throught the preveiw horizon
+     */
+
+    void UpdatePlanner_input();
+
+    void updateTasks();
+
     void addToGUI();
 
     void AddToLog();

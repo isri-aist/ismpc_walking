@@ -10,12 +10,13 @@ Walking_controller::~Walking_controller()
 }
 
 Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, const mc_rtc::Configuration & config)
-: mc_control::MCController(rm, dt)
+: mc_control::fsm::Controller(rm, dt,config)
 {
   
   mc_rbdyn::lipm_stabilizer::StabilizerConfiguration Stabiconfig(robot().module().defaultLIPMStabilizerConfiguration());
   const auto & s_config = config("stabilizer")("robot")(robot().name())("stabilizer");
   Stabiconfig.load(s_config);
+  
   Controller_Config.Stab_config = Stabiconfig;
   Controller_Config.Controller_timestep = dt;
 
@@ -31,17 +32,17 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, c
 
   mc_rtc::log::info(robots().envIndex());
   controller_timestep = dt;
-  config_.load(config);
-  static auto constraint = mc_solver::ConstraintSetLoader::load(solver(), config("collisions")[0]);
+  // config_.load(config);
+  // static auto constraint = mc_solver::ConstraintSetLoader::load(solver(), config("collisions")[0]);
 
   datastore().make_call("KinematicAnchorFrame::" + robot().name(), [this](const mc_rbdyn::Robot & robot) {
     return sva::interpolate(robot.surfacePose("LeftFoot"), robot.surfacePose("RightFoot"), LeftFootRatio);
   });
 
-  solver().addConstraintSet(*constraint);
-  solver().addConstraintSet(contactConstraint);
-  solver().addConstraintSet(kinematicsConstraint);
-  solver().addConstraintSet(dynamicsConstraint);
+  // solver().addConstraintSet(*constraint);
+  // solver().addConstraintSet(contactConstraint);
+  // solver().addConstraintSet(kinematicsConstraint);
+  // solver().addConstraintSet(dynamicsConstraint);
 
   footcontact_dof << 0, 0, 1, 1, 1, 0;
   addContact({robot().name(), "ground", "RightFoot", "AllGround", 0.7, footcontact_dof});
@@ -62,11 +63,10 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, c
   StabTask = std::make_shared<mc_tasks::lipm_stabilizer::StabilizerTask>(solver().robots(), solver().realRobots(),
                                                                          solver().robots().robotIndex(), solver().dt());
 
-  StabTask->configure(Controller_Config.Stab_config);
   StabTask->reset();
+  StabTask->configure(Controller_Config.Stab_config);
 
-  postureTask->stiffness(1);
-  postureTask->weight(5);
+  mc_rtc::log::info("com stiff {}",Controller_Config.Stab_config.comStiffness);
 
   armTask = std::make_shared<mc_tasks::PostureTask>(solver(), robots().robotIndex(), 100, 10);
   std::vector<std::string> armTask_Joints({"R_SHOULDER_P", "L_SHOULDER_P"});
@@ -102,10 +102,12 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, c
   
   MPCSolver.Allow_none(Controller_Config.MPC_allow_None);
 
+
+
   solver().addTask(StabTask);
+  solver().addTask(postureTask);
   solver().addTask(leftSwingFootTask);
   solver().addTask(rightSwingFootTask);
-  solver().addTask(postureTask);
   solver().addTask(armTask);
   updateTasks();
   addToGUI();
@@ -129,7 +131,6 @@ void Walking_controller::wait_for_mpc_thread()
     WalkingTrajectoryThread = std::thread(&Walking_controller::WalkingTrajectoryLoop, this);
     WalkingTrajectoryThread.detach();
 
-    std::cout << WalkingTrajectory_Computing << std::endl;
     mc_rtc::log::info("waiting for first computation");
     std::chrono::high_resolution_clock::time_point t_clock = std::chrono::high_resolution_clock::now();
     while(WalkingTrajectory_Computing)
@@ -363,7 +364,7 @@ bool Walking_controller::run()
 
   gui()->removeCategory({"Walking", "Visualization", "FootStep"});
   add_FootSteps_GUI();
-  bool ret = mc_control::MCController::run();
+  bool ret = mc_control::fsm::Controller::run();
 
   update_datastore();
   return ret;
@@ -506,7 +507,7 @@ void Walking_controller::reset(const mc_control::ControllerResetData & reset_dat
     WalkingTrajectoryThread.join();
   }
 
-  mc_control::MCController::reset(reset_data);
+  mc_control::fsm::Controller::reset(reset_data);
 
 
 };

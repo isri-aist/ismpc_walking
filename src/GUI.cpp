@@ -83,7 +83,7 @@ void Walking_controller::addToGUI()
       mc_rtc::gui::NumberInput(
           "Ts", [this]() -> double { return datastore().get<double>("ismpc_walking::input_timestep"); }, [this](const double & v) { datastore().assign<double>("ismpc_walking::input_timestep",v); }),
       mc_rtc::gui::NumberInput(
-          "Steps", [this]() -> int { return datastore().get<int>("ismpc_walking::steps_target"); }, [this](const int & v) { datastore().assign<int>("ismpc_walking::steps_target",v);  }),
+          "Steps", [this]() -> int { return datastore().get<int>("ismpc_walking::steps_target"); }, [this](const double & v) { datastore().assign<int>("ismpc_walking::steps_target",static_cast<int>(v));  }),
 
       mc_rtc::gui::Point3D("Steps desired pose", mc_rtc::gui::PointConfig(mc_rtc::gui::Color(1, 0, 1)),
                            [this]() {

@@ -1,4 +1,13 @@
 ---
+# Finite state machine
+#
+StatesFiles:
+- "@MC_STATES_DEFAULT_INSTALL_PREFIX@/data"
+StatesLibraries:
+- "@MC_STATES_DEFAULT_INSTALL_PREFIX@"
+- "@MC_CONTROLLER_INSTALL_PREFIX@/ismpc_walking/states"
+
+
 ObserverPipelines:     
   name: "LIPMWalkingObserverPipeline"
   gui: true
@@ -10,13 +19,22 @@ ObserverPipelines:
       config:
         anchorFrame:
           maxAnchorFrameDiscontinuity: 0.02
-      
-constraints:
-  - type: collision	
+   
 
+constraints:
+  - type: contact
+  - type: collision
+  # KinematicsConstraint, i.e. joint limits see equation (3.6) in Joris Vaillant's thesis
+  #  interaction distance (d_i) safety distance (d_s) damper offset (xi_off)
+  #  applies to main robot
+  - type: kinematics
+    damper: [0.1, 0.01, 0.5]
 collisions:
-- type: collision
-  useCommon: true
+  - type: collision
+    useMinimal: true
+robots:
+  ground:
+    module: env/ground
   
 controller:
   start_at_launch: false
@@ -37,9 +55,9 @@ ismpc:
   Tc: 2
   Tp: 6
   delta: 5e-2
-  beta: 1e5
+  beta: 1e6
   beta_stab: 1e8
-  beta_traj : 1e2
+  beta_traj : 0.
   zmp_cstr_square: [0.1,0.05]
   zmp_cstr_square_sg_supp: [0.1,0.05]
   next_stp_cstr_ratio: 1
@@ -96,7 +114,7 @@ stabilizer:
           com:
             stiffness: [1000.,1000.,100.]
             weight: 1000.
-            hieght: 0.817
+            height: 0.817
         dcm_bias:
           dcmMeasureErrorStd: 0.001
           biasDriftPerSecondStd: 0.0001
@@ -116,12 +134,26 @@ stabilizer:
             stiffness: 2
             weight: 500
           com:
-            stiffness: [1000.,1000.,100.]
-            weight: 1000.
-            hieght: 0.78
-  
+            stiffness: [100.,100.,100.]
+            weight: 10000.
+            height: 0.78
 
-Plugins: [footsteps_planner_plugin]
+states:
+  Test_Posture:
+    base: MetaTasks
+    tasks:
+      taskPosture:
+        type: posture
+        stiffness: 1
+        #damping: 4
+        weight: 5.0
+
+init: Test_Posture
+  
+transitions:
+  - [Pause,Ok,init,Auto]
+
+Plugins: [footsteps_planner_plugin,mocap_plugin]
 
   
   

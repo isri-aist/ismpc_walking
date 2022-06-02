@@ -22,7 +22,7 @@ add_library(${CONTROLLER_NAME} SHARED ${controller_SRC} ${controller_HDR})
 
 target_include_directories(${CONTROLLER_NAME} PUBLIC $<INSTALL_INTERFACE:include> $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>)
 # target_include_directories(${CONTROLLER_NAME} PUBLIC ${PROJECT_SOURCE_DIR}/include)
-target_link_libraries(${CONTROLLER_NAME} PUBLIC mc_rtc::mc_control mc_rtc::mc_rtc_ros)
+target_link_libraries(${CONTROLLER_NAME} PUBLIC mc_rtc::mc_control_fsm mc_rtc::mc_rtc_ros)
 
 install(TARGETS ${CONTROLLER_NAME} DESTINATION ${MC_RTC_LIBDIR})
 
@@ -39,3 +39,4 @@ install(TARGETS ${CONTROLLER_NAME}
 install(
   DIRECTORY ${CMAKE_SOURCE_DIR}/include/ DESTINATION include)
 
+  add_subdirectory(states)
