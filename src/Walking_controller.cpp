@@ -366,7 +366,6 @@ bool Walking_controller::run()
   add_FootSteps_GUI();
   bool ret = mc_control::fsm::Controller::run();
 
-  update_datastore();
   return ret;
 }
 

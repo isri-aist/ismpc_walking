@@ -98,6 +98,64 @@ public :
         MPCSolver.configure(Controller_Config);
     }
 
+    bool double_support_state()
+    {
+        return DoubleSupport_state;
+    }
+    bool stop_phase()
+    {
+        return Stop;
+    }
+    bool robot_walking()
+    {
+        return Robot_Walking;
+    }
+    void start_stop()
+    {
+        Stop = !Stop;
+    }
+    double get_t()
+    {
+        return t;
+    }
+    double next_ts()
+    {
+        if (mpc_state_.TimeStamps.size() != 0)
+        {
+            return mpc_state_.TimeStamps[0];
+        }
+        return 0.;
+    }
+    double tds()
+    {
+        return Tds;
+    }
+    void tds(double t_ds)
+    {
+        Tds = mc_filter::utils::clampAndWarn(t_ds, Controller_Config.T_ds_min,
+                                                    Controller_Config.Ts_max / Controller_Config.Double_Step_Ratio,
+                                                    "Tds capped");
+    }
+    double ts()
+    {
+        return T_Steps;
+    }
+    void ts(double ts)
+    {
+        T_Steps = mc_filter::utils::clampAndWarn(ts, Tds + Controller_Config.T_ss_min, Controller_Config.Ts_max,
+                                        "Ts capped");
+    }
+    int n_steps()
+    {
+        return N_Steps_Desired;
+    }
+    void n_steps(int steps)
+    {
+        N_Steps_Desired = steps;
+    }
+
+
+
 protected:
 
     void getTransformations();
@@ -142,74 +200,30 @@ protected:
 
     void create_datastore(){
 
-        datastore().make<Eigen::Vector3d>("ismpc_walking::ZMP_target", Eigen::Vector3d::Zero());
-        datastore().make<Eigen::Vector3d>("ismpc_walking::DCM_target", Eigen::Vector3d::Zero());
-        datastore().make<Eigen::Vector3d>("ismpc_walking::ZMP", Eigen::Vector3d::Zero());
-        datastore().make<Eigen::Vector3d>("ismpc_walking::DCM", Eigen::Vector3d::Zero());
-        datastore().make<bool>("ismpc_walking::Stop",false);
-        datastore().make<bool>("ismpc_walking::Start_Trigger",false);
-        datastore().make<bool>("ismpc_walking::Stop_Trigger",false);
-        datastore().make<bool>("ismpc_walking::Update_Config_trigger",false);
-        datastore().make<ControllerConfiguration>("ismpc_walking::Controller_config",Controller_Config);
-        
-        datastore().make<std::string>("ismpc_walking::supportFootName", "RightFoot");
-        datastore().make<std::string>("ismpc_walking::swingFootName", "LeftFoot");
-
-        datastore().make<double>("ismpc_walking::T_step_in",0.0); //Steps Timings input
-        datastore().make<double>("ismpc_walking::t",0.0); //General timing in a step
-        datastore().make<double>("ismpc_walking::Ts",0.0); // TimeStamps
-
-        datastore().make<Eigen::Vector3d>("ismpc_walking::input_vel",Eigen::Vector3d::Zero()); 
-        datastore().make<double>("ismpc_walking::input_timestep",1.0); 
-        datastore().make<int>("ismpc_walking::steps_target",-1); 
-
+        datastore().make_call("ismpc_walking::stop_phase", [this]() -> bool { return Stop; });
+        datastore().make_call("ismpc_walking::robot_walking", [this]() -> bool { return Robot_Walking; });
+        datastore().make_call("ismpc_walking::double_support", [this]() -> bool { return DoubleSupport_state; });
+        datastore().make_call("ismpc_walking::start/stop", [this]() { Stop = !Stop; });
+        datastore().make_call("ismpc_walking::configure", [this](const ControllerConfiguration & config) { Configure(config); });
+        datastore().make_call("ismpc_walking::get_config", [this]() -> ControllerConfiguration & { return Controller_Config; });
+        datastore().make_call("ismpc_walking::zmp_target", [this]() -> Eigen::Vector3d { return zmpTarget; });
+        datastore().make_call("ismpc_walking::dcm_target", [this]() -> Eigen::Vector3d { return dcmTarget; });
+        datastore().make_call("ismpc_walking::zmp", [this]() -> Eigen::Vector3d { return StabTask->measuredDCM(); });
+        datastore().make_call("ismpc_walking::dcm", [this]() -> Eigen::Vector3d { return StabTask->measuredZMP(); });
+        datastore().make_call("ismpc_walking::support_foot_name", [this]() -> std::string { return supportFootName; });
+        datastore().make_call("ismpc_walking::swing_foot_name", [this]() -> std::string { return swingFootName; });
+        datastore().make_call("ismpc_walking::t", [this]() -> double { return t; });
+        datastore().make_call("ismpc_walking::next_ts", [this]() -> double { return ts(); });
+        datastore().make_call("ismpc_walking::get_ts_target", [this]() -> double { return T_Steps; });
+        datastore().make_call("ismpc_walking::set_ts", [this](double t) { return ts(t); });
+        datastore().make_call("ismpc_walking::set_tds", [this](double t) { return tds(t); });
+        datastore().make_call("ismpc_walking::get_tds", [this]() -> double { return Tds; });
+        datastore().make_call("ismpc_walking::set_n_step", [this](int n) { N_Steps_Desired = n; });
+        datastore().make_call("ismpc_walking::set_ref_vel", [this](Eigen::Vector3d vel) { reference_velocity = vel; });
 
     }
     
-    void update_datastore(){
-     
-        datastore().assign<Eigen::Vector3d>("ismpc_walking::ZMP_target",zmpTarget);
-        datastore().assign<Eigen::Vector3d>("ismpc_walking::DCM_target",dcmTarget);
-        datastore().assign<Eigen::Vector3d>("ismpc_walking::DCM",StabTask->measuredDCM());
-        datastore().assign<Eigen::Vector3d>("ismpc_walking::ZMP",StabTask->measuredZMP());
-        auto & start_trigg = datastore().get<bool>("ismpc_walking::Start_Trigger");
-        if (start_trigg && !Robot_Walking){
-            t_k = 0 ; ComputeTrajectoryOnce = true; Stop = false;
-            Robot_Walking = true;
-            datastore().assign<bool>("ismpc_walking::Start_Trigger",false);
-        }
-        auto & stop_trigg = datastore().get<bool>("ismpc_walking::Stop_Trigger");
-        if (stop_trigg && Robot_Walking){
-            Stop = true;
-            datastore().assign<bool>("ismpc_walking::Stop_Trigger",false);
-        }
-        datastore().assign<bool>("ismpc_walking::Stop",Robot_Walking);
-
-        auto & update_trig = datastore().get<bool>("ismpc_walking::Update_Config_trigger");
-        if (update_trig)
-        {
-            const auto & controller_conf = datastore().get<ControllerConfiguration>("ismpc_walking::Controller_config");
-            Configure(controller_conf);
-            Controller_Config = controller_conf;
-            datastore().assign<bool>("ismpc_walking::Update_Config_trigger",false);
-        }
-
-        datastore().assign<std::string>("ismpc_walking::supportFootName",supportFootName);
-        datastore().assign<std::string>("ismpc_walking::swingFootName",swingFootName);
-        if (mpc_state_.input_timesteps_.size() != 0){
-            datastore().assign<double>("ismpc_walking::T_step_in",mpc_state_.input_timesteps_[0]);
-        }
-        datastore().assign<double>("ismpc_walking::t",t);
-        if (mpc_state_.TimeStamps.size() != 0){
-            datastore().assign<double>("ismpc_walking::Ts",mpc_state_.TimeStamps[0]);
-        }
-
-        T_Steps = datastore().get<double>("ismpc_walking::input_timestep");
-        reference_velocity = datastore().get<Eigen::Vector3d>("ismpc_walking::input_vel");
-        N_Steps_Desired = datastore().get<int>("ismpc_walking::steps_target"); 
-
-    }
-
+ 
     void wait_for_mpc_thread();
 
 

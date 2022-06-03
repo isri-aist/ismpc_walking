@@ -75,15 +75,15 @@ void Walking_controller::addToGUI()
       mc_rtc::gui::ArrayInput(
           "Reference velocity", {"x", "y", "omega"},
           [this]() -> const Eigen::Vector3d & {
-            return datastore().get<Eigen::Vector3d>("ismpc_walking::input_vel");
+            return reference_velocity;
           },
           [this](const Eigen::Vector3d & vel) {
-            datastore().assign<Eigen::Vector3d>("ismpc_walking::input_vel",vel);
+            reference_velocity = vel;
           }),      
       mc_rtc::gui::NumberInput(
-          "Ts", [this]() -> double { return datastore().get<double>("ismpc_walking::input_timestep"); }, [this](const double & v) { datastore().assign<double>("ismpc_walking::input_timestep",v); }),
+          "Ts", [this]() -> double { return T_Steps; }, [this](const double & t) { T_Steps = t; }),
       mc_rtc::gui::NumberInput(
-          "Steps", [this]() -> int { return datastore().get<int>("ismpc_walking::steps_target"); }, [this](const double & v) { datastore().assign<int>("ismpc_walking::steps_target",static_cast<int>(v));  }),
+          "Steps", [this]() -> int { return N_Steps_Desired; }, [this](const double & n) { N_Steps_Desired = n;  }),
 
       mc_rtc::gui::Point3D("Steps desired pose", mc_rtc::gui::PointConfig(mc_rtc::gui::Color(1, 0, 1)),
                            [this]() {
