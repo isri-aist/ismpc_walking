@@ -72,7 +72,7 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, c
   std::vector<std::string> armTask_Joints({"R_SHOULDER_P", "L_SHOULDER_P"});
   armTask->selectActiveJoints(solver(), armTask_Joints);
   armTask->name("ArmPosture");
-
+  
   supportFootName = "RightFoot";
   swingFootName = "LeftFoot";
 
@@ -105,7 +105,6 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, c
 
 
   solver().addTask(StabTask);
-  solver().addTask(postureTask);
   solver().addTask(leftSwingFootTask);
   solver().addTask(rightSwingFootTask);
   solver().addTask(armTask);
@@ -196,8 +195,11 @@ void Walking_controller::ComputeWalkingTrajectory()
     //   std::cout << "step " << k << ": " << planned_steps_[k].translation() << std::endl;
     // }
     std::vector<double> & timesteps = datastore().get<std::vector<double>>("footsteps_planner::output_time_steps");
-    Tds = Controller_Config.Double_Step_Ratio * timesteps[0];
-
+    // mc_rtc::log::info("tds by ratio {}",Tds_by_ratio);
+    if (Tds_by_ratio)
+    {
+      Tds = Controller_Config.Double_Step_Ratio * timesteps[0];
+    }
     int Steps = N_Steps;
     int Steps_Desired = N_Steps_Desired;
     if(Stop && !Swing_Foot_Contact)
@@ -215,8 +217,7 @@ void Walking_controller::ComputeWalkingTrajectory()
 
     MPCSolver.init_MPC(mpc_thread_state , planned_steps_, timesteps , Tail , Steps_Desired,Steps);
 
-    // MPCSolver.Puk(mpc_thread_state.Pu);
-
+  
     if (Use_w){
       MPCSolver.Disturbance(mpc_thread_state.w);
     }
@@ -430,7 +431,7 @@ void Walking_controller::UpdateInitialVectors()
       // Vck = Vck * (1 - K) + K * computeVelocityInSupportFoot(realRobot().comVelocity());
       mpc_state_.Pck = robot().com() * (1 - K) + K * realRobot().com();
       mpc_state_.Vck = robot().comVelocity() * (1 - K) + K * realRobot().comVelocity();
-      // mpc_state_.Pzk = mpc_state_.Get_ZMP_planarTarget(indx) * (1 - K) + K * computeInSupportFootFlat(computeZMP());
+      mpc_state_.Pzk = mpc_state_.Get_ZMP_planarTarget(indx) * (1 - K) + K * computeInSupportFootFlat(computeZMP());
 
       // mpc_state_.Pu = StabTask->measuredDCMUnbiased();
     }
@@ -438,7 +439,7 @@ void Walking_controller::UpdateInitialVectors()
     {
       mpc_state_.Pck = mpc_state_.Get_CoM_planarTarget(indx);
       mpc_state_.Vck = mpc_state_.Get_CoMVel_planarTarget(indx);
-      mpc_state_.Pzk = mpc_state_.Get_ZMP_planarTarget(indx);      
+      // mpc_state_.Pzk = mpc_state_.Get_ZMP_planarTarget(indx);      
     }
 
 

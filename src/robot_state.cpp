@@ -130,3 +130,17 @@ Eigen::Vector3d Walking_controller::computeZMP()
   Eigen::Vector3d zmp = floor_p + floor_n.cross(moment_p) / floor_n.dot(force);
   return zmp;
 }
+
+sva::ForceVecd Walking_controller::compute_momentum_contact_point()
+{
+  Eigen::Vector3d com = robot().com();
+  Eigen::Vector3d contact_point = robot().surfacePose(supportFootName).translation();
+  Eigen::Vector3d com_vel = robot().comVelocity();
+  sva::ForceVecd CoM_momentum = rbd::computeCentroidalMomentum(robot().mb(), robot().mbc(), com);
+
+  Eigen::Vector3d L = CoM_momentum.couple() + (com - contact_point).cross(com_vel) * robot().mass();
+
+  return sva::ForceVecd(L,CoM_momentum.force());
+
+  
+}

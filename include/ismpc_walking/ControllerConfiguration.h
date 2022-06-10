@@ -41,7 +41,7 @@ struct ControllerConfiguration
     double delta = 5e-2 ; //MPC TimeStep;
     double Tc = 1.5 ; //Control Time
     double Tp = 4; //Preview Time
-    double Double_Step_Ratio = 0.4;
+    double Double_Step_Ratio = 0.25;
 
 
     double MPC_ZMP_Constraint_max_size = 0.2;

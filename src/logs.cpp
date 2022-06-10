@@ -14,7 +14,9 @@ void Walking_controller::AddToLog()
     return ret;
   });
 
-  logger().addLogEntry("Kinematic LeftFoot ratio", [this]() { return LeftFootRatio; });
+  logger().addLogEntry("Contact point angular momentum / (m*H)", [this]() -> Eigen::Vector3d { 
+                      return compute_momentum_contact_point().couple()/(robot().mass() * Controller_Config.Stab_config.comHeight) ; });
+  logger().addLogEntry("Kinematic LeftFoot ratio", [this]() -> double { return LeftFootRatio; });
   logger().addLogEntry("SwingFoot Vel", [this]() -> const Eigen::Vector3d & { return SwingFootVel; });
   logger().addLogEntry("SwingFoot Accel", [this]() -> const Eigen::Vector3d & { return SwingFootAcc; });
   logger().addLogEntry("RealRobot LeftFoot Accel",

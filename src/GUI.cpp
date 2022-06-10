@@ -159,7 +159,7 @@ void Walking_controller::addToGUI()
                                 std::vector<Eigen::Vector3d> Output;
                                 for(int k = 0; k < mpc_state_.X_MPC.size(); k++)
                                 {
-                                  Output.push_back(mpc_state_.Get_CoM_planarTarget(k));
+                                  Output.push_back(mpc_state_.Get_CoM_planarTarget(k) + Eigen::Vector3d{0,0,Controller_Config.Stab_config.comHeight});
                                 }
                                 return Output;
                               }),

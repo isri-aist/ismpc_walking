@@ -8,7 +8,6 @@
 #include <chrono>
 #include <unistd.h>
 #include <mc_control/mc_controller.h>
-#include <mc_tasks/lipm_stabilizer/StabilizerTask.h>
 #include <mc_tasks/AddRemoveContactTask.h>
 #include <mc_tasks/CoMTask.h>
 #include <mc_tasks/CoPTask.h>
@@ -17,6 +16,8 @@
 #include <mc_tasks/EndEffectorTask.h>
 #include <mc_tasks/OrientationTask.h>
 #include <mc_tasks/SurfaceTransformTask.h>
+#include <mc_tasks/lipm_stabilizer/StabilizerTask.h>
+#include <mc_rbdyn/Robots.h>
 #include <mc_control/api.h>
 #include <mc_control/fsm/Controller.h>
 #include "FootTrajectory.h"
@@ -142,7 +143,7 @@ public :
     }
     void ts(double ts)
     {
-        T_Steps = mc_filter::utils::clampAndWarn(ts, Tds + Controller_Config.T_ss_min, Controller_Config.Ts_max,
+        T_Steps = mc_filter::utils::clampAndWarn(ts, Controller_Config.T_ds_min + Controller_Config.T_ss_min, Controller_Config.Ts_max,
                                         "Ts capped");
     }
     int n_steps()
@@ -159,6 +160,7 @@ public :
 protected:
 
     void getTransformations();
+    sva::ForceVecd compute_momentum_contact_point();
     Eigen::Vector3d computeInSupportFootFlat(const Eigen::Vector3d & t_world);
     Eigen::Vector3d computeVelocityInSupportFoot(const Eigen::Vector3d & v_world);
     sva::ForceVecd measuredContactWrench();
@@ -213,6 +215,8 @@ protected:
         datastore().make_call("ismpc_walking::support_foot_name", [this]() -> std::string { return supportFootName; });
         datastore().make_call("ismpc_walking::swing_foot_name", [this]() -> std::string { return swingFootName; });
         datastore().make_call("ismpc_walking::t", [this]() -> double { return t; });
+        datastore().make_call("ismpc_walking::t_lift", [this]() -> double { return t_lift; });
+        datastore().make_call("ismpc_walking::t_contact", [this]() -> double { return t_contact; });
         datastore().make_call("ismpc_walking::next_ts", [this]() -> double { return ts(); });
         datastore().make_call("ismpc_walking::get_ts_target", [this]() -> double { return T_Steps; });
         datastore().make_call("ismpc_walking::set_ts", [this](double t) { return ts(t); });
@@ -220,6 +224,7 @@ protected:
         datastore().make_call("ismpc_walking::get_tds", [this]() -> double { return Tds; });
         datastore().make_call("ismpc_walking::set_n_step", [this](int n) { N_Steps_Desired = n; });
         datastore().make_call("ismpc_walking::set_ref_vel", [this](Eigen::Vector3d vel) { reference_velocity = vel; });
+        datastore().make_call("ismpc_walking::tds_by_ratio", [this](bool val) { Tds_by_ratio = val; });
 
     }
     
@@ -234,7 +239,6 @@ protected:
     std::shared_ptr<mc_tasks::SurfaceTransformTask> SupportFootTask;
     std::shared_ptr<mc_tasks::SurfaceTransformTask>  leftSwingFootTask;
     std::shared_ptr<mc_tasks::SurfaceTransformTask>  rightSwingFootTask;
-
     std::shared_ptr<mc_tasks::PostureTask> armTask;
     
 
@@ -281,7 +285,7 @@ private:
     bool WalkingTrajectory_Computing = false;
     bool emergencyFlag = false; //Stop controller run loop
     bool AutoFootstepPlacement = true; //To enable the Autofootstep placement MPC
-    
+    bool Tds_by_ratio = true;    
 
     
     double LeftFootRatio = 0.5; double PrevLeftFootRatio = 0.5;
@@ -293,6 +297,7 @@ private:
     double ControllerLoopTime = 0;
     double T_Steps = 1.1;
     double PrevStepTiming = 0;
+
 
     int N_Steps = 0 ;
     int N_Steps_Desired = -1;

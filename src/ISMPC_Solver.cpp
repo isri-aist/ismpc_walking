@@ -747,7 +747,7 @@ void ISMPC_Solver::GetWalkingParameters(double t_k, double Tds)
   N_variable = 2 * (m_C + j_Max_C);
 
   m_D = static_cast<int>(std::round(m_Tds / m_delta)) - Tds_offset;
-  count_Dstep = static_cast<int>(std::round(std::min(m_tk / m_delta, static_cast<double>(m_D + 1))));
+  count_Dstep = static_cast<int>(std::round(std::min(  (m_tk / m_delta), static_cast<double>(m_D + 1))));
 
   // mc_rtc::log::info("countD {}, m_D {} ,t_k : {}; Tc : {} ; Tds {} ; j_f_max : {}",count_Dstep,m_D,m_tk, m_Tc,m_Tds,j_Max_C);
   // mc_rtc::log::info("m_C {}",m_C);
