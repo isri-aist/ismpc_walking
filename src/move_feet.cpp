@@ -12,14 +12,10 @@ bool Walking_controller::MoveFeet(double t)
   double NextTimeStep(0);
 
   NextTimeStep = mpc_state_.get_Ts(kfoot);
-  if(kfoot != 0)
-  {
-    PrevStepTiming = mpc_state_.get_Ts(kfoot-1);
-  }
-
   X_0_SwingFootInitial = mpc_state_.X_0_Initial_SwingFoot;
   if(kfoot != 0)
   {
+    PrevStepTiming = mpc_state_.get_Ts(kfoot-1);
     X_0_SwingFootInitial = mpc_state_.Get_CorrectedFootstep(kfoot-1) ;
   }
 
@@ -34,11 +30,6 @@ bool Walking_controller::MoveFeet(double t)
   }
 
 
-  if(Swing_Foot_Contact)
-  {
-    t_lift = PrevStepTiming + Tds;
-  }
-
   Eigen::Vector3d SupportFootPose = robot().surfacePose(supportFootName).translation();
   SupportFootPose.z() = mc_rbdyn::rpyFromMat(robot().surfacePose(supportFootName).rotation()).z();
 
@@ -47,8 +38,8 @@ bool Walking_controller::MoveFeet(double t)
 
   if(Swing_Foot_Contact)
   {
-
-    if(t > PrevStepTiming + Tds)
+    t_lift = PrevStepTiming + mpc_state_.get_tds();
+    if(t > PrevStepTiming + mpc_state_.get_tds())
     {
 
       mc_rtc::log::success("lifting " + swingFootName);
@@ -112,7 +103,7 @@ bool Walking_controller::MoveFeet(double t)
         (realRobot().surfacePose(swingFootName).translation() - realRobot().surfacePose(supportFootName).translation())
             .z();
 
-    bool TouchDown = (sensor.force().norm() > 42 || swing_foot_height < 1e-3);
+    bool TouchDown = (sensor.force().norm() > 42);
 
     if(((Step_Time > 0.25 && TouchDown) || Step_Time >= SingleSupportDuration) && !DoubleSupport_state)
 
@@ -152,7 +143,7 @@ bool Walking_controller::MoveFeet(double t)
       {
         Stop = true;
       }
-      t_k = 0;
+      t_k = - Controller_Config.delta;
       countStart = count - 1;
 
     }

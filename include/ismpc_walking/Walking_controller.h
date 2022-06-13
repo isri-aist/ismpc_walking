@@ -129,11 +129,11 @@ public :
     }
     double tds()
     {
-        return Tds;
+        return mpc_state_.get_tds();
     }
     void tds(double t_ds)
     {
-        Tds = mc_filter::utils::clampAndWarn(t_ds, Controller_Config.T_ds_min,
+        input_tds = mc_filter::utils::clampAndWarn(t_ds, Controller_Config.T_ds_min,
                                                     Controller_Config.Ts_max / Controller_Config.Double_Step_Ratio,
                                                     "Tds capped");
     }
@@ -221,7 +221,7 @@ protected:
         datastore().make_call("ismpc_walking::get_ts_target", [this]() -> double { return T_Steps; });
         datastore().make_call("ismpc_walking::set_ts", [this](double t) { return ts(t); });
         datastore().make_call("ismpc_walking::set_tds", [this](double t) { return tds(t); });
-        datastore().make_call("ismpc_walking::get_tds", [this]() -> double { return Tds; });
+        datastore().make_call("ismpc_walking::get_tds", [this]() -> double { return input_tds; });
         datastore().make_call("ismpc_walking::set_n_step", [this](int n) { N_Steps_Desired = n; });
         datastore().make_call("ismpc_walking::set_ref_vel", [this](Eigen::Vector3d vel) { reference_velocity = vel; });
         datastore().make_call("ismpc_walking::tds_by_ratio", [this](bool val) { Tds_by_ratio = val; });
@@ -313,7 +313,7 @@ private:
     Eigen::Vector3d SwingFootInitialPose; //Previous Swing Foot pose at the time of the MPC computation 
 
     double SwingFootInitialAngle = 0.0;
-    double Tds; //Double Step Time duration
+    double input_tds = 0.25; //Double Step Time duration
     int count = 0; //Controller iterations
     double t_k = 0;
     double controller_timestep; 
@@ -394,7 +394,7 @@ private:
     Eigen::Vector6d footcontact_dof;
 
 
-    int kfoot = 0; //Current Support Foot
+    int kfoot = 0; //indx of the target step in the step plan
 
     //For Joystick {
     double maxVelX=0.15;

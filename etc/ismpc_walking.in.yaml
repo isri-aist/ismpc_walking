@@ -65,7 +65,7 @@ ismpc:
   offset_sg_supp: [0.00,0.0]
   allow_none_tail: true
   footsteps_cstr_square: [0.3,0.05]
-  double_support_ratio: 0.4
+  double_support_ratio: 0.25
   sliding_zmp_cstr_region: false
   use_stability_task: false
   safety_thresholds:
@@ -113,7 +113,7 @@ stabilizer:
             weight: 500
           com:
             stiffness: [1000.,1000.,100.]
-            weight: 1000.
+            weight: 10000.
             height: 0.817
         dcm_bias:
           dcmMeasureErrorStd: 0.001
@@ -140,7 +140,7 @@ stabilizer:
             weight: 500
           com:
             stiffness: [1000.,1000.,100.]
-            weight: 1000.
+            weight: 10000.
             height: 0.78
         dcm_bias:
           dcmMeasureErrorStd: 0.001

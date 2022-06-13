@@ -87,6 +87,14 @@ struct MPC_state
     {
         return TimeStamps[indx];
     }
+    double get_tds()
+    {
+        return tds;
+    }
+    void set_input_tds(double t)
+    {
+        input_tds = t;
+    }
 
     const Eigen::Vector3d & getPzk()
     {
@@ -135,5 +143,7 @@ struct MPC_state
     Eigen::Vector3d SupportFootPose;
     sva::PTransformd X_0_SupportFoot;
     sva::PTransformd X_0_Initial_SwingFoot;
+    double tds = 0.25;
+    double input_tds = 0.25;
 
 };

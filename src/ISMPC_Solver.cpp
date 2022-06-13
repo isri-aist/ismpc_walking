@@ -12,8 +12,8 @@ ISMPC_Solver::ISMPC_Solver(double delta_controller, double delta, double Tp, dou
 
   m_eta = sqrt(mc_rtc::constants::GRAVITY / CoM_height);
   count_Dstep = 0;
-  m_C = (int)std::round((m_Tc) / m_delta);
-  m_P = (int)std::round((m_Tp) / m_delta);
+  m_C = static_cast<int>(m_Tc/m_delta);
+  m_P = static_cast<int>(m_Tp/m_delta);
   QPsuccess = false;
 
   Integration_Mat.setZero();
@@ -177,9 +177,9 @@ void ISMPC_Solver::ZMP_Constraints()
   for(int i = 0; i < m_C; i++)
   {
 
-    if(m_tk + ((double)(i)) * m_delta >= NextStepTiming && j_f + 1 < m_timestamp.size())
+    if(m_tk + static_cast<double>(i) * m_delta >= NextStepTiming && j_f + 1 < m_timestamp.size())
     {
-      m_D = static_cast<int>(std::round(m_Tds / m_delta)) - Tds_offset;
+      m_D = static_cast<int>(m_Tds / m_delta) - Tds_offset;
 
       // j_f = std::min(j_f + 1, (int)input_steps_.size() - 1);
       j_f +=1;
@@ -746,8 +746,8 @@ void ISMPC_Solver::GetWalkingParameters(double t_k, double Tds)
 
   N_variable = 2 * (m_C + j_Max_C);
 
-  m_D = static_cast<int>(std::round(m_Tds / m_delta)) - Tds_offset;
-  count_Dstep = static_cast<int>(std::round(std::min(  (m_tk / m_delta), static_cast<double>(m_D + 1))));
+  m_D = static_cast<int>(m_Tds / m_delta) - Tds_offset;
+  count_Dstep = static_cast<int>(std::min(  m_tk / m_delta, static_cast<double>(m_D + 1))) + 0;
 
   // mc_rtc::log::info("countD {}, m_D {} ,t_k : {}; Tc : {} ; Tds {} ; j_f_max : {}",count_Dstep,m_D,m_tk, m_Tc,m_Tds,j_Max_C);
   // mc_rtc::log::info("m_C {}",m_C);

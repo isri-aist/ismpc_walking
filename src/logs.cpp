@@ -23,7 +23,26 @@ void Walking_controller::AddToLog()
                        [this]() -> const Eigen::Vector3d & { return robot().bodyAccB(LeftFootLinkName_).linear(); });
   logger().addLogEntry("RealRobot RightFoot Accel",
                        [this]() -> const Eigen::Vector3d & { return robot().bodyAccB(RightFootLinkName_).linear(); });
-  logger().addLogEntry("ISMPC_NextTs", [this]() -> const double & { return mpc_state_.input_timesteps_[0]; });
+  logger().addLogEntry("ISMPC_NextTs", [this]() ->  double { 
+    std::vector<double> ts(mpc_state_.getTimeStamp());
+    if (ts.size() != 0)
+    {
+      return ts[0]; 
+    }
+    return 0.;
+    }
+    );
+  logger().addLogEntry("ISMPC_NextTds", [this]() -> double  { return mpc_state_.get_tds(); });
+  logger().addLogEntry("ISMPC_input_tds", [this]() -> double  { return mpc_state_.input_tds; });
+  logger().addLogEntry("ISMPC_input_ts", [this]() -> double  { 
+    std::vector<double> ts(mpc_state_.input_timesteps_);
+    if (ts.size() != 0)
+    {
+      return ts[0]; 
+    }
+    return 0.;
+    }
+    );
   logger().addLogEntry("ISMPC_t", [this]() -> const double & { return t; });
   logger().addLogEntry("ISMPC_stab-error", [this]() -> const double { return this->mpc_state_.stab_error; });
   logger().addLogEntry("ISMPC_State_CoM", [this]() -> const Eigen::Vector3d {

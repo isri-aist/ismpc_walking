@@ -27,7 +27,7 @@ void Walking_controller::addToGUI()
                         }),
                     mc_rtc::gui::Label("Velocity Tail used", [this]() { return this->MPCSolver.Tail(); }),
                     mc_rtc::gui::Label("Timing", [this]() { return this->t; }),
-                    mc_rtc::gui::Label("Double support duration", [this]() { return this->Tds; }),
+                    mc_rtc::gui::Label("Double support duration", [this]() { return this->mpc_state_.get_tds(); }),
                     mc_rtc::gui::Label("Next Step Timing ",
                                        [this]() {
                                          if(this->mpc_state_.TimeStamps.size() != 0)

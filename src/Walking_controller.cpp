@@ -196,9 +196,10 @@ void Walking_controller::ComputeWalkingTrajectory()
     // }
     std::vector<double> & timesteps = datastore().get<std::vector<double>>("footsteps_planner::output_time_steps");
     // mc_rtc::log::info("tds by ratio {}",Tds_by_ratio);
-    if (Tds_by_ratio)
+    double tds = Controller_Config.Double_Step_Ratio * timesteps[0];
+    if ( !Tds_by_ratio)
     {
-      Tds = Controller_Config.Double_Step_Ratio * timesteps[0];
+      tds = mpc_thread_state.input_tds;
     }
     int Steps = N_Steps;
     int Steps_Desired = N_Steps_Desired;
@@ -223,7 +224,7 @@ void Walking_controller::ComputeWalkingTrajectory()
     }
     else{MPCSolver.Disturbance(Eigen::Vector3d::Zero());}
 
-    MPCSolver.GetWalkingParameters(mpc_thread_state.t_k, Tds);
+    MPCSolver.GetWalkingParameters(mpc_thread_state.t_k, tds);
 
     std::chrono::duration<double, std::milli> time_span = std::chrono::high_resolution_clock::now() - t_clock;
     ProcessTime = time_span.count();
@@ -231,6 +232,7 @@ void Walking_controller::ComputeWalkingTrajectory()
     if(MPCSolver.QPsucceeded())
     {
       std::lock_guard<std::mutex> lk_copy_state(mutex_mpc_);
+      mpc_thread_state.tds = tds;
       mpc_thread_state.TimeStamps = timesteps;
       mpc_thread_state.planned_steps_ = planned_steps_;
       mpc_thread_state.opti_steps = MPCSolver.optimal_steps();
@@ -271,6 +273,7 @@ void Walking_controller::UpdatePlanner_input()
   }
   
   mpc_state_.input_timesteps_ = {T_Steps , 2 * T_Steps};
+  mpc_state_.set_input_tds(input_tds);
   mpc_state_.input_steps_.clear();
   // mpc._state_.input_Pf.push_back(Step_Target);
   mpc_state_.input_Support_FootName = supportFootName;
