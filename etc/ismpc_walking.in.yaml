@@ -1,6 +1,7 @@
 ---
 # Finite state machine
 #
+IdleKeepState: true
 StatesFiles:
 - "@MC_STATES_DEFAULT_INSTALL_PREFIX@/data"
 StatesLibraries:
@@ -124,11 +125,11 @@ stabilizer:
 
     hrp4:
       stabilizer:
-        dcm_tracking:
-          gains:
-            prop: 2
-            integral: 0
-            deriv: 0.
+        # dcm_tracking:
+        #   gains:
+        #     prop: 2
+        #     integral: 0
+        #     deriv: 0.
         # admittance:
         #   maxVel:
         #     angular: [3., 3., 3.]
@@ -138,16 +139,16 @@ stabilizer:
             pitch: 0.12
             stiffness: 2
             weight: 500
-          com:
-            stiffness: [1000.,1000.,100.]
-            weight: 10000.
-            height: 0.78
-        dcm_bias:
-          dcmMeasureErrorStd: 0.001
-          biasDriftPerSecondStd: 0.0001
-          zmpMeasureErrorStd: 0.0005
-          biasLimit: [0.05, 0.02]
-          withDCMBias: true
+        #   com:
+        #     stiffness: [1000.,1000.,100.]
+        #     weight: 10000.
+        #     height: 0.78
+        # dcm_bias:
+        #   dcmMeasureErrorStd: 0.001
+        #   biasDriftPerSecondStd: 0.0001
+        #   zmpMeasureErrorStd: 0.0005
+        #   biasLimit: [0.05, 0.02]
+        #   withDCMBias: true
 
 states:
   Test_Posture:
@@ -162,7 +163,7 @@ states:
 init: Test_Posture
   
 transitions:
-  - [Pause,Ok,init,Auto]
+  - [Initial,Ok,Initial]
 
 Plugins: [footsteps_planner_plugin,mocap_plugin]
 

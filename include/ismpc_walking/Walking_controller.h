@@ -342,6 +342,8 @@ private:
 
     double Vx_i = 0; double Vy_i = 0 ; double Omega_i = 0;
     Eigen::Vector3d reference_velocity;
+
+    Eigen::Vector3d StaticPose = Eigen::Vector3d::Zero();
     
     sva::PTransformd ReferenceFrame_Origin_Offset = sva::PTransformd::Identity();
 

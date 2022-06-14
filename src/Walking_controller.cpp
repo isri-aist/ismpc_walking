@@ -82,6 +82,9 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, c
   SwingFootInitialPose = robot().surfacePose(swingFootName).translation();
   X_0_SwingFootInitial = SwingFootInitialPose;
 
+  StaticPose = ((robot().surfacePose("LeftFoot").translation() + robot().surfacePose("RightFoot").translation()) / 2);
+  StaticPose.z() = Controller_Config.Stab_config.comHeight;
+
   SwingFootAcc.setZero();
   SwingFootVel.setZero();
 
@@ -334,13 +337,14 @@ bool Walking_controller::run()
       ComputeTrajectoryOnce = true;
       count_stop = count - 1;
     }
+    if (Robot_Walking)
+    {
+      StaticPose = ((robot().surfacePose("LeftFoot").translation() + robot().surfacePose("RightFoot").translation()) / 2);
+      StaticPose.z() = Controller_Config.Stab_config.comHeight;
+    }
 
-
-    Eigen::Vector3d StaticPose(
-        (robot().surfacePose("LeftFoot").translation() + robot().surfacePose("RightFoot").translation()) / 2);
-    StaticPose.z() = Controller_Config.Stab_config.comHeight;
     StabTask->staticTarget(StaticPose);
-    StabTask->comStiffness(Eigen::Vector3d::Ones() * 10);
+    StabTask->comStiffness(Eigen::Vector3d::Ones() * 20);
     t_k = 0;
     kfoot = 0;
     N_Steps = 0;
