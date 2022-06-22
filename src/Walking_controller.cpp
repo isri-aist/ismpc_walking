@@ -16,6 +16,11 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, c
   mc_rbdyn::lipm_stabilizer::StabilizerConfiguration Stabiconfig(robot().module().defaultLIPMStabilizerConfiguration());
   const auto & s_config = config("stabilizer")("robot")(robot().name())("stabilizer");
   Stabiconfig.load(s_config);
+
+  if(config.has("footsteps_planner"))
+  {
+    planner_config_ = config("footsteps_planner");
+  }
   
   Controller_Config.Stab_config = Stabiconfig;
   Controller_Config.Controller_timestep = dt;
@@ -36,7 +41,16 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, c
   // static auto constraint = mc_solver::ConstraintSetLoader::load(solver(), config("collisions")[0]);
 
   datastore().make_call("KinematicAnchorFrame::" + robot().name(), [this](const mc_rbdyn::Robot & robot) {
-    return sva::interpolate(robot.surfacePose("LeftFoot"), robot.surfacePose("RightFoot"), LeftFootRatio);
+    sva::PTransformd X_0_leftfoot = robot.surfacePose("LeftFoot");
+    sva::PTransformd X_0_rightfoot = robot.surfacePose("RightFoot");
+    double height = robot.surfacePose(supportFootName).translation().z();
+    Eigen::Vector3d T_0_leftfoot = X_0_leftfoot.translation();
+    Eigen::Vector3d T_0_rightfoot = X_0_rightfoot.translation();
+    sva::PTransformd X_0_leftfoot_floor(X_0_leftfoot.rotation(),Eigen::Vector3d{T_0_leftfoot.x(),T_0_leftfoot.y(),height});
+    sva::PTransformd X_0_rightfoot_floor(X_0_rightfoot.rotation(),Eigen::Vector3d{T_0_rightfoot.x(),T_0_rightfoot.y(),height});
+
+    return sva::interpolate(X_0_leftfoot_floor, X_0_rightfoot_floor, LeftFootRatio);
+  
   });
 
   // solver().addConstraintSet(*constraint);
@@ -127,6 +141,8 @@ void Walking_controller::wait_for_mpc_thread()
     {
       sleep(1);
     }
+    // auto config_func = datastore().get<std::function<void(mc_rtc::Configuration const&)>>("footstep_planner::configure");
+    // config_func(planner_config_);
     MPC_thread_on = true;
     ComputeTrajectoryOnce = true;
     WalkingTrajectory_Computing = true;
@@ -344,7 +360,7 @@ bool Walking_controller::run()
     }
 
     StabTask->staticTarget(StaticPose);
-    StabTask->comStiffness(Eigen::Vector3d::Ones() * 20);
+    StabTask->comStiffness(Eigen::Vector3d::Ones() * 10);
     t_k = 0;
     kfoot = 0;
     N_Steps = 0;

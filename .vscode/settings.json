@@ -64,6 +64,7 @@
         "typeinfo": "cpp",
         "variant": "cpp",
         "bit": "cpp",
-        "core": "cpp"
+        "core": "cpp",
+        "spacevecalg": "cpp"
     }
 }

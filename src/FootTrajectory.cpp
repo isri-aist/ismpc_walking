@@ -124,6 +124,7 @@ std::vector<Eigen::Vector3d> FootTrajectory::getSwingFootTrajectory(const sva::P
   t -= (t0);
   // double zi = 0;
   // double zf = stepHeight;
+  
   double tinit = 0;
 
   std::vector<Eigen::Vector3d> Output;
@@ -131,6 +132,7 @@ std::vector<Eigen::Vector3d> FootTrajectory::getSwingFootTrajectory(const sva::P
   if(t < 0)
   {
     duration = dur;
+    prev_dur = dur;
     m_t = t;
     duration_Z = dur * 0.5;
     zi = 0;
@@ -201,7 +203,8 @@ std::vector<Eigen::Vector3d> FootTrajectory::getSwingFootTrajectory(const sva::P
                                         (X_0_StepTarget.translation() - swingFootPosition_1)(1)}
                             .norm();
 
-    if((d_footpose > 1e-2 || std::abs(prev_dur - dur) > 0.1))
+    // std::cout << "ss d_dur" << std::abs(prev_dur - dur) << std::endl;
+    if(d_footpose > 1e-2 || ( std::abs(prev_dur - dur) > 0.05) && dur > 0.2)
     {
       New_traj = true;
     }
@@ -216,7 +219,7 @@ std::vector<Eigen::Vector3d> FootTrajectory::getSwingFootTrajectory(const sva::P
     {
 
       duration = dur - t;
-
+      prev_dur = dur;
       m_t = delta;
 
       if(!Z_up && dur * 0.5 - t > 0.1)
@@ -350,7 +353,7 @@ std::vector<Eigen::Vector3d> FootTrajectory::getSwingFootTrajectory(const sva::P
   Output.push_back(swingFootAcc);
   Output.push_back(swingFootOrientationAcc);
 
-  prev_dur = dur;
+  
 
   return Output;
 }

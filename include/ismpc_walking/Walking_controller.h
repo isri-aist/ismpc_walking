@@ -43,6 +43,7 @@ public :
     void reset(const mc_control::ControllerResetData & reset_data) override;
 
     ControllerConfiguration Controller_Config;
+    mc_rtc::Configuration planner_config_;
 
     void Configure(const mc_rtc::Configuration & config){
         
@@ -154,6 +155,18 @@ public :
     {
         N_Steps_Desired = steps;
     }
+    void SwitchFootSupport_manual()
+    {
+        if(!Robot_Walking)
+        {
+            mc_rtc::log::info("[ismpc_walking] switching support foot manually");
+            switchFootSupport();
+            updateTasks();
+            MoveFeet(0);
+            // UpdatePlanner_input();
+            ComputeTrajectoryOnce = true;
+        }
+    }
 
 
 
@@ -225,6 +238,9 @@ protected:
         datastore().make_call("ismpc_walking::set_n_step", [this](int n) { N_Steps_Desired = n; });
         datastore().make_call("ismpc_walking::set_ref_vel", [this](Eigen::Vector3d vel) { reference_velocity = vel; });
         datastore().make_call("ismpc_walking::tds_by_ratio", [this](bool val) { Tds_by_ratio = val; });
+        datastore().make_call("ismpc_walking::arm_swing_off", [this]() { armTask->weight(0); });
+        datastore().make_call("ismpc_walking::arm_swing_on", [this]() { armTask->weight(10); });
+        datastore().make_call("ismpc_walking::switch_support_foot", [this]() { SwitchFootSupport_manual(); });
 
     }
     
@@ -278,7 +294,7 @@ private:
     double x = 0.4 ; double y = 0.1 ; double z = 30; //Coordinate for a specified footstep position
 
     bool UseRealRobot = false; //To use the real robots data
-    bool UseMPCState = true;
+    bool UseMPCState = false;
     bool Stop = true ; //If true, the robot is at stop or the robot is about to stop at next step;
     bool Robot_Walking = false; //If false, the robot is not moving;
     bool ComputeTrajectoryOnce = true; 
