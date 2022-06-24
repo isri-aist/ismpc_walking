@@ -81,6 +81,9 @@ public :
         Controller_Config.SwingFootStiffness_Dim = config("tasks")("swingfoot_dimstiffness");
         Controller_Config.SwingFootWeight_Dim = config("tasks")("swingfoot_dimweight");
 
+        Controller_Config.SupportFootStiffness_Dim = config("tasks")("supportfoot_dimstiffness");
+        Controller_Config.SupportFootWeight_Dim = config("tasks")("supportfoot_dimweight");
+
         
         Configure(Controller_Config);
 
@@ -313,6 +316,11 @@ private:
     double ControllerLoopTime = 0;
     double T_Steps = 1.1;
     double PrevStepTiming = 0;
+
+    double maxStiffTimeThreshold_ = 3; // Time after which hand task gain reach max [s]
+    double linearStiffTimeThreshold_ = 1.5; // Time after which hand task gain switch from min to gradually reach max [s]
+    double minStiffness_ = 10;
+    double maxStiffness_ = 10;
 
 
     int N_Steps = 0 ;
