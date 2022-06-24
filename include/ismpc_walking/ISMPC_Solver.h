@@ -250,7 +250,7 @@ class ISMPC_Solver {
          * @tparam t_k, time of the computation
          * @tparam Tds,  double support duration
          */
-        void GetWalkingParameters(double t_k, double Tds);
+        void GetWalkingParameters(double t_k, double Tds,bool stop);
         
         /**
          * @brief Set The constraints region for the ZMP (during each delta time) and the footsteps in the robot frame
@@ -437,6 +437,8 @@ class ISMPC_Solver {
          * Footsteps position constraints
          */
         void ZMP_Constraints();
+
+        void Static_ZMP_Constraints();
 
         void FootSteps_Constraints();
         
