@@ -283,6 +283,8 @@ private:
     
     Eigen::Vector3d SwingFootInitialPose; //Previous Swing Foot pose at the time of the MPC computation 
 
+    Eigen::Vector6d footcontact_dof;
+
     double SwingFootInitialAngle = 0.0;
     double Tds; //Double Step Time duration
     int count = 0; //Controller iterations

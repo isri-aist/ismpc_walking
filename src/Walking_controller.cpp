@@ -21,6 +21,8 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, c
 : mc_control::MCController(rm, dt)
 {
 
+  footcontact_dof << 0,0,1,1,1,0;
+
   Controller_Config.Stab_config = robot().module().defaultLIPMStabilizerConfiguration();
   if(robot().name() == "hrp4cr")
   {
@@ -681,7 +683,7 @@ bool Walking_controller::MoveFeet(double t)
       StabTask->setContacts({SupportState});
       DoubleSupport_state = false;
 
-      solver().setContacts({{robots(), 0, 1, supportFootName, "AllGround"}});
+      removeContact({robot().name(), "ground", swingFootName, "AllGround", 0.7, footcontact_dof});
 
       Swing_Foot_Contact = false;
 
@@ -754,7 +756,7 @@ bool Walking_controller::MoveFeet(double t)
       //                                     DoubleSupport_state )
       // {
 
-      solver().setContacts({{robots(), 0, 1, "LeftFoot", "AllGround"}, {robots(), 0, 1, "RightFoot", "AllGround"}});
+      addContact({robot().name(), "ground", swingFootName, "AllGround", 0.7, footcontact_dof});
       // StabTask->setContacts({mc_tasks::lipm_stabilizer::ContactState::Left,mc_tasks::lipm_stabilizer::ContactState::Right});
       StabTask->copAdmittance(Controller_Config.Std_Admittance);
       StabTask->contactStiffness(Controller_Config.Stab_config.contactStiffness);
@@ -1089,18 +1091,8 @@ void Walking_controller::reset(const mc_control::ControllerResetData & reset_dat
   X_0_SwingFootInitial = SwingFootInitialPose;
   updateTasks();
 
-  Eigen::Matrix6d dof = Eigen::Matrix6d::Identity(6, 6);
-  dof(0, 0) = 0;
-  dof(1, 1) = 0;
-  dof(5, 5) = 0;
-  // dof = Eigen::Matrix6d::Zero(6,6);
-  tasks::qp::ContactId ContactId_R;
-  tasks::qp::ContactId ContactId_L;
-  ContactId_R = mc_rbdyn::Contact(robots(), 0, 1, "RightFoot", "AllGround").contactId(robots());
-  ContactId_L = mc_rbdyn::Contact(robots(), 0, 1, "LeftFoot", "AllGround").contactId(robots());
-  contactConstraint.contactConstr->addDofContact(ContactId_L, dof);
-  contactConstraint.contactConstr->addDofContact(ContactId_R, dof);
-  contactConstraint.contactConstr->updateDofContacts();
+  addContact({robot().name(), "ground", "RightFoot", "AllGround", 0.7, footcontact_dof});
+  addContact({robot().name(), "ground", "LeftFoot", "AllGround", 0.7, footcontact_dof});
 
   MPC_thread_on = false;
   WalkingTrajectoryThread.join();
