@@ -51,21 +51,20 @@ controller:
       torsoBodyName: "CHEST_P_LINK"
       leftFootLink: "L_TOE_P_LINK"
       rightFootLink: "R_TOE_P_LINK"
- 
 ismpc:
   Tc: 2
   Tp: 6
   delta: 5e-2
   beta: 1e6
   beta_stab: 1e8
-  beta_traj : 0.
+  beta_traj : 1e1
   zmp_cstr_square: [0.1,0.05]
-  zmp_cstr_square_sg_supp: [0.1,0.05]
+  zmp_cstr_square_sg_supp: [0.1,0.07]
   next_stp_cstr_ratio: 1
   offset: [0.0,0.0]
-  offset_sg_supp: [0.00,0.0]
+  offset_sg_supp: [0.00,-0.01]
   allow_none_tail: true
-  footsteps_cstr_square: [0.3,0.05]
+  footsteps_cstr_square: [0.3,0.01]
   double_support_ratio: 0.25
   sliding_zmp_cstr_region: false
   use_stability_task: false
@@ -78,19 +77,42 @@ footsteps_planner:
   Tp: 6
   delta: 0.05
   Ts_limit: [0.7,2]
-  kinematics_cstr: [0.3,0.05]
-  feet_distance: 0.16
+  kinematics_cstr: [0.2,0.12]
+  feet_distance: 0.17
   mean_speed: 0.1
   robot_height: 150
   max_rotation: 0.17
 
+mocap_plugin:
+  ip : "172.17.0.1"
+  port : 7001
+  frequency: 60
+  sequence_size : 60
+
 tasks:
-  swingfoot_stiffness: 300
+  swingfoot_stiffness: 500
   swingfoot_weight: 5000
   swingfoot_dimweight: [1.,1.,1.,1.,1.,1.]
   swingfoot_dimstiffness: [1.,1.,1.,1.,1.,1.]
+  supportfoot_dimweight: [0.,0.,1.,1.,1.,1.]
+  supportfoot_dimstiffness: [0.,0.,1.,1.,1.,1.]
   supportfoot_stiffness: 20000
   supportfoot_weight: 10000
+
+controller:
+  start_at_launch: false
+  steps: 10
+  speed: [0,0.0,0]
+  t_steps: 2
+  robot:
+    hrp4:
+      torsoBodyName: "torso"
+      leftFootLink: "l_ankle"
+      rightFootLink: "r_ankle"
+    hrp4cr:
+      torsoBodyName: "CHEST_P_LINK"
+      leftFootLink: "L_TOE_P_LINK"
+      rightFootLink: "R_TOE_P_LINK"
 
 stabilizer:
   robot:
@@ -114,8 +136,8 @@ stabilizer:
             weight: 500
           com:
             stiffness: [1000.,1000.,100.]
-            weight: 10000.
-            height: 0.817
+            weight: 1000.
+            hieght: 0.817
         dcm_bias:
           dcmMeasureErrorStd: 0.001
           biasDriftPerSecondStd: 0.0001
@@ -125,43 +147,35 @@ stabilizer:
 
     hrp4:
       stabilizer:
-        # dcm_tracking:
-        #   gains:
-        #     prop: 2
-        #     integral: 0
-        #     deriv: 0.
-        # admittance:
-        #   maxVel:
-        #     angular: [3., 3., 3.]
-        #     linear: [1., 1., 1.]
+        dcm_tracking:
+          gains:
+            prop: 5
+            integral: 10
+            deriv: 0.
+            comdError : 0.
+        admittance:
+          cop: [0.01, 0.01]
+          maxVel:
+            angular: [3., 3., 3.]
+            linear: [1., 1., 1.]
         tasks:
           torso:
             pitch: 0.12
             stiffness: 2
             weight: 500
-        #   com:
-        #     stiffness: [1000.,1000.,100.]
-        #     weight: 10000.
-        #     height: 0.78
-        # dcm_bias:
-        #   dcmMeasureErrorStd: 0.001
-        #   biasDriftPerSecondStd: 0.0001
-        #   zmpMeasureErrorStd: 0.0005
-        #   biasLimit: [0.05, 0.02]
-        #   withDCMBias: true
+          com:
+            stiffness: [1000.,1000.,100.]
+            weight: 1000.
+            dimWeight: [1 , 1 , 1]
+            height: 0.78
+        dcm_bias:
+          dcmMeasureErrorStd: 0.001
+          biasDriftPerSecondStd: 0.0001
+          zmpMeasureErrorStd: 0.0005
+          biasLimit: [0.05, 0.02]
+          withDCMBias: true
 
-states:
-  Test_Posture:
-    base: MetaTasks
-    tasks:
-      taskPosture:
-        type: posture
-        stiffness: 1
-        #damping: 4
-        weight: 5.0
-
-init: Test_Posture
-  
+ 
 transitions:
   - [Initial,Ok,Initial]
 
