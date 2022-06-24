@@ -12,7 +12,8 @@ bool Walking_controller::MoveFeet(double t)
   double NextTimeStep(0);
 
   NextTimeStep = mpc_state_.get_Ts(kfoot);
-  X_0_SwingFootInitial = mpc_state_.X_0_Initial_SwingFoot;
+
+ 
   if(kfoot != 0)
   {
     PrevStepTiming = mpc_state_.get_Ts(kfoot-1);
@@ -35,14 +36,16 @@ bool Walking_controller::MoveFeet(double t)
 
   std::string sensorName = swingFootName + "ForceSensor";
   const auto & sensor = robot().forceSensor(sensorName);
+  const auto & sensor_support = robot().forceSensor(supportFootName + "ForceSensor");
 
   if(Swing_Foot_Contact)
   {
     t_lift = PrevStepTiming + mpc_state_.get_tds();
-    if(t > PrevStepTiming + mpc_state_.get_tds())
+    if(t - 0 * Controller_Config.delta >= PrevStepTiming + mpc_state_.get_tds() ) //&& std::abs(sensor_support.force().z()) > 50
     {
 
       mc_rtc::log::success("lifting " + swingFootName);
+      solver().addTask(SwingFootTask);
       auto contact_state = mc_tasks::lipm_stabilizer::ContactState::Right;
       if(swingFootName == "RightFoot"){contact_state = mc_tasks::lipm_stabilizer::ContactState::Left;}
       StabTask->setContacts({contact_state});
@@ -63,7 +66,7 @@ bool Walking_controller::MoveFeet(double t)
 
   double offset = 0;
   double SingleSupportDuration = (NextTimeStep - t_lift) + offset;
-  double height_off = 0;
+  double height_off = X_0_support.translation().z();
   SwingFootTrajectory.set_Z_ContactOffset(height_off);
 
   SwingFootTrajectory.getSwingFootTrajectory(X_0_SwingFootTarget, X_0_SwingFootInitial, t,
@@ -75,6 +78,7 @@ bool Walking_controller::MoveFeet(double t)
   sva::PTransformd X_0_FootTask_Target = SwingFootTrajectory.GetTrajectory();
 
   sva::MotionVecd V_0_FootTask_Target = SwingFootTrajectory.GetVelocity();
+  sva::MotionVecd A_0_FootTask_Target = SwingFootTrajectory.GetAccel();
 
   const Eigen::Vector3d & SwingFoot_rpy_real = mc_rbdyn::rpyFromMat(realRobot().surfacePose(swingFootName).rotation());
   Eigen::Vector3d SwingFoot_rpy_initial_real = mc_rbdyn::rpyFromMat(X_0_SwingFootInitial_real.rotation());
@@ -83,15 +87,17 @@ bool Walking_controller::MoveFeet(double t)
   SwingFoot_delta_rpy.z() = 0.;
   SwingFoot_rpy_initial_real.z() = 0.;
 
-  // if(UseRealRobot)
-  // {
+  if(UseRealRobot)
+  {
     X_0_FootTask_Target.rotation() =
         mc_rbdyn::rpyToMat(SwingFoot_rpy_initial_real - SwingFoot_delta_rpy + SwingFoot_rpy_target);
     // X_0_FootTask_Target.rotation() = mc_rbdyn::rpyToMat( -SwingFoot_delta_rpy + SwingFoot_rpy_target);
-  // }
+  }
 
   SwingFootTask->target(X_0_FootTask_Target);
   SwingFootTask->refVelB(sva::PTransformd(X_0_swing.rotation()) * V_0_FootTask_Target);
+  SwingFootTask->refAccel(sva::MotionVecd(Eigen::Vector3d::Zero(),A_0_FootTask_Target.linear()));
+  // SwingFootTask->refAccel(sva::PTransformd(X_0_swing.rotation()) *sva::MotionVecd(Eigen::Vector3d::Zero(),A_0_FootTask_Target.linear()));
 
   if(!Swing_Foot_Contact)
   {
@@ -172,6 +178,12 @@ bool Walking_controller::MoveFeet(double t)
     SwingFootInitialPose = robot().surfacePose(swingFootName).translation();
     SwingFootInitialAngle = mc_rbdyn::rpyFromMat(robot().surfacePose(swingFootName).rotation()).z();
 
+    X_0_SwingFootInitial = sva::PTransformd(sva::RotZ(mc_rbdyn::rpyFromMat(robot().surfacePose(swingFootName).rotation()).z()) ,
+                                                          robot().surfacePose(swingFootName).translation());
+
+    solver().removeTask(leftSwingFootTask);
+    solver().removeTask(rightSwingFootTask);
+
   }
 
   return 0;
@@ -198,7 +210,8 @@ void Walking_controller::updateTasks()
   SwingFootTask->dimWeight(Eigen::VectorXd::Ones(6));
   SwingFootTask->stiffness(Controller_Config.SwingFootStiffness);
   SupportFootTask->weight(Controller_Config.SupportFootWeight);
-  SupportFootTask->stiffness(Controller_Config.SupportFootStiffness * dimW);
+  SupportFootTask->dimWeight(Controller_Config.SupportFootWeight_Dim);
+  SupportFootTask->stiffness(Controller_Config.SupportFootStiffness * Controller_Config.SupportFootStiffness_Dim);
 
   // Eigen::VectorXd dimW_com(Eigen::VectorXd::Ones(3)); dimW_com(2) = 0.1;
   // CoMTask->dimWeight(dimW_com);
