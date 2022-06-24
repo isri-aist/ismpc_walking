@@ -122,8 +122,7 @@ std::vector<Eigen::Vector3d> FootTrajectory::getSwingFootTrajectory(const sva::P
 {
 
   t -= (t0);
-  // double zi = 0;
-  // double zf = stepHeight;
+
   
   double tinit = 0;
 
@@ -135,8 +134,8 @@ std::vector<Eigen::Vector3d> FootTrajectory::getSwingFootTrajectory(const sva::P
     prev_dur = dur;
     m_t = t;
     duration_Z = dur * 0.5;
-    zi = 0;
-    zf = stepHeight;
+
+    zf = stepHeight + X_0_StartPose.translation().z();
     Z_up = false;
 
     Eigen::MatrixXd R_0_swingFootStartPos = X_0_StartPose.rotation();
@@ -146,7 +145,7 @@ std::vector<Eigen::Vector3d> FootTrajectory::getSwingFootTrajectory(const sva::P
 
     swingFootPosition(0) = X_0_StartPose.translation().x();
     swingFootPosition(1) = X_0_StartPose.translation().y();
-    swingFootPosition(2) = 0;
+    swingFootPosition(2) = X_0_StartPose.translation().z();
     swingFootVelocity.setZero();
     swingFootAcc.setZero();
 
@@ -225,7 +224,7 @@ std::vector<Eigen::Vector3d> FootTrajectory::getSwingFootTrajectory(const sva::P
       if(!Z_up && dur * 0.5 - t > 0.1)
       {
         duration_Z = dur * 0.5 - t;
-        zf = stepHeight;
+        zf = stepHeight + X_0_StartPose.translation().z();
 
         pitch_f = 0;
       }
@@ -236,7 +235,7 @@ std::vector<Eigen::Vector3d> FootTrajectory::getSwingFootTrajectory(const sva::P
       if(Z_up || duration_Z <= 0.05)
       {
         duration_Z = dur - t;
-        zf = Z_contact_offset;
+        zf = X_0_StartPose.translation().z();
         Z_up = true;
 
         pitch_f = 0;

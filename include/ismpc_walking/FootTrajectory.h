@@ -31,11 +31,11 @@ class FootTrajectory {
         std::vector<Eigen::Vector3d> TrajGUI();
 
         void setZOffset(double z){
-            z_offset = std::max(0.0,std::min(z,1e-2));
+            z_offset = z;
         }
     
         void set_Z_ContactOffset(double z){
-            Z_contact_offset = std::max(0.0,std::min(z,5e-3));
+            Z_contact_offset = z;
         }
 
         void Update_Traj(){
