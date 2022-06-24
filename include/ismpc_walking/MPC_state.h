@@ -145,5 +145,6 @@ struct MPC_state
     sva::PTransformd X_0_Initial_SwingFoot;
     double tds = 0.25;
     double input_tds = 0.25;
+    bool stop = true;
 
 };
