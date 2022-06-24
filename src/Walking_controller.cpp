@@ -14,8 +14,12 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, c
 {
   
   mc_rbdyn::lipm_stabilizer::StabilizerConfiguration Stabiconfig(robot().module().defaultLIPMStabilizerConfiguration());
-  const auto & s_config = config("stabilizer")("robot")(robot().name())("stabilizer");
-  Stabiconfig.load(s_config);
+  if (config("stabilizer")("robot").has(robot().name()))
+  {
+    const auto & s_config = config("stabilizer")("robot")(robot().name())("stabilizer");
+    Stabiconfig.load(s_config);
+  }
+
 
   if(config.has("footsteps_planner"))
   {
@@ -40,18 +44,23 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, c
   // config_.load(config);
   // static auto constraint = mc_solver::ConstraintSetLoader::load(solver(), config("collisions")[0]);
 
-  datastore().make_call("KinematicAnchorFrame::" + robot().name(), [this](const mc_rbdyn::Robot & robot) {
-    sva::PTransformd X_0_leftfoot = robot.surfacePose("LeftFoot");
-    sva::PTransformd X_0_rightfoot = robot.surfacePose("RightFoot");
-    double height = robot.surfacePose(supportFootName).translation().z();
-    Eigen::Vector3d T_0_leftfoot = X_0_leftfoot.translation();
-    Eigen::Vector3d T_0_rightfoot = X_0_rightfoot.translation();
-    sva::PTransformd X_0_leftfoot_floor(X_0_leftfoot.rotation(),Eigen::Vector3d{T_0_leftfoot.x(),T_0_leftfoot.y(),height});
-    sva::PTransformd X_0_rightfoot_floor(X_0_rightfoot.rotation(),Eigen::Vector3d{T_0_rightfoot.x(),T_0_rightfoot.y(),height});
+  // datastore().make_call("KinematicAnchorFrame::" + robot().name(), [this] (const mc_rbdyn::Robot & robot) -> sva::PTransformd {
+  //   sva::PTransformd X_0_leftfoot = robot.surfacePose("LeftFoot");
+  //   sva::PTransformd X_0_rightfoot = robot.surfacePose("RightFoot");
+  //   double height = robot.surfacePose(supportFootName).translation().z();
+  //   Eigen::Vector3d T_0_leftfoot = X_0_leftfoot.translation();
+  //   Eigen::Vector3d T_0_rightfoot = X_0_rightfoot.translation();
+  //   sva::PTransformd X_0_leftfoot_floor(X_0_leftfoot.rotation(),Eigen::Vector3d{T_0_leftfoot.x(),T_0_leftfoot.y(),height});
+  //   sva::PTransformd X_0_rightfoot_floor(X_0_rightfoot.rotation(),Eigen::Vector3d{T_0_rightfoot.x(),T_0_rightfoot.y(),height});
 
-    return sva::interpolate(X_0_leftfoot_floor, X_0_rightfoot_floor, LeftFootRatio);
+  //   return sva::interpolate(X_0_leftfoot_floor, X_0_rightfoot_floor, LeftFootRatio);
   
+  // });
+
+  datastore().make_call("KinematicAnchorFrame::" + robot().name(), [this](const mc_rbdyn::Robot & robot) {
+    return sva::interpolate(robot.surfacePose("LeftFoot"), robot.surfacePose("RightFoot"), LeftFootRatio);
   });
+
 
   // solver().addConstraintSet(*constraint);
   // solver().addConstraintSet(contactConstraint);
@@ -243,7 +252,7 @@ void Walking_controller::ComputeWalkingTrajectory()
     }
     else{MPCSolver.Disturbance(Eigen::Vector3d::Zero());}
 
-    MPCSolver.GetWalkingParameters(mpc_thread_state.t_k, tds);
+    MPCSolver.GetWalkingParameters(mpc_thread_state.t_k, tds,mpc_thread_state.stop);
 
     std::chrono::duration<double, std::milli> time_span = std::chrono::high_resolution_clock::now() - t_clock;
     ProcessTime = time_span.count();
@@ -306,6 +315,7 @@ void Walking_controller::UpdatePlanner_input()
   Eigen::Vector3d Pf_m1(SwingFootInitialPose);
   Pf_m1.z() = SupportFootPose.z();
   mpc_state_.input_P_fm1 = Pf_m1;
+  mpc_state_.stop = !Robot_Walking;
 }
 
 bool Walking_controller::run()
@@ -330,7 +340,10 @@ bool Walking_controller::run()
 
   if(!(Stop && Swing_Foot_Contact))
   {
-
+    // if(!Robot_Walking)
+    // {
+    //   StabTask->comStiffness(Controller_Config.Stab_config.comStiffness);
+    // }
     if(t - t_k >= Controller_Config.delta)
     {
       ComputeTrajectoryOnce = true;
@@ -344,23 +357,30 @@ bool Walking_controller::run()
   }
   else
   {
+    // if (Robot_Walking)
+    // {
+    //   count = 0;
+    //   StaticPose = ((robot().surfacePose("LeftFoot").translation() + robot().surfacePose("RightFoot").translation()) / 2);
+    //   StaticPose.z() = Controller_Config.Stab_config.comHeight;
+    //   StabTask->staticTarget(StaticPose);
+    // }
     MoveFeet(0);
+    MoveCoM(0);
     updateTasks();
 
     t_stop = (count - count_stop) * controller_timestep;
-    if(t_stop > 2 * Controller_Config.delta)
+    if(t_stop > 1 * Controller_Config.delta)
     {
       ComputeTrajectoryOnce = true;
       count_stop = count - 1;
     }
-    if (Robot_Walking)
-    {
-      StaticPose = ((robot().surfacePose("LeftFoot").translation() + robot().surfacePose("RightFoot").translation()) / 2);
-      StaticPose.z() = Controller_Config.Stab_config.comHeight;
-    }
 
-    StabTask->staticTarget(StaticPose);
-    StabTask->comStiffness(Eigen::Vector3d::Ones() * 10);
+    // double ratio = (count * controller_timestep - linearStiffTimeThreshold_)
+    //                 / (maxStiffTimeThreshold_ - linearStiffTimeThreshold_);
+    // mc_filter::utils::clampInPlace(ratio, 0, 1);
+    // StabTask->comStiffness(Eigen::Vector3d::Ones() * (minStiffness_ + ratio * (maxStiffness_ - minStiffness_)));
+
+
     t_k = 0;
     kfoot = 0;
     N_Steps = 0;
@@ -404,7 +424,7 @@ void Walking_controller::MoveCoM(double t)
   }
 
   Eigen::Vector3d Pcom(mpc_state_.Get_CoM_planarTarget(mpc_state_.Index));
-  Pcom.z() = Controller_Config.Stab_config.comHeight + X_0_support_real.translation().z();
+  Pcom.z() = Controller_Config.Stab_config.comHeight + X_0_support.translation().z();
   zmpTarget = mpc_state_.Get_ZMP_planarTarget(mpc_state_.Index);
 
   Eigen::Vector3d Vc(mpc_state_.Get_CoMVel_planarTarget(mpc_state_.Index));
@@ -476,7 +496,7 @@ void Walking_controller::UpdateInitialVectors()
   }
   
 
-  if(mpc_state_.X_MPC.size() != 0 && Robot_Walking)
+  if(mpc_state_.X_MPC.size() != 0)
   {
 
     mpc_state_.Pzk = mpc_state_.Get_ZMP_planarTarget(indx);
