@@ -17,6 +17,8 @@ struct ControllerConfiguration
     Eigen::Vector3d CoMWeight_Dim{1,1,1};
     Eigen::Vector6d SwingFootWeight_Dim = Eigen::Vector6d::Ones();
     Eigen::Vector6d SwingFootStiffness_Dim = Eigen::Vector6d::Ones();
+    Eigen::Vector6d SupportFootWeight_Dim = Eigen::Vector6d::Ones();
+    Eigen::Vector6d SupportFootStiffness_Dim = Eigen::Vector6d::Ones();
 
     double Ts_max = 2;
     double T_ds_min = 0.2;
