@@ -295,6 +295,14 @@ void Walking_controller::ComputeWalkingTrajectory()
 void Walking_controller::UpdatePlanner_input()
 {
   mpc_state_.input_v_.clear();
+  if(supportFootName == "LeftFoot")
+  {
+    reference_velocity.y() = mc_filter::utils::clamp(reference_velocity.y(), -0.07, 0.0);
+  }
+  else
+  {
+    reference_velocity.y() = mc_filter::utils::clamp(reference_velocity.y(), 0.0, 0.07);
+  }
   for(int k = 0; k < (int)2 * std::round(Controller_Config.Tp / Controller_Config.delta); k++)
   {
     mpc_state_.input_v_.push_back(sva::MotionVecd(Eigen::Vector3d{0,0,reference_velocity.z()} , Eigen::Vector3d{reference_velocity.x(),reference_velocity.y(),0}));
