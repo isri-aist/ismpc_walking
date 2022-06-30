@@ -21,8 +21,8 @@ struct ControllerConfiguration
     Eigen::Vector6d SupportFootStiffness_Dim = Eigen::Vector6d::Ones();
 
     double Ts_max = 2;
-    double T_ds_min = 0.2;
-    double T_ss_min = 0.6;
+    double T_ds_min = 0.25;
+    double T_ss_min = 0.75;
     double Ts_min = T_ds_min + T_ss_min;
 
     Eigen::Vector2d Footsteps_Generation_Kinematics_cstr{0.3,0.1};
@@ -34,7 +34,7 @@ struct ControllerConfiguration
     double Beta = 1e4; //1e4; 
     double Beta_stab = 1e7;
     double Beta_traj = 0.;
-    Eigen::Vector2d Beta_range{1e6,1e2};
+    Eigen::Vector2d Beta_range{1e10,1e2};
     bool sliding_zmp_cstr_region = false;
     bool use_stability_task = false;
     double FootStepHeight = 0.035;
