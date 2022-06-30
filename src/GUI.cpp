@@ -176,9 +176,9 @@ void Walking_controller::addToGUI()
                                 return Output;
                               }),
 
-      mc_rtc::gui::Polygon(
-          "AllPoly", mc_rtc::gui::Color(1., 0.3, 0.),
-          [this]() -> const std::vector<std::vector<Eigen::Vector3d>> & { return this->MPCSolver.get_allpolys(); }),
+      // mc_rtc::gui::Polygon(
+      //     "AllPoly", mc_rtc::gui::Color(1., 0.3, 0.),
+      //     [this]() -> const std::vector<std::vector<Eigen::Vector3d>> & { return this->MPCSolver.get_allpolys(); }),
       mc_rtc::gui::Polygon("SupportPolygon", mc_rtc::gui::Color(1., 1., 0.), [this]() -> const std::vector<Eigen::Vector3d> & { return mpc_state_.get_SupPolygon(); })
 
         );
