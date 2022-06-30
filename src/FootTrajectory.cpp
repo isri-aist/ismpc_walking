@@ -235,7 +235,7 @@ std::vector<Eigen::Vector3d> FootTrajectory::getSwingFootTrajectory(const sva::P
       if(Z_up || duration_Z <= 0.05)
       {
         duration_Z = dur - t;
-        zf = X_0_StartPose.translation().z();
+        zf = 0.;
         Z_up = true;
 
         pitch_f = 0;
