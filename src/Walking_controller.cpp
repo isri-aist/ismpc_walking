@@ -624,14 +624,6 @@ bool Walking_controller::MoveFeet(double t)
     PrevStepTiming = mpc_state_.get_Ts(kfoot-1);
   }
 
-  X_0_SwingFootInitial.translation() = SwingFootInitialPose;
-  double PrevSwingFootAngle = SwingFootInitialAngle;
-  if(kfoot != 0)
-  {
-    X_0_SwingFootInitial.translation() = mpc_state_.Get_CorrectedFootstep(kfoot-1) ;
-    PrevSwingFootAngle = mpc_state_.Thetaf(kfoot - 1);
-  }
-  X_0_SwingFootInitial.rotation() = sva::RotZ(PrevSwingFootAngle);
 
   sva::PTransformd X_0_SwingFootTarget;
   if(kfoot + 1 < mpc_state_.Xf_Corr.size())
@@ -679,8 +671,25 @@ bool Walking_controller::MoveFeet(double t)
     {
 
       mc_rtc::log::success("lifting " + swingFootName);
+      solver().addTask(SwingFootTask);
+      Eigen::Vector3d supp_pose;
+      double supp_yaw;
+      supp_pose = robot().surfacePose(supportFootName).translation();
+      supp_pose.z() = 0.0;
+      supp_yaw = mc_rbdyn::rpyFromMat(robot().surfacePose(supportFootName).rotation()).z();
+      if(supportFootName == "LeftFoot")
+      {
+        StabTask->setContacts(
+            {{mc_tasks::lipm_stabilizer::ContactState::Left, sva::PTransformd(sva::RotZ(supp_yaw), supp_pose)}});
+      }
+      else
+      {
+        StabTask->setContacts(
+            { {mc_tasks::lipm_stabilizer::ContactState::Right, sva::PTransformd(sva::RotZ(supp_yaw), supp_pose)}});
+      }
 
-      StabTask->setContacts({SupportState});
+
+
       DoubleSupport_state = false;
 
       removeContact({robot().name(), "ground", swingFootName, "AllGround", 0.7, footcontact_dof});
@@ -716,9 +725,11 @@ bool Walking_controller::MoveFeet(double t)
 
   Eigen::Matrix3d R_0_swing = X_0_FootTask_Target.rotation();
   sva::MotionVecd V_0_FootTask_Target = SwingFootTrajectory.GetVelocity();
+  sva::MotionVecd A_0_FootTask_Target = SwingFootTrajectory.GetAccel();
 
   SwingFootTask->target(X_0_FootTask_Target);
   SwingFootTask->refVelB(sva::PTransformd(X_0_swing.rotation()) * V_0_FootTask_Target);
+  SwingFootTask->refAccel(sva::MotionVecd(Eigen::Vector3d::Zero(),A_0_FootTask_Target.linear()));
 
   if(!Swing_Foot_Contact)
   {
@@ -741,8 +752,27 @@ bool Walking_controller::MoveFeet(double t)
 
       t_contact = t;
 
-      StabTask->setContacts(
-          {mc_tasks::lipm_stabilizer::ContactState::Left, mc_tasks::lipm_stabilizer::ContactState::Right});
+      Eigen::Vector3d supp_pose;
+      double supp_yaw;
+      supp_pose = robot().surfacePose(supportFootName).translation();
+      supp_pose.z() = 0.0;
+      supp_yaw = mc_rbdyn::rpyFromMat(robot().surfacePose(supportFootName).rotation()).z();
+      Eigen::Vector3d swing_pose;
+      double swing_yaw;
+      swing_pose = robot().surfacePose(swingFootName).translation();
+      swing_pose.z() = 0.0;
+      swing_yaw = mc_rbdyn::rpyFromMat(robot().surfacePose(swingFootName).rotation()).z();
+      if(supportFootName == "LeftFoot")
+      {
+        StabTask->setContacts(
+            {{mc_tasks::lipm_stabilizer::ContactState::Left, sva::PTransformd(sva::RotZ(supp_yaw), supp_pose)}, {mc_tasks::lipm_stabilizer::ContactState::Right, sva::PTransformd(sva::RotZ(swing_yaw), swing_pose)}});
+      }
+      else
+      {
+        StabTask->setContacts(
+            {{mc_tasks::lipm_stabilizer::ContactState::Left, sva::PTransformd(sva::RotZ(swing_yaw), swing_pose)}, {mc_tasks::lipm_stabilizer::ContactState::Right, sva::PTransformd(sva::RotZ(supp_yaw), supp_pose)}});
+      }
+
       DoubleSupport_state = true;
 
       mc_rtc::log::info("height : {} ", swing_foot_height);
@@ -800,6 +830,13 @@ bool Walking_controller::MoveFeet(double t)
     SwingFootTask->target(sva::PTransformd(sva::RotZ(yaw), pos));
     SwingFootTask->refVelB(sva::MotionVecd::Zero());
     SwingFootTask->refAccel(sva::MotionVecd::Zero());
+
+    X_0_SwingFootInitial = robot().surfacePose(swingFootName);
+
+    solver().removeTask(leftSwingFootTask);
+    solver().removeTask(rightSwingFootTask);
+
+
   }
 
   return 0;

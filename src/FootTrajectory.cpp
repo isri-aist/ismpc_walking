@@ -144,7 +144,7 @@ std::vector<Eigen::Vector3d> FootTrajectory::getSwingFootTrajectory(const sva::P
 
     swingFootPosition(0) = X_0_StartPose.translation().x();
     swingFootPosition(1) = X_0_StartPose.translation().y();
-    swingFootPosition(2) = 0;
+    swingFootPosition(2) = X_0_StartPose.translation().z();
     swingFootVelocity.setZero();
     swingFootAcc.setZero();
 
