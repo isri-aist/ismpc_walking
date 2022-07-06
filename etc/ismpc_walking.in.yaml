@@ -1,5 +1,5 @@
 ---
-ObserverPipelines:     
+ObserverPipelines:
   name: "LIPMWalkingObserverPipeline"
   gui: true
   observers:
@@ -10,18 +10,18 @@ ObserverPipelines:
       config:
         anchorFrame:
           maxAnchorFrameDiscontinuity: 0.02
-      
+
 constraints:
-  - type: collision	
+  - type: collision
 
 collisions:
-- type: collision
-  useCommon: true
-  
+  - type: collision
+    useCommon: true
+
 controller:
   start_at_launch: true
-  steps: 10
-  speed: [0.1,0.05,-0.1]
+  steps: 5
+  speed: [0.1, 0.05, 0.0]
   t_steps: 1.1
   robot:
     hrp4:
@@ -32,46 +32,58 @@ controller:
       torsoBodyName: "CHEST_P_LINK"
       leftFootLink: "L_TOE_P_LINK"
       rightFootLink: "R_TOE_P_LINK"
- 
+
 ismpc:
   Tc: 1.5
   Tp: 6
   delta: 5e-2
   beta: 1e4
-  zmp_cstr_square: [0.05,0.05]
-  footsteps_cstr_square: [0.3,0.05]
+  zmp_cstr_square: [0.05, 0.05]
+  footsteps_cstr_square: [0.3, 0.05]
   double_support_ratio: 0.4
   sliding_zmp_cstr_region: true
   safety_thresholds:
-    beta_range: [1e2,1e6]
+    beta_range: [1e2, 1e6]
     zmp_cstr_square_min: 0.01
     zmp_cstr_square_max: 0.2
 
+# stab_config:
+#   dcm_tracking:
+#     gains:
+#       prop: 5.0
+#       integral: 10.0
+#       deriv: 0.0
+# safety_thresholds:
+# dcm_p_gain_max: 20.0
+# dcm_i_gain_max: 100.0
+# dcm_d_gain_max: 2.0
+
 footstepsGeneration:
   Tp: 6
-  Ts_range: [0.7,2]
-  kinematics_cstr: [0.3,0.05]
+  Ts_range: [0.7, 2]
+  kinematics_cstr: [0.3, 0.05]
   feet_distance: 0.2
   mean_speed: 0.1
 
 tasks:
   swingfoot_stiffness: 300
   swingfoot_weight: 5000
-  swingfoot_dimweight: [1.,1.,1.,1.,1.,1.]
-  swingfoot_dimstiffness: [1.,1.,1.,1.,1.,1.]
+  swingfoot_dimweight: [1., 1., 1., 1., 1., 1.]
+  swingfoot_dimstiffness: [1., 1., 1., 1., 1., 1.]
   supportfoot_stiffness: 20000
   supportfoot_weight: 10000
   stabilizer:
     com_stiff: 1e2
     com_weight: 1000
-    com_dimweight: [1.,1.,0.3]
-    com_dimstiffness: [1.,1.,1.]
-    P_gain: 10
-    I_gain: 5
-    D_gain: 0
-    std_admittance: [0.01,0.01]
-    impact_admittance: [0.01,0.01]
+    com_dimweight: [1., 1., 0.3]
+    com_dimstiffness: [1., 1., 1.]
+    P_gain: 10.0
+    I_gain: 5.0
+    D_gain: 0.0
+    std_admittance: [0.01, 0.01]
+    impact_admittance: [0.01, 0.01]
+  safety_thresholds:
+    P_gain_max: 200.0
+    I_gain_max: 200.0
 
-  
-  
-
+Plugins: [RLPlugin]

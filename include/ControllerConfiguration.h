@@ -41,9 +41,10 @@ struct ControllerConfiguration
     double Tc = 1.5 ; //Control Time
     double Tp = 4; //Preview Time
     double Double_Step_Ratio = 0.4;
-    int Stab_P_gain = 10;
-    int Stab_I_gain = 5; //5
-
+    double Stab_P_gain = 10;
+    double Stab_I_gain = 5; //5
+    double Stab_P_gain_max = 200;
+    double Stab_I_gain_max = 200;
     double MPC_ZMP_Constraint_max_size = 0.2;
     double MPC_ZMP_Constraint_min_size = 0.01;
     Eigen::Vector2d MPC_ZMP_Constraint_size{0.1,0.08};

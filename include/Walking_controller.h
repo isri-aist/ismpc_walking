@@ -90,7 +90,13 @@ public :
         Controller_Config.Double_Step_Ratio = config("ismpc")("double_support_ratio");
         Controller_Config.sliding_zmp_cstr_region = config("ismpc")("sliding_zmp_cstr_region");
         Controller_Config.delta =  config("ismpc")("delta");
-
+        //Controller_Config.Stab_config.dcmPropGain = config("stab_config")("dcm_tracking")("gains")("prop");
+        //Controller_Config.Stab_config.safetyThresholds.MAX_DCM_P_GAIN = config("stab_config")("safety_thresholds")("dcm_p_gain_max");
+        //Controller_Config.Stab_config.dcmIntegralGain = config("stab_config")("dcm_tracking")("gains")("integral");
+        //Controller_Config.Stab_config.safetyThresholds.MAX_DCM_I_GAIN =  config("stab_config")("safety_thresholds")("dcm_i_gain_max");
+        //Controller_Config.Stab_config.dcmDerivGain = config("stab_config")("dcm_tracking")("gains")("deriv");
+        //Controller_Config.Stab_config.safetyThresholds.MAX_DCM_D_GAIN =  config("stab_config")("safety_thresholds")("dcm_d_gain_max");
+        
         Controller_Config.Tp = config("footstepsGeneration")("Tp");
         Controller_Config.Footstps_Generation_Ts_range = config("footstepsGeneration")("Ts_range");
         Controller_Config.Footsteps_Generation_Kinematics_cstr = config("footstepsGeneration")("kinematics_cstr");
@@ -111,6 +117,8 @@ public :
         Controller_Config.CoMWeight_Dim = config("tasks")("stabilizer")("com_dimweight");
         Controller_Config.Stab_P_gain = config("tasks")("stabilizer")("P_gain");
         Controller_Config.Stab_I_gain = config("tasks")("stabilizer")("I_gain");
+        Controller_Config.Stab_P_gain_max = config("tasks")("safety_thresholds")("P_gain_max");
+        Controller_Config.Stab_I_gain_max = config("tasks")("safety_thresholds")("I_gain_max");
         Controller_Config.Impact_Admittance = config("tasks")("stabilizer")("impact_admittance");
         Controller_Config.Std_Admittance = config("tasks")("stabilizer")("std_admittance");
         
@@ -120,7 +128,7 @@ public :
 
     void Configure(const ControllerConfiguration & config){
         Controller_Config = config;
-        Controller_Config.update_config();
+        //Controller_Config.update_config();
         Controller_Config.Beta = std::min(Controller_Config.Beta_range(1),std::max(Controller_Config.Beta_range(0),Controller_Config.Beta));
         Controller_Config.MPC_ZMP_Constraint_size.x() = std::min(Controller_Config.MPC_ZMP_Constraint_max_size,
                                                                  std::max(Controller_Config.MPC_ZMP_Constraint_min_size,
@@ -128,6 +136,8 @@ public :
         Controller_Config.MPC_ZMP_Constraint_size.y() = std::min(Controller_Config.MPC_ZMP_Constraint_max_size,
                                                                  std::max(Controller_Config.MPC_ZMP_Constraint_min_size,
                                                                  Controller_Config.MPC_ZMP_Constraint_size.y()));
+        Controller_Config.Stab_P_gain = std::min(Controller_Config.Stab_P_gain_max,std::max(0.0,Controller_Config.Stab_P_gain));
+        Controller_Config.Stab_I_gain = std::min(Controller_Config.Stab_I_gain_max,std::max(0.0,Controller_Config.Stab_I_gain));
         MPCSolver.configure(Controller_Config);
         FootStpGen.configure(Controller_Config);
     }
