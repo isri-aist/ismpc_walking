@@ -188,7 +188,9 @@ void Walking_controller::ComputeWalkingTrajectory()
   
   WalkingTrajectory_Computing = true;
   if(ComputeTrajectoryOnce && datastore().has("footsteps_planner::planner_config"))
-  {
+  {   
+    std::chrono::high_resolution_clock::time_point t_clock = std::chrono::high_resolution_clock::now();
+
     {
       std::lock_guard<std::mutex> lk_copy_state(mutex_mpc_);
       UpdateInitialVectors();
@@ -196,7 +198,6 @@ void Walking_controller::ComputeWalkingTrajectory()
       mpc_thread_state = mpc_state_;
     }
     
-    std::chrono::high_resolution_clock::time_point t_clock = std::chrono::high_resolution_clock::now();
 
     MPCSolver.AutoFootstepPlacement = AutoFootstepPlacement;
 
@@ -255,7 +256,7 @@ void Walking_controller::ComputeWalkingTrajectory()
     MPCSolver.GetWalkingParameters(mpc_thread_state.t_k, tds,mpc_thread_state.stop);
 
     std::chrono::duration<double, std::milli> time_span = std::chrono::high_resolution_clock::now() - t_clock;
-    ProcessTime = time_span.count();
+    mpc_thread_process_time = time_span.count();
 
     if(MPCSolver.QPsucceeded())
     {
@@ -267,7 +268,7 @@ void Walking_controller::ComputeWalkingTrajectory()
       mpc_thread_state.QPSuccess = true;
       mpc_thread_state.X_MPC = MPCSolver.X_MPC();
       mpc_thread_state.Y_MPC = MPCSolver.Y_MPC();
-      mpc_thread_state.Index = (int)(ProcessTime * 1e-3 / controller_timestep);
+      mpc_thread_state.Index = static_cast<int>(mpc_thread_process_time * 1e-3 / controller_timestep);
       mpc_thread_state.SupPolygon = MPCSolver.get_polynome_support();
       mpc_thread_state.Traj_ant = MPCSolver.GetAfterTc_ZMP_trajectory();
       mpc_thread_state.Tail = MPCSolver.Tail() != "None";
@@ -288,7 +289,9 @@ void Walking_controller::ComputeWalkingTrajectory()
     }
 
     ComputeTrajectoryOnce = false;
+
   }
+  
   WalkingTrajectory_Computing = false;
 }
 
@@ -465,7 +468,7 @@ void Walking_controller::UpdateInitialVectors()
 
   int indx = std::max(0, mpc_state_.Index);
 
-  if(UseMPCState && mpc_state_.X_MPC.size() != 0 && Robot_Walking)
+  if(UseMPCState && mpc_state_.X_MPC.size() != 0)
   {
     mpc_state_.Pck = mpc_state_.Get_CoM_planarTarget(indx);
     mpc_state_.Vck = mpc_state_.Get_CoMVel_planarTarget(indx);

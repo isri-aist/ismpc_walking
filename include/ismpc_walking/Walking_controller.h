@@ -305,6 +305,7 @@ private:
     bool emergencyFlag = false; //Stop controller run loop
     bool AutoFootstepPlacement = true; //To enable the Autofootstep placement MPC
     bool Tds_by_ratio = true;    
+    bool force_contact_safety_ = true;
 
     
     double LeftFootRatio = 0.5; double PrevLeftFootRatio = 0.5;
@@ -312,7 +313,7 @@ private:
     double t = 0; //General timing in a step
     double t_lift = 0; //Time when the swing foot contact has been removed
     double t_contact = 0; //Time when foot hit the ground
-    double ProcessTime = 0.0;
+    double mpc_thread_process_time = 0.0;
     double ControllerLoopTime = 0;
     double T_Steps = 1.1;
     double PrevStepTiming = 0;
@@ -362,6 +363,9 @@ private:
     bool FeetUp = false;
     
     mc_rtc::Configuration config_;
+
+
+
 
 
     double Vx_i = 0; double Vy_i = 0 ; double Omega_i = 0;
