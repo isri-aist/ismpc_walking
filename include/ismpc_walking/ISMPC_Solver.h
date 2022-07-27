@@ -14,49 +14,52 @@ struct Rectangle {
 
     public :
 
-        Rectangle(double ori , const Eigen::Vector2d size)
+        Rectangle(double ori , const Eigen::Vector2d & size, const Eigen::Vector3d & offset = Eigen::Vector3d::Zero())
         {
-            _center = Eigen::Vector3d::Zero();
+            _center = offset;
             _angle = ori;
             _size.segment(0,2) = size;
             compute_rect();
 
         }
 
-        Rectangle(const sva::PTransformd pose , const Eigen::Vector2d size )
+        Rectangle(const sva::PTransformd & pose , const Eigen::Vector2d & size, const Eigen::Vector3d & offset = Eigen::Vector3d::Zero() )
         {
-            _center = pose.translation(); _center.z() = 0;
+            _center = pose.translation() + offset; _center.z() = 0;
             _angle = mc_rbdyn::rpyFromMat(pose.rotation()).z();
             _size.segment(0,2) = size;
             compute_rect();
         }
 
-        Rectangle(const Eigen::Vector3d center, const Eigen::Vector2d size){
-            _center = center; _angle = _center.z(); _size.segment(0,2) = size;
+        Rectangle(const Eigen::Vector3d & center, const Eigen::Vector2d & size, const Eigen::Vector3d & offset = Eigen::Vector3d::Zero()){
+            _center = center + offset;
+            _angle = _center.z(); _size.segment(0,2) = size;
             _center.z() = 0;
         }
         void compute_rect()
         {
 
-            R.setZero();
-            R(0,0) = cos(_angle) ; R(0,1) = -sin(_angle);
-            R(1,0) = sin(_angle) ; R(1,1) =  cos(_angle);
-            R(2,2) = 1;
+            R << cos(_angle) , -sin(_angle) , 0 , 
+                 sin(_angle) , cos(_angle), 0 ,
+                 0, 0,1;  
+
             upper_left_corner  = _center + R * Eigen::Vector3d{-_size.x()/2, _size.y()/2,0};
             upper_right_corner = _center + R * Eigen::Vector3d{_size.x()/2, _size.y()/2,0};
             lower_left_corner  = _center + R * Eigen::Vector3d{-_size.x()/2,-_size.y()/2,0};
             lower_right_corner = _center + R * Eigen::Vector3d{_size.x()/2,-_size.y()/2,0};
+            corners = {upper_left_corner,upper_right_corner,lower_right_corner,lower_left_corner};
 
         }
         void add_offset(const Eigen::Vector3d offset)
         {
             _center += Eigen::Vector3d{offset.x() , offset.y(),0};
             compute_rect();
+            
         }
         ~Rectangle() = default;
 
-        std::vector<Eigen::Vector3d> Get_corners(){
-            return {upper_left_corner,upper_right_corner,lower_right_corner,lower_left_corner};
+        std::vector<Eigen::Vector3d> & Get_corners(){
+            return corners;
             // return {upper_left_corner,lower_left_corner,lower_right_corner,upper_right_corner};
         }
         const Eigen::Vector3d & Up_Left_corner() const noexcept
@@ -95,6 +98,7 @@ struct Rectangle {
         Eigen::Vector3d upper_right_corner;
         Eigen::Vector3d lower_left_corner;
         Eigen::Vector3d lower_right_corner;
+        std::vector<Eigen::Vector3d> corners;
 
 };
 
@@ -129,7 +133,7 @@ struct SupportPolygon{
 
         void jarvis_march();
 
-        std::vector<Eigen::Vector3d> Get_Polygone_Corners(){
+        std::vector<Eigen::Vector3d> & Get_Polygone_Corners(){
             return SupportPolygone_Corners;
         }
 
@@ -158,13 +162,13 @@ struct SupportPolygon{
     private:
 
         void Compute_polygone(){
-            for (int r = 0; r < _Rectangles.size() ; r++){
-                std::vector<Eigen::Vector3d> corners = _Rectangles[r].Get_corners();
-                for (int c = 0; c < corners.size() ; c++){
-                    _Corners.push_back(corners[c]);
-                }
-            }
+
             if (_Rectangles.size() > 1){
+                for (int r = 0 ; r < _Rectangles.size() ; r++)
+                {   
+                    std::vector<Eigen::Vector3d> corners = _Rectangles[r].Get_corners();
+                    _Corners.insert(_Corners.end(),corners.begin(),corners.end());
+                }
                 jarvis_march();
             }
             else{
@@ -174,11 +178,13 @@ struct SupportPolygon{
             SupportPolygone_Edges_Center.resize(SupportPolygone_Corners.size(),2);
             SupportPolygone_Vertices.resize(SupportPolygone_Corners.size(),2);
             Offset.resize(SupportPolygone_Corners.size());
+            Eigen::Matrix2d R_Vertices_0;
+            
             for (int c = 0 ; c < SupportPolygone_Corners.size() ; c++){
                 const Eigen::Vector3d & point_1 = SupportPolygone_Corners[c];
                 const Eigen::Vector3d & point_2 = SupportPolygone_Corners[ (c+1)%SupportPolygone_Corners.size() ];
                 const Eigen::Vector3d vertice = (point_2 - point_1).normalized();
-                const Eigen::Vector3d normal = Eigen::Vector3d{0,0,1}.cross(vertice).normalized();
+                const Eigen::Vector3d normal = vertical_vec.cross(vertice).normalized();
                 SupportPolygone_Normals(c,0) = normal.x();
                 SupportPolygone_Normals(c,1) = normal.y();
                 SupportPolygone_Vertices(c,0) = vertice.x();
@@ -186,16 +192,15 @@ struct SupportPolygon{
                 SupportPolygone_Edges_Center(c,0) = (((point_2 + point_1)/2)).x();
                 SupportPolygone_Edges_Center(c,1) = (((point_2 + point_1)/2)).y();
 
-                Eigen::Matrix2d R_Vertices_0;
+                
                 R_Vertices_0 << SupportPolygone_Normals(c,0) , SupportPolygone_Vertices(c,0), SupportPolygone_Normals(c,1), SupportPolygone_Vertices(c,1);
 
-                Offset(c) = (R_Vertices_0.transpose() * Eigen::Vector2d{ SupportPolygone_Edges_Center(c,0),
-                                                                         SupportPolygone_Edges_Center(c,1)}).x();
+                Offset(c) = (R_Vertices_0.transpose() * SupportPolygone_Edges_Center.block(c,0,1,2).transpose())(0);
 
  
             }
         }
-
+        Eigen::Vector3d vertical_vec = Eigen::Vector3d{0,0,1};
         std::vector<Rectangle> _Rectangles;
         std::vector<Eigen::Vector3d> _Corners;
         std::vector<Eigen::Vector3d> SupportPolygone_Corners;
