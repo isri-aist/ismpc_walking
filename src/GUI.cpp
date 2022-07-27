@@ -61,10 +61,15 @@ void Walking_controller::addToGUI()
                         [this]() {
                           Use_w = !Use_w;
                         }),
+                    mc_rtc::gui::Checkbox(
+                        "Force Contact Safety", [this]() { return force_contact_safety_; },
+                        [this]() {
+                          force_contact_safety_ = !force_contact_safety_;
+                        }),
                     // mc_rtc::gui::Checkbox("ZMP_Corr", [this](){return ZMP_correction;}, [this](){ZMP_correction =
                     // !ZMP_correction;}),
                     mc_rtc::gui::Label("Stab Error (m)", [this]() { return this->MPCSolver.stability_error(); }),
-                    mc_rtc::gui::Label("MPC Processing Time (ms)", [this]() { return this->ProcessTime; }),
+                    mc_rtc::gui::Label("MPC Processing Time (ms)", [this]() { return this->mpc_thread_process_time; }),
                     mc_rtc::gui::Label("Run Loop Processing Time (ms)", [this]() { return this->ControllerLoopTime; })
                     // mc_rtc::gui::Label("ZMP box range x",[this](){return this->MPCSolver.ZMP_dx;}),
                     // mc_rtc::gui::Label("ZMP box range y",[this](){return this->MPCSolver.ZMP_dy;})
