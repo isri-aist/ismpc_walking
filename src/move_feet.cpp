@@ -41,7 +41,7 @@ bool Walking_controller::MoveFeet(double t)
   if(Swing_Foot_Contact)
   {
     t_lift = PrevStepTiming + mpc_state_.get_tds();
-    if(t - 0 * Controller_Config.delta >= PrevStepTiming + mpc_state_.get_tds() && std::abs(sensor_support.force().z()) > 50)
+    if(t - 0 * Controller_Config.delta >= PrevStepTiming + mpc_state_.get_tds() && (std::abs(sensor_support.force().z()) > 50 || !force_contact_safety_ ))
     {
 
       mc_rtc::log::success("lifting " + swingFootName);
@@ -99,12 +99,12 @@ bool Walking_controller::MoveFeet(double t)
   SwingFoot_delta_rpy.z() = 0.;
   SwingFoot_rpy_initial_real.z() = 0.;
 
-  if(UseRealRobot)
-  {
-    X_0_FootTask_Target.rotation() =
-        mc_rbdyn::rpyToMat(SwingFoot_rpy_initial_real - SwingFoot_delta_rpy + SwingFoot_rpy_target);
-    // X_0_FootTask_Target.rotation() = mc_rbdyn::rpyToMat( -SwingFoot_delta_rpy + SwingFoot_rpy_target);
-  }
+  // if(UseRealRobot)
+  // {
+  //   X_0_FootTask_Target.rotation() =
+  //       mc_rbdyn::rpyToMat(SwingFoot_rpy_initial_real - SwingFoot_delta_rpy + SwingFoot_rpy_target);
+  //   // X_0_FootTask_Target.rotation() = mc_rbdyn::rpyToMat( -SwingFoot_delta_rpy + SwingFoot_rpy_target);
+  // }
 
   SwingFootTask->target(X_0_FootTask_Target);
   SwingFootTask->refVelB(sva::PTransformd(X_0_swing.rotation()) * V_0_FootTask_Target);
