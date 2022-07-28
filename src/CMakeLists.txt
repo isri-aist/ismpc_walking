@@ -38,3 +38,5 @@ install(TARGETS ${CONTROLLER_NAME}
 
 install(
   DIRECTORY ${CMAKE_SOURCE_DIR}/include/ DESTINATION include)
+
+add_subdirectory(states)
