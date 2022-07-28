@@ -2,11 +2,16 @@
 # Finite state machine
 #
 IdleKeepState: true
-StatesFiles:
-- "@MC_STATES_DEFAULT_INSTALL_PREFIX@/data"
+# Where to look for state libraries
 StatesLibraries:
-- "@MC_STATES_DEFAULT_INSTALL_PREFIX@"
+- "@MC_STATES_DEFAULT_RUNTIME_INSTALL_PREFIX@"
+- "@MC_STATES_RUNTIME_INSTALL_PREFIX@"
 - "@MC_CONTROLLER_INSTALL_PREFIX@/ismpc_walking/states"
+# Where to look for state files
+StatesFiles:
+- "@MC_STATES_DEFAULT_RUNTIME_INSTALL_PREFIX@/data"
+- "@MC_STATES_RUNTIME_INSTALL_PREFIX@/data"
+
 
 
 ObserverPipelines:     
@@ -175,9 +180,10 @@ stabilizer:
           biasLimit: [0.05, 0.02]
           withDCMBias: true
 
- 
+
 transitions:
   - [Initial,Ok,Initial]
+
 
 Plugins: [footsteps_planner_plugin]
 
