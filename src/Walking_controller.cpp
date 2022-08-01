@@ -2,9 +2,9 @@
 
 Walking_controller::~Walking_controller()
 {
+  MPC_thread_on = false;
   if(WalkingTrajectoryThread.joinable())
   {
-    MPC_thread_on = false;
     WalkingTrajectoryThread.join();
   }
 }
@@ -170,6 +170,7 @@ void Walking_controller::wait_for_mpc_thread()
         WalkingTrajectory_Computing = false;
       }
     }
+    mc_rtc::log::success("MPC thread on");
   }
 }
 
@@ -555,9 +556,9 @@ void Walking_controller::reset(const mc_control::ControllerResetData & reset_dat
   addContact({robot().name(), "ground", "RightFoot", "AllGround", 0.7, footcontact_dof});
   addContact({robot().name(), "ground", "LeftFoot", "AllGround", 0.7, footcontact_dof});
 
+  MPC_thread_on = false;
   if (WalkingTrajectoryThread.joinable())
   {
-    MPC_thread_on = false;
     WalkingTrajectoryThread.join();
   }
 
