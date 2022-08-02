@@ -145,10 +145,10 @@ void Walking_controller::wait_for_mpc_thread()
 {
   if (!MPC_thread_on)
   {
-    mc_rtc::log::info("waiting for plugin");
+    mc_rtc::log::info("waiting for footsteps_planner plugin");
     while (!datastore().has("footsteps_planner::planner_config"))
     {
-      sleep(1);
+      std::this_thread::sleep_for(std::chrono::milliseconds(50));
     }
     // auto config_func = datastore().get<std::function<void(mc_rtc::Configuration const&)>>("footstep_planner::configure");
     // config_func(planner_config_);
@@ -162,7 +162,7 @@ void Walking_controller::wait_for_mpc_thread()
     std::chrono::high_resolution_clock::time_point t_clock = std::chrono::high_resolution_clock::now();
     while(WalkingTrajectory_Computing)
     {
-      sleep(1);
+      std::this_thread::sleep_for(std::chrono::milliseconds(50));
       std::chrono::duration<double, std::milli> time_span = std::chrono::high_resolution_clock::now() - t_clock;
       if (time_span.count() > 5e3)
       {
@@ -291,6 +291,10 @@ void Walking_controller::ComputeWalkingTrajectory()
 
     ComputeTrajectoryOnce = false;
 
+  }
+  else
+  {
+    std::this_thread::sleep_for(std::chrono::milliseconds(2)); 
   }
   
   WalkingTrajectory_Computing = false;
