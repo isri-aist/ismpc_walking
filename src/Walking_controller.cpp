@@ -160,7 +160,7 @@ void Walking_controller::wait_for_mpc_thread()
 
     mc_rtc::log::info("waiting for first computation");
     std::chrono::high_resolution_clock::time_point t_clock = std::chrono::high_resolution_clock::now();
-    while(WalkingTrajectory_Computing)
+    while(ComputeTrajectoryOnce)
     {
       std::this_thread::sleep_for(std::chrono::milliseconds(50));
       std::chrono::duration<double, std::milli> time_span = std::chrono::high_resolution_clock::now() - t_clock;
