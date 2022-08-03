@@ -3,17 +3,15 @@
 #include <SpaceVecAlg/SpaceVecAlg>
 #include<iostream>
 #include<fstream>
-#include "eigen-quadprog/eigen_quadprog_api.h"
-#include "eigen-quadprog/QuadProg.h"
+#include<vector>
+
 
 
 class FootTrajectory {
     public :
         FootTrajectory();
         ~FootTrajectory() = default;
-       
-        void Init(double t, double t0, double tf,Eigen::Vector3d p0,Eigen::Vector3d pf,Eigen::Vector3d pt, Eigen::Vector3d v, Eigen::Vector3d a);
-    
+           
         sva::PTransformd GetTrajectory(){
             
             return sva::PTransformd(sva::RotX(swingFootOrientation(0)) * sva::RotY(swingFootOrientation(1)) * sva::RotZ(swingFootOrientation(2)),
@@ -88,12 +86,8 @@ class FootTrajectory {
         
 
     private:
-        bool QPsuccess = false;
         
         Eigen::VectorXd GetCoeffs(double t, double dur, Eigen::VectorXd boundaryConditions, bool IneqCstr_On);
-
-        Eigen::VectorXd solveQP();
-
 
         double z_offset = 0.0;
         double Z_contact_offset = 0.0;
@@ -160,16 +154,9 @@ class FootTrajectory {
 
         std::vector<Eigen::Vector3d> trajgui;
 
-        //QP Problem
-        Eigen::MatrixXd m_Q;  //QP Hessian
-        Eigen::VectorXd m_p;  //QP Grad
-        Eigen::MatrixXd m_G;  // QP constraints Matrix
-
+    
         Eigen::MatrixXd Aeq; //Equality Matrix
-        Eigen::VectorXd beq; //Equality Vector
 
-        Eigen::MatrixXd Aineq; //Inequality Matrix
-        Eigen::VectorXd bineq; //Inequality Vector
 
 
 };
