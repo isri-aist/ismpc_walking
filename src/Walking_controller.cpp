@@ -467,17 +467,15 @@ void Walking_controller::MoveCoM(double t)
 void Walking_controller::UpdateInitialVectors()
 {
   mpc_state_.t_k = t_k;
-  mpc_state_.Pzk = Eigen::Vector3d{0,0,1}.cross( robot().com().cross(robot().mass()*mc_rtc::constants::gravity) ) /
-                        ( (robot().mass()*(mc_rtc::constants::gravity - robot().comAcceleration())).transpose() *
-                        Eigen::Vector3d{0,0,1} );
-
-  int indx = std::max(0, mpc_state_.Index);
+  // mpc_state_.Pzk = Eigen::Vector3d{0,0,1}.cross( robot().com().cross(robot().mass()*mc_rtc::constants::gravity) ) /
+  //                       ( (robot().mass()*(mc_rtc::constants::gravity - robot().comAcceleration())).transpose() *
+  //                       Eigen::Vector3d{0,0,1} );
 
   if(UseMPCState && mpc_state_.X_MPC.size() != 0)
   {
-    mpc_state_.Pck = mpc_state_.Get_CoM_planarTarget(indx);
-    mpc_state_.Vck = mpc_state_.Get_CoMVel_planarTarget(indx);
-    mpc_state_.Pzk = mpc_state_.Get_ZMP_planarTarget(indx);
+    mpc_state_.Pck = mpc_state_.Get_CoM_planarTarget(mpc_state_.Index);
+    mpc_state_.Vck = mpc_state_.Get_CoMVel_planarTarget(mpc_state_.Index);
+    mpc_state_.Pzk = mpc_state_.Get_ZMP_planarTarget(mpc_state_.Index);
     mpc_state_.Pu = mpc_state_.Pck + mpc_state_.Vck/eta(); 
     // std::cout << "using MPC" << std::endl;
   }
@@ -490,14 +488,14 @@ void Walking_controller::UpdateInitialVectors()
       // Vck = Vck * (1 - K) + K * computeVelocityInSupportFoot(realRobot().comVelocity());
       mpc_state_.Pck = robot().com() * (1 - K) + K * realRobot().com();
       mpc_state_.Vck = robot().comVelocity() * (1 - K) + K * realRobot().comVelocity();
-      mpc_state_.Pzk = mpc_state_.Get_ZMP_planarTarget(indx) * (1 - K) + K * computeInSupportFootFlat(computeZMP());
+      mpc_state_.Pzk = mpc_state_.Get_ZMP_planarTarget(mpc_state_.Index) * (1 - K) + K * computeInSupportFootFlat(computeZMP());
 
       // mpc_state_.Pu = StabTask->measuredDCMUnbiased();
     }
     else
     {
-      mpc_state_.Pck = mpc_state_.Get_CoM_planarTarget(indx);
-      mpc_state_.Vck = mpc_state_.Get_CoMVel_planarTarget(indx);
+      mpc_state_.Pck = mpc_state_.Get_CoM_planarTarget(mpc_state_.Index);
+      mpc_state_.Vck = mpc_state_.Get_CoMVel_planarTarget(mpc_state_.Index);
       // mpc_state_.Pzk = mpc_state_.Get_ZMP_planarTarget(indx);      
     }
 
@@ -515,7 +513,7 @@ void Walking_controller::UpdateInitialVectors()
   if(mpc_state_.X_MPC.size() != 0)
   {
 
-    mpc_state_.Pzk = mpc_state_.Get_ZMP_planarTarget(indx);
+    mpc_state_.Pzk = mpc_state_.Get_ZMP_planarTarget(mpc_state_.Index);
     
   }
   else
