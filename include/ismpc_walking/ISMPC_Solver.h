@@ -8,6 +8,11 @@
 #include "ControllerConfiguration.h"
 #include <Eigen/StdVector>
 #include <eigen3/Eigen/Dense>
+#include <boost/geometry/geometry.hpp>
+#include <boost/geometry/geometries/point_xy.hpp>
+#include <boost/geometry/geometries/multi_point.hpp>
+#include <boost/geometry/geometries/polygon.hpp>
+#include <boost/geometry/geometries/adapted/boost_tuple.hpp>
 
 
 struct Rectangle {
@@ -35,6 +40,7 @@ struct Rectangle {
             _center = center + offset;
             _angle = _center.z(); _size.segment(0,2) = size;
             _center.z() = 0;
+            compute_rect();
         }
         void compute_rect()
         {
@@ -125,13 +131,14 @@ struct SupportPolygon{
         ~SupportPolygon()
         {
             _Rectangles.clear();
-            _Corners.clear();
+            _corners.clear();
             SupportPolygone_Corners.clear();
         }   
 
         
 
         void jarvis_march();
+        void convex_hull();
 
         std::vector<Eigen::Vector3d> & Get_Polygone_Corners(){
             return SupportPolygone_Corners;
@@ -164,12 +171,13 @@ struct SupportPolygon{
         void Compute_polygone(){
 
             if (_Rectangles.size() > 1){
-                for (int r = 0 ; r < _Rectangles.size() ; r++)
-                {   
-                    std::vector<Eigen::Vector3d> corners = _Rectangles[r].Get_corners();
-                    _Corners.insert(_Corners.end(),corners.begin(),corners.end());
-                }
-                jarvis_march();
+                // for (int r = 0 ; r < _Rectangles.size() ; r++)
+                // {   
+                //     std::vector<Eigen::Vector3d> corners = _Rectangles[r].Get_corners();
+                //     _corners.insert(_corners.end(),corners.begin(),corners.end());
+                // }
+                // jarvis_march();
+                convex_hull();
             }
             else{
                 SupportPolygone_Corners = _Rectangles[0].Get_corners();
@@ -184,7 +192,7 @@ struct SupportPolygon{
                 const Eigen::Vector3d & point_1 = SupportPolygone_Corners[c];
                 const Eigen::Vector3d & point_2 = SupportPolygone_Corners[ (c+1)%SupportPolygone_Corners.size() ];
                 const Eigen::Vector3d vertice = (point_2 - point_1).normalized();
-                const Eigen::Vector3d normal = vertical_vec.cross(vertice).normalized();
+                const Eigen::Vector3d normal = vertical_vec.cross(vertice);
                 SupportPolygone_Normals(c,0) = normal.x();
                 SupportPolygone_Normals(c,1) = normal.y();
                 SupportPolygone_Vertices(c,0) = vertice.x();
@@ -202,7 +210,7 @@ struct SupportPolygon{
         }
         Eigen::Vector3d vertical_vec = Eigen::Vector3d{0,0,1};
         std::vector<Rectangle> _Rectangles;
-        std::vector<Eigen::Vector3d> _Corners;
+        std::vector<Eigen::Vector3d> _corners;
         std::vector<Eigen::Vector3d> SupportPolygone_Corners;
         Eigen::MatrixX2d SupportPolygone_Vertices;
         Eigen::MatrixX2d SupportPolygone_Edges_Center;

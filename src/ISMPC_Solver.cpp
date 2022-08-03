@@ -311,9 +311,9 @@ void ISMPC_Solver::ZMP_Constraints()
   sva::PTransformd X_0_step_j = X_0_support_foot;
   sva::PTransformd X_0_step_jm1 = X_0_swing_foot_initial;
 
-  std::chrono::duration<double, std::milli> time_span = std::chrono::high_resolution_clock::now() - t_clock;
+  // std::chrono::duration<double, std::milli> time_span = std::chrono::high_resolution_clock::now() - t_clock;
   // mc_rtc::log::info("[ZMP cstr] init time {} ms", time_span.count());
-  t_clock = std::chrono::high_resolution_clock::now();
+  // t_clock = std::chrono::high_resolution_clock::now();
   
   for(int i = 0; i < m_C; i++)
   {
@@ -370,7 +370,7 @@ void ISMPC_Solver::ZMP_Constraints()
 
     if(j_f == 0 || !AutoFootstepPlacement)
     {
-
+      // t_clock_0 = std::chrono::high_resolution_clock::now();
       if(j_f > 0)
       {
 
@@ -442,6 +442,9 @@ void ISMPC_Solver::ZMP_Constraints()
       b_zmp_ineq.push_back(offsets - normals * P_z_k.segment(0,2));
 
       All_poly.push_back(zmp_cstr_polygons.back().Get_Polygone_Corners());
+
+      // time_span_0 = std::chrono::high_resolution_clock::now() - t_clock_0;
+      // mc_rtc::log::info("[ZMP cstr] Cstr at j {} took {} ms", j_f ,time_span_0.count());
     }
 
     else if(j_f == 1)
@@ -545,10 +548,10 @@ void ISMPC_Solver::ZMP_Constraints()
     count_Dstep += 1;
   }
 
-  time_span = std::chrono::high_resolution_clock::now() - t_clock;
+  // time_span = std::chrono::high_resolution_clock::now() - t_clock;
   // mc_rtc::log::info("[ZMP cstr] gen time {} ms", time_span.count());
 
-  t_clock = std::chrono::high_resolution_clock::now();
+  // t_clock = std::chrono::high_resolution_clock::now();
 
   int N_zmp_cstr = 0;
   for(int k = 0; k < zmp_cstr_polygons.size(); k++)
@@ -589,7 +592,7 @@ void ISMPC_Solver::ZMP_Constraints()
       Eigen::MatrixXd::Identity(b_zmp_traj.rows(), b_zmp_traj.rows())
       * Delta.block(0, 0, b_zmp_traj.rows(), b_zmp_traj.rows());
 
-  time_span = std::chrono::high_resolution_clock::now() - t_clock;
+  // time_span = std::chrono::high_resolution_clock::now() - t_clock;
   // mc_rtc::log::info("[ZMP cstr] matrix gen time {} ms", time_span.count());
   
 }
@@ -1094,28 +1097,61 @@ Eigen::VectorXd ISMPC_Solver::solveQP()
   return QP.result();
 }
 
+BOOST_GEOMETRY_REGISTER_BOOST_TUPLE_CS(cs::cartesian)
+namespace bg = boost::geometry;
+
+void SupportPolygon::convex_hull()
+{
+  SupportPolygone_Corners.clear();
+  
+  typedef boost::tuple<double,double> point;
+  typedef bg::model::multi_point<point> points;
+  typedef bg::model::polygon<point> polygon;
+
+  points p;
+  for (int r = 0 ; r < _Rectangles.size() ; r ++)
+  {
+    std::vector<Eigen::Vector3d> rect_corners = _Rectangles[r].Get_corners();
+    for (size_t i=0; i<rect_corners.size(); i++) {
+      bg::append(p, point(rect_corners[i].x(),rect_corners[i].y()));
+    }
+  }
+  polygon hull;
+  bg::convex_hull(p, hull);
+
+
+for(auto it = boost::begin(boost::geometry::exterior_ring(hull)); it != boost::end(boost::geometry::exterior_ring(hull)); ++it)
+{
+    SupportPolygone_Corners.push_back(Eigen::Vector3d{bg::get<0>(*it),bg::get<1>(*it),0.});
+}
+
+
+
+
+}
+
 void SupportPolygon::jarvis_march()
 {
-  // std::sort(_Corners.begin(),_Corners.end(),vec3d_x_comp());
+  // std::sort(_corners.begin(),_corners.end(),vec3d_x_comp());
 
-  int index = std::min_element(_Corners.begin(), _Corners.end(), vec3d_x_comp()) - _Corners.begin();
+  int index = std::min_element(_corners.begin(), _corners.end(), vec3d_x_comp()) - _corners.begin();
 
-  SupportPolygone_Corners.push_back(_Corners[index]);
+  SupportPolygone_Corners.push_back(_corners[index]);
 
   int l = index;
   int q = 0;
   while(true)
   {
-    q = (l + 1) % _Corners.size();
-    for(int i = 0; i < _Corners.size(); i++)
+    q = (l + 1) % _corners.size();
+    for(int i = 0; i < _corners.size(); i++)
     {
       if(i == l)
       {
         continue;
       }
-      const Eigen::Vector3d & v_q{_Corners[q].x(), _Corners[q].y(), 0};
-      const Eigen::Vector3d & v_l{_Corners[l].x(), _Corners[l].y(), 0};
-      const Eigen::Vector3d & v_i{_Corners[i].x(), _Corners[i].y(), 0};
+      const Eigen::Vector3d & v_q{_corners[q].x(), _corners[q].y(), 0};
+      const Eigen::Vector3d & v_l{_corners[l].x(), _corners[l].y(), 0};
+      const Eigen::Vector3d & v_i{_corners[i].x(), _corners[i].y(), 0};
       double d = ((v_q - v_l).cross(v_i - v_l)).z();
       if(d > 0 || (d == 0 && (v_i - v_l).norm() > (v_q - v_l).norm()))
       {
@@ -1127,6 +1163,6 @@ void SupportPolygon::jarvis_march()
     {
       break;
     }
-    SupportPolygone_Corners.push_back(_Corners[q]);
+    SupportPolygone_Corners.push_back(_corners[q]);
   }
 }
