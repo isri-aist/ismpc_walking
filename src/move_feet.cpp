@@ -130,10 +130,6 @@ bool Walking_controller::MoveFeet(double t)
 
       t_contact = t;
 
-      // StabTask->setContacts(
-      //     {mc_tasks::lipm_stabilizer::ContactState::Left, mc_tasks::lipm_stabilizer::ContactState::Right});
-
-
       Eigen::Vector3d supp_pose;
       double supp_yaw;
       supp_pose = robot().surfacePose(supportFootName).translation();
@@ -231,17 +227,12 @@ bool Walking_controller::MoveFeet(double t)
 
 void Walking_controller::updateTasks()
 {
-  std::vector<std::string> SupportFootJoints;
   if(supportFootName == "LeftFoot")
   {
-
-    SupportFootTask = leftSwingFootTask;
     SwingFootTask = rightSwingFootTask;
   }
   else
   {
-
-    SupportFootTask = rightSwingFootTask;
     SwingFootTask = leftSwingFootTask;
   }
   Eigen::MatrixXd dimW(Eigen::VectorXd::Zero(6));
@@ -249,9 +240,7 @@ void Walking_controller::updateTasks()
   SwingFootTask->weight(Controller_Config.SwingFootWeight);
   SwingFootTask->dimWeight(Eigen::VectorXd::Ones(6));
   SwingFootTask->stiffness(Controller_Config.SwingFootStiffness);
-  SupportFootTask->weight(Controller_Config.SupportFootWeight);
-  SupportFootTask->dimWeight(Controller_Config.SupportFootWeight_Dim);
-  SupportFootTask->stiffness(Controller_Config.SupportFootStiffness * Controller_Config.SupportFootStiffness_Dim);
+
 
   // Eigen::VectorXd dimW_com(Eigen::VectorXd::Ones(3)); dimW_com(2) = 0.1;
   // CoMTask->dimWeight(dimW_com);
