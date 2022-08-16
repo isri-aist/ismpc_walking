@@ -95,6 +95,8 @@ void ISMPC_Solver::init_MPC(const MPC_state & mpc_state , const std::vector<sva:
   // m_eta = sqrt(g / P_c_k.z());
   P_u_k = P_c_k + (V_c_k / m_eta);
   X_0_swing_foot_initial = mpc_state.X_0_Initial_SwingFoot;
+  
+
   X_0_support_foot = mpc_state.X_0_SupportFoot;
   input_steps_ = steps;
   m_timestamp = timesstp;
@@ -253,6 +255,7 @@ void ISMPC_Solver::ZMP_Constraints()
   {
     sgn = 1;
   }
+  // X_0_swing_foot_initial = sva::PTransformd(X_0_swing_foot_initial.rotation(),P_z_k);
   const Eigen::Vector3d rect_offset_support =
       X_0_support_foot.rotation().transpose() * Eigen::Vector3d{rect_pose_offset.x(), sgn * rect_pose_offset.y(), 0};
 
@@ -404,8 +407,6 @@ void ISMPC_Solver::ZMP_Constraints()
 
       // ZMP_rect = ZMP_rect_mid;
 
-      ZMP_ref_traj.push_back(ZMP_Zone.translation().x() - P_z_k.x());
-      ZMP_ref_traj.push_back(ZMP_Zone.translation().y() - P_z_k.y());
 
       if(Slide_ZMP_region || nn == DD + 1)
       {
@@ -426,10 +427,13 @@ void ISMPC_Solver::ZMP_Constraints()
       else
       {
         zmp_cstr_polygons.push_back(SuppPoly);
-
         ZMP_max_ref_traj.push_back(R_0_support * ZMP_rect.get_center() + Eigen::Vector3d{m_dx / 2, m_dy / 2, 0});
         ZMP_min_ref_traj.push_back(R_0_support * ZMP_rect.get_center() - Eigen::Vector3d{m_dx / 2, m_dy / 2, 0});
+
       }
+
+      ZMP_ref_traj.push_back(ZMP_Zone.translation().x() - P_z_k.x());
+      ZMP_ref_traj.push_back(ZMP_Zone.translation().y() - P_z_k.y());
 
       if(i == 0)
       {
@@ -604,6 +608,7 @@ void ISMPC_Solver::FootSteps_Constraints()
   Eigen::MatrixXd Delta = Eigen::MatrixXd::Identity(2 * j_Max_C, 2 * j_Max_C); // Matrix to differentiate two footsteps
 
   double l = 0;
+  int N_Footsteps_cstr = 0;
   for(int i = 0; i < j_Max_C; i++)
   {
     const double theta_i = mc_rbdyn::rpyFromMat(input_steps_[i].rotation()).z();
@@ -639,13 +644,11 @@ void ISMPC_Solver::FootSteps_Constraints()
                             + normals * X_0_support_foot.translation().segment(0,2)
                             + normals * R_Theta_i_0.block(0,0,2,2) * Eigen::Vector2d{0, l});
     }
+    N_Footsteps_cstr += static_cast<int>(Normal_step_Vec.back().rows());
   }
 
-  int N_Footsteps_cstr = 0;
-  for(int k = 0; k < Normal_step_Vec.size(); k++)
-  {
-    N_Footsteps_cstr += static_cast<int>(Normal_step_Vec[k].rows());
-  }
+  
+
 
   Eigen::MatrixXd Foosteps_Cstr = Eigen::MatrixXd::Zero(N_Footsteps_cstr, 2 * (j_Max_C));
   Eigen::VectorXd b_steps(N_Footsteps_cstr);

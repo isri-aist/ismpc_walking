@@ -466,6 +466,7 @@ void Walking_controller::MoveCoM(double t)
 
 void Walking_controller::UpdateInitialVectors()
 {
+  
   mpc_state_.t_k = t_k;
   // mpc_state_.Pzk = Eigen::Vector3d{0,0,1}.cross( robot().com().cross(robot().mass()*mc_rtc::constants::gravity) ) /
   //                       ( (robot().mass()*(mc_rtc::constants::gravity - robot().comAcceleration())).transpose() *

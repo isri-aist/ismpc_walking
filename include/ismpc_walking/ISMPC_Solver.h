@@ -527,7 +527,7 @@ class ISMPC_Solver {
         double m_tk;
         double m_Tc ; double m_Tp; // Control & Preview horizon time
         double m_Tds; //Double Support Duration
-        int Tds_offset = 2;
+        int Tds_offset = 0;
         double m_Dstep_ratio; //T_DoubleStep/T_Step
         double m_delta ; //t_k - t_k-1
         double m_delta_control; //Controller timestep
