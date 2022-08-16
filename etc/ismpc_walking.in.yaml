@@ -60,16 +60,16 @@ ismpc:
   Tc: 1.5
   Tp: 4
   delta: 1e-1
-  beta: 1e6
+  beta: 1e7
   beta_stab: 1e8
   beta_traj : 1e1
   zmp_cstr_square: [0.1,0.05]
-  zmp_cstr_square_sg_supp: [0.1,0.07]
+  zmp_cstr_square_sg_supp: [0.07,0.06]
   next_stp_cstr_ratio: 1
   offset: [0.0,0.0]
-  offset_sg_supp: [0.00,-0.01]
+  offset_sg_supp: [0.00,0.0]
   allow_none_tail: true
-  footsteps_cstr_square: [0.3,0.01]
+  footsteps_cstr_square: [0.4,0.02]
   double_support_ratio: 0.25
   sliding_zmp_cstr_region: false
   use_stability_task: false
@@ -81,18 +81,12 @@ ismpc:
 footsteps_planner:
   Tp: 6
   delta: 0.05
-  Ts_limit: [0.7,2]
-  kinematics_cstr: [0.2,0.12]
-  feet_distance: 0.17
+  Ts_limit: [1,2]
+  kinematics_cstr: [0.4,0.08]
+  feet_distance: 0.15
   mean_speed: 0.1
   robot_height: 150
   max_rotation: 0.17
-
-mocap_plugin:
-  ip : "172.17.0.1"
-  port : 7001
-  frequency: 60
-  sequence_size : 60
 
 tasks:
   swingfoot_stiffness: 500
