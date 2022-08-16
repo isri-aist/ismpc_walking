@@ -69,7 +69,7 @@ void Walking_controller::getTransformations()
   const auto & X_0_torso_link = robot().bodyPosW(torsoBodyName_);
   const auto & X_0_torso_reference = ReferenceFrame_Origin_Offset * X_0_torso_link;
 
-  LeftFootRatio = StabTask->leftFootRatio();
+  LeftFootRatio = mc_filter::utils::clamp(StabTask->leftFootRatio(),LeftFootRatio - 0.019,LeftFootRatio + 0.019);
 
 
 }

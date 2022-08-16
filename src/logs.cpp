@@ -9,7 +9,10 @@ void Walking_controller::AddToLog()
     ret.reserve(rjo.size());
     for(const auto & j : rjo)
     {
-      ret.push_back(robot().mbc().jointTorque[robot().jointIndexByName(j)][0]);
+      if(robot().hasJoint(j))
+      {
+        ret.push_back(robot().mbc().jointTorque[robot().jointIndexByName(j)][0]);
+      }
     }
     return ret;
   });

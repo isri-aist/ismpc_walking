@@ -146,7 +146,7 @@ void Walking_controller::wait_for_mpc_thread()
   if (!MPC_thread_on)
   {
     mc_rtc::log::info("waiting for footsteps_planner plugin");
-    while (!datastore().has("footsteps_planner::planner_config"))
+    while (!datastore().has("footstep_planner::configure"))
     {
       std::this_thread::sleep_for(std::chrono::milliseconds(50));
     }
