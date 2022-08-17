@@ -15,7 +15,7 @@ StatesFiles:
 
 
 ObserverPipelines:     
-  name: "LIPMWalkingObserverPipeline"
+  name: "ObserverPipeline"
   gui: true
   observers:
     - type: Encoder
@@ -59,7 +59,7 @@ controller:
 ismpc:
   Tc: 1.5
   Tp: 4
-  delta: 1e-1
+  delta: 5e-2
   beta: 1e7
   beta_stab: 1e8
   beta_traj : 1e1
@@ -93,10 +93,6 @@ tasks:
   swingfoot_weight: 5000
   swingfoot_dimweight: [1.,1.,1.,1.,1.,1.]
   swingfoot_dimstiffness: [1.,1.,1.,1.,1.,1.]
-  supportfoot_dimweight: [0.,0.,1.,1.,1.,1.]
-  supportfoot_dimstiffness: [0.,0.,1.,1.,1.,1.]
-  supportfoot_stiffness: 20000
-  supportfoot_weight: 10000
 
 controller:
   start_at_launch: false
