@@ -247,6 +247,7 @@ void Walking_controller::ComputeWalkingTrajectory()
     }
 
     MPCSolver.init_MPC(mpc_thread_state , planned_steps_, timesteps , Tail , Steps_Desired,Steps);
+    // MPCSolver.Puk(mpc_state_.Pu);
 
   
     if (Use_w){
@@ -484,14 +485,15 @@ void Walking_controller::UpdateInitialVectors()
   {
     if (DoubleSupport_state && true)
     {
-      double K = 1;
+      double K = 0;
       // Pck = Pck * (1 - K) + K * computeInSupportFootFlat(realRobot().com());
       // Vck = Vck * (1 - K) + K * computeVelocityInSupportFoot(realRobot().comVelocity());
+      mpc_state_.Pzk = mpc_state_.Get_ZMP_planarTarget(mpc_state_.Index) * (1 - K) + K * computeInSupportFootFlat(computeZMP());
+      K = K_feedback;
       mpc_state_.Pck = robot().com() * (1 - K) + K * realRobot().com();
       mpc_state_.Vck = robot().comVelocity() * (1 - K) + K * realRobot().comVelocity();
-      mpc_state_.Pzk = mpc_state_.Get_ZMP_planarTarget(mpc_state_.Index) * (1 - K) + K * computeInSupportFootFlat(computeZMP());
 
-      // mpc_state_.Pu = StabTask->measuredDCMUnbiased();
+      mpc_state_.Pu = StabTask->measuredDCMUnbiased();
     }
     else
     {

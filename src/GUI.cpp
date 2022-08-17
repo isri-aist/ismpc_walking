@@ -49,6 +49,8 @@ void Walking_controller::addToGUI()
                           if(UseMPCState) UseMPCState = false;
                           ComputeTrajectoryOnce = true;
                         }),
+                    mc_rtc::gui::NumberInput(
+                        "K feedback", [this]() -> double { return K_feedback; }, [this](const double & n) { K_feedback = n;  }),
                     mc_rtc::gui::Checkbox(
                         "MPC state feedback", [this]() { return UseMPCState; },
                         [this]() {
