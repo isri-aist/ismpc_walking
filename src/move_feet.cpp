@@ -157,10 +157,7 @@ bool Walking_controller::MoveFeet(double t)
       // mc_rtc::log::info("Locking " + swingFootName + "at t : " + std::to_string(t));
       mc_rtc::log::info("T_contact - T_steps : {}", t - NextTimeStep);
 
-
-      Eigen::Vector6d dof;
-      dof << 0, 0, 1, 1, 1, 0;
-      addContact({robot().name(), "ground", swingFootName, "AllGround", 0.7, dof});
+      addContact({robot().name(), "ground", swingFootName, "AllGround", 0.7, footcontact_dof});
 
 
       mc_rtc::log::success("Locked " + swingFootName);

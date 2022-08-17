@@ -9,12 +9,7 @@
 #include <unistd.h>
 #include <mc_control/mc_controller.h>
 #include <mc_tasks/AddRemoveContactTask.h>
-#include <mc_tasks/CoMTask.h>
-#include <mc_tasks/CoPTask.h>
 #include <Tasks/QPContactConstr.h>
-#include <mc_tasks/AdmittanceTask.h>
-#include <mc_tasks/EndEffectorTask.h>
-#include <mc_tasks/OrientationTask.h>
 #include <mc_tasks/SurfaceTransformTask.h>
 #include <mc_tasks/lipm_stabilizer/StabilizerTask.h>
 #include <mc_rbdyn/Robots.h>
@@ -76,13 +71,10 @@ public :
 
         Controller_Config.SwingFootStiffness = config("tasks")("swingfoot_stiffness");
         Controller_Config.SwingFootWeight = config("tasks")("swingfoot_weight");
-        Controller_Config.SupportFootStiffness = config("tasks")("supportfoot_stiffness");
-        Controller_Config.SupportFootWeight = config("tasks")("supportfoot_weight");
         Controller_Config.SwingFootStiffness_Dim = config("tasks")("swingfoot_dimstiffness");
         Controller_Config.SwingFootWeight_Dim = config("tasks")("swingfoot_dimweight");
 
-        Controller_Config.SupportFootStiffness_Dim = config("tasks")("supportfoot_dimstiffness");
-        Controller_Config.SupportFootWeight_Dim = config("tasks")("supportfoot_dimweight");
+
 
         
         Configure(Controller_Config);
@@ -317,6 +309,7 @@ private:
     double ControllerLoopTime = 0;
     double T_Steps = 1.1;
     double PrevStepTiming = 0;
+    double K_feedback = 1;
 
     double maxStiffTimeThreshold_ = 3; // Time after which hand task gain reach max [s]
     double linearStiffTimeThreshold_ = 1.5; // Time after which hand task gain switch from min to gradually reach max [s]

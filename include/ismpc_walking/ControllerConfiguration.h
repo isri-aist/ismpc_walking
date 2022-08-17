@@ -5,8 +5,6 @@ struct ControllerConfiguration
 {
     double SwingFootWeight = 5000;
     double SwingFootStiffness = 300;
-    double SupportFootWeight = 20000;
-    double SupportFootStiffness = 10000;
     double CoM_Stiff = 100;
     double CoM_Weight = 1000;
     Eigen::Vector2d Std_Admittance = {1e-2,1e-2}; 
@@ -17,8 +15,7 @@ struct ControllerConfiguration
     Eigen::Vector3d CoMWeight_Dim{1,1,1};
     Eigen::Vector6d SwingFootWeight_Dim = Eigen::Vector6d::Ones();
     Eigen::Vector6d SwingFootStiffness_Dim = Eigen::Vector6d::Ones();
-    Eigen::Vector6d SupportFootWeight_Dim = Eigen::Vector6d::Ones();
-    Eigen::Vector6d SupportFootStiffness_Dim = Eigen::Vector6d::Ones();
+
 
     double Ts_max = 2;
     double T_ds_min = 0.25;
