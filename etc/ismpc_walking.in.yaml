@@ -60,7 +60,7 @@ ismpc:
   Tc: 1.5
   Tp: 4
   delta: 5e-2
-  beta: 1e7
+  beta: 1e8
   beta_stab: 1e8
   beta_traj : 1e1
   zmp_cstr_square: [0.1,0.05]
@@ -74,7 +74,7 @@ ismpc:
   sliding_zmp_cstr_region: false
   use_stability_task: false
   safety_thresholds:
-    beta_range: [1e2,1e6]
+    beta_range: [1e-9,1e9]
     zmp_cstr_square_min: 0.01
     zmp_cstr_square_max: 0.2
 
@@ -121,7 +121,8 @@ stabilizer:
           gains:
             prop: 4
             integral: 5
-            deriv: 0.2
+            deriv: 0.
+            comdError: 0.
         admittance:
           cop: [0.03, 0.04]
           maxVel:
