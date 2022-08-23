@@ -536,7 +536,8 @@ class ISMPC_Solver {
         Eigen::Vector2d rect_pose_offset; //cstr zone offset in the foot frame for y axis, positive offset is an offset toward the other feet;
         Eigen::Vector2d rect_pose_offset_sg_supp; //ss cstr zone offset in the foot frame for y axis, positive offset is an offset toward the other feet;
         double zmp_cstr_next_stp_ratio = 2;
-        double m_dx_f ; double m_dy_f; //Step Placement Region
+        double m_dx_f ; double m_dy_f; //Step kinematic admissible Region
+        double m_dx_f_rect ; double m_dy_f_rect; //Step admissible region
         double m_Beta = 1e1;
         double m_Beta_stab = 1e5;
         double m_Beta_traj = 0.;

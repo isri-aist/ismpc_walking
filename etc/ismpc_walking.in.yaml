@@ -69,6 +69,7 @@ ismpc:
   offset: [0.0,0.0]
   offset_sg_supp: [0.00,0.0]
   allow_none_tail: true
+  foosteps_kin_cstr: [0.4,0.02]
   footsteps_cstr_square: [0.4,0.02]
   double_support_ratio: 0.25
   sliding_zmp_cstr_region: false

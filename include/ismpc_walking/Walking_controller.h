@@ -48,6 +48,7 @@ public :
         Controller_Config.MPC_ZMP_Constraint_min_size = config("ismpc")("safety_thresholds")("zmp_cstr_square_min");
         Controller_Config.MPC_ZMP_Constraint_max_size = config("ismpc")("safety_thresholds")("zmp_cstr_square_max");
         Controller_Config.MPC_Footsteps_Constraint_size = config("ismpc")("footsteps_cstr_square");
+        Controller_Config.MPC_Footsteps_kin_Constraint_size = config("ismpc")("foosteps_kin_cstr");
         Controller_Config.Double_Step_Ratio = config("ismpc")("double_support_ratio");
         Controller_Config.sliding_zmp_cstr_region = config("ismpc")("sliding_zmp_cstr_region");
         Controller_Config.delta =  config("ismpc")("delta");
@@ -285,7 +286,7 @@ private:
     double x = 0.4 ; double y = 0.1 ; double z = 30; //Coordinate for a specified footstep position
 
     bool UseRealRobot = false; //To use the real robots data
-    bool UseMPCState = false;
+    bool UseMPCState = true;
     bool Stop = true ; //If true, the robot is at stop or the robot is about to stop at next step;
     bool Robot_Walking = false; //If false, the robot is not moving;
     bool ComputeTrajectoryOnce = true; 

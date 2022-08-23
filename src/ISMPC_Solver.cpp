@@ -36,8 +36,10 @@ ISMPC_Solver::ISMPC_Solver(double delta_controller, double delta, double Tp, dou
 
 void ISMPC_Solver::configure(const ControllerConfiguration & config)
 {
-  m_dx_f = config.MPC_Footsteps_Constraint_size.x();
-  m_dy_f = config.MPC_Footsteps_Constraint_size.y();
+  m_dx_f = config.MPC_Footsteps_kin_Constraint_size.x();
+  m_dy_f = config.MPC_Footsteps_kin_Constraint_size.y();
+  m_dx_f_rect = config.MPC_Footsteps_Constraint_size.x();
+  m_dy_f_rect = config.MPC_Footsteps_Constraint_size.y();
   m_dx = config.MPC_ZMP_Constraint_size.x();
   m_dy = config.MPC_ZMP_Constraint_size.y();
   m_dx_sg_s = config.MPC_ZMP_Constraint_size_sg_supp.x();
@@ -77,7 +79,8 @@ void ISMPC_Solver::configure(const ControllerConfiguration & config)
   mc_rtc::log::info("[ISMPC] Configuration :");
   mc_rtc::log::info("Beta {}", m_Beta);
   mc_rtc::log::info("ZMP cstr\n{}", Eigen::Vector2d{m_dx, m_dy});
-  mc_rtc::log::info("Footsteps cstr\n{}", Eigen::Vector2d{m_dx_f, m_dy_f});
+  mc_rtc::log::info("Footsteps kin cstr\n{}", Eigen::Vector2d{m_dx_f, m_dy_f});
+  mc_rtc::log::info("Footsteps cstr\n{}", Eigen::Vector2d{m_dx_f_rect, m_dy_f_rect});
   mc_rtc::log::info("CoM h {}", CoM_height);
   mc_rtc::log::info("Tp {} Tc {}", m_Tp, m_Tc);
   mc_rtc::log::info("MPC_delta {}", m_delta);
@@ -222,10 +225,7 @@ void ISMPC_Solver::Static_ZMP_Constraints()
 
     ZMP_Cstr.block(cstr_index, zk, n_vertice, 2) = zmp_cstr_polygons[i_ineq].normals();
     bineq_zmp.segment(cstr_index, n_vertice) = b_zmp_ineq[i_ineq];
-    // for (int i = 0 ; i < b_zmp_ineq[i_ineq].rows(); i++)
-    // {
-    //   b_zmp.push_back(b_zmp_ineq[i_ineq](i));
-    // }
+
 
     zk += 2;
     cstr_index += n_vertice;
@@ -603,12 +603,15 @@ void ISMPC_Solver::ZMP_Constraints()
 
 void ISMPC_Solver::FootSteps_Constraints()
 {
-  std::vector<Eigen::VectorXd> b_step_ineq;
-  std::vector<Eigen::MatrixX2d> Normal_step_Vec;
+  std::vector<Eigen::VectorXd> b_kin_cstr_vec;
+  std::vector<Eigen::MatrixX2d> kin_cstr_normals_vec;
+  std::vector<Eigen::MatrixX2d> step_cstr_normals_vec;
+  std::vector<Eigen::VectorXd> b_step_cstr_vec;
   Eigen::MatrixXd Delta = Eigen::MatrixXd::Identity(2 * j_Max_C, 2 * j_Max_C); // Matrix to differentiate two footsteps
 
   double l = 0;
-  int N_Footsteps_cstr = 0;
+  int N_footsteps_kin_cstr = 0;
+  int N_footsteps_cstr = 0;
   for(int i = 0; i < j_Max_C; i++)
   {
     const double theta_i = mc_rbdyn::rpyFromMat(input_steps_[i].rotation()).z();
@@ -630,46 +633,77 @@ void ISMPC_Solver::FootSteps_Constraints()
     SupportPolygon Kinematic_Poly = SupportPolygon(Kinematic_Rectangle);
     Eigen::MatrixX2d normals((Kinematic_Poly.normals()));
     Eigen::VectorXd offsets(Kinematic_Poly.offsets());  
-    Normal_step_Vec.push_back(normals);
+    kin_cstr_normals_vec.push_back(normals);
     if(i > 0)
     {
       Delta(2 * i, 2 * (i - 1)) = -1;
       Delta(2 * i + 1, 2 * (i - 1) + 1) = -1;
-      b_step_ineq.push_back(offsets
+      b_kin_cstr_vec.push_back(offsets
                             + normals * R_Theta_i_0.block(0,0,2,2) * Eigen::Vector2d{0, l});
     }
     else
     {
-      b_step_ineq.push_back(offsets
+      b_kin_cstr_vec.push_back(offsets
                             + normals * X_0_support_foot.translation().segment(0,2)
                             + normals * R_Theta_i_0.block(0,0,2,2) * Eigen::Vector2d{0, l});
     }
-    N_Footsteps_cstr += static_cast<int>(Normal_step_Vec.back().rows());
+    N_footsteps_kin_cstr += static_cast<int>(kin_cstr_normals_vec.back().rows());
+
+    Rectangle step_admissible_region_rect = Rectangle(X_0_step_i,Eigen::Vector2d{m_dx_f_rect, m_dy_f_rect});
+    SupportPolygon step_admissible_region_poly = SupportPolygon(step_admissible_region_rect);
+    normals = step_admissible_region_poly.normals();
+    
+    step_cstr_normals_vec.push_back(normals);
+    b_step_cstr_vec.push_back(step_admissible_region_poly.offsets());
+    N_footsteps_cstr += static_cast<int>(step_cstr_normals_vec.back().rows());
+
   }
 
   
 
 
-  Eigen::MatrixXd Foosteps_Cstr = Eigen::MatrixXd::Zero(N_Footsteps_cstr, 2 * (j_Max_C));
-  Eigen::VectorXd b_steps(N_Footsteps_cstr);
+  Eigen::MatrixXd foosteps_kin_cstr = Eigen::MatrixXd::Zero(N_footsteps_kin_cstr , 2 * (j_Max_C));
+  Eigen::MatrixXd foosteps_cstr = Eigen::MatrixXd::Zero(N_footsteps_cstr , 2 * (j_Max_C));
+  Eigen::VectorXd b_kin_cstr(N_footsteps_kin_cstr );
+  Eigen::VectorXd b_steps_cstr(N_footsteps_cstr );
+  Aineq_steps.resize(N_footsteps_kin_cstr + N_footsteps_cstr, N_variable); Aineq_steps.setZero();
+  bineq_steps.resize(N_footsteps_kin_cstr + N_footsteps_cstr); bineq_steps.setZero();
+
   int step = 0;
   int cstr_index = 0;
 
-  for(int i_ineq = 0; i_ineq < Normal_step_Vec.size(); i_ineq++)
+  for(int i_ineq = 0; i_ineq < kin_cstr_normals_vec.size(); i_ineq++)
   {
 
-    Eigen::MatrixXd ineq = Normal_step_Vec[i_ineq];
+    Eigen::MatrixX2d ineq = kin_cstr_normals_vec[i_ineq];
 
-    Foosteps_Cstr.block(cstr_index, step, ineq.rows(), 2) = ineq.block(0, 0, ineq.rows(), 2);
-    b_steps.segment(cstr_index, ineq.rows()) = b_step_ineq[i_ineq].segment(0, ineq.rows());
+    foosteps_kin_cstr.block(cstr_index, step, ineq.rows(), 2) = ineq.block(0, 0, ineq.rows(), 2);
+    b_kin_cstr.segment(cstr_index, ineq.rows()) = b_kin_cstr_vec[i_ineq].segment(0, ineq.rows());
 
     step += 2;
     cstr_index += ineq.rows();
   }
 
-  Aineq_steps.resize(N_Footsteps_cstr, N_variable); Aineq_steps.setZero();
-  Aineq_steps.block(0, 2 * m_C, N_Footsteps_cstr, 2 * j_Max_C) = Foosteps_Cstr * Delta;
-  bineq_steps = b_steps;
+  Aineq_steps.block(0, 2 * m_C, N_footsteps_kin_cstr, 2 * j_Max_C) = foosteps_kin_cstr * Delta;
+  bineq_steps.segment(0,N_footsteps_kin_cstr) = b_kin_cstr;
+
+  step = 0;
+  cstr_index = 0;
+  for(int i_ineq = 0; i_ineq < step_cstr_normals_vec.size(); i_ineq++)
+  {
+
+    Eigen::MatrixX2d ineq = step_cstr_normals_vec[i_ineq];
+
+    foosteps_cstr.block(cstr_index, step, ineq.rows(), 2) = ineq.block(0, 0, ineq.rows(), 2);
+    b_steps_cstr.segment(cstr_index, ineq.rows()) = b_step_cstr_vec[i_ineq].segment(0, ineq.rows());
+
+    step += 2;
+    cstr_index += ineq.rows();
+  }
+
+
+  Aineq_steps.block(N_footsteps_kin_cstr, 2 * m_C, N_footsteps_cstr, 2 * j_Max_C) = foosteps_cstr;
+  bineq_steps.segment(N_footsteps_kin_cstr,N_footsteps_cstr) = b_steps_cstr;
 }
 
 void ISMPC_Solver::AntTailTrajectory()

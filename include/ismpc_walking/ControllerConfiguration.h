@@ -49,6 +49,7 @@ struct ControllerConfiguration
     Eigen::Vector2d MPC_ZMP_cstr_square_offset = Eigen::Vector2d::Zero();
     Eigen::Vector2d MPC_ZMP_cstr_square_offset_sg_supp = Eigen::Vector2d::Zero();
     Eigen::Vector2d MPC_Footsteps_Constraint_size{0.1,0.1};
+    Eigen::Vector2d MPC_Footsteps_kin_Constraint_size{0.1,0.1};
 
     bool Stabilizer_dcm_bias_estimator = true;
     bool Stabilizer_dcm_filter = true;
