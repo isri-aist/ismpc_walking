@@ -609,7 +609,7 @@ void ISMPC_Solver::FootSteps_Constraints()
   std::vector<Eigen::VectorXd> b_step_cstr_vec;
   Eigen::MatrixXd Delta = Eigen::MatrixXd::Identity(2 * j_Max_C, 2 * j_Max_C); // Matrix to differentiate two footsteps
 
-  double l = 0;
+  double l = 0.2;
   int N_footsteps_kin_cstr = 0;
   int N_footsteps_cstr = 0;
   for(int i = 0; i < j_Max_C; i++)
@@ -618,7 +618,7 @@ void ISMPC_Solver::FootSteps_Constraints()
     sva::PTransformd & X_0_step_i = input_steps_[i];
     sva::PTransformd & X_0_step_im1 = X_0_support_foot;
     if (i != 0) {X_0_step_im1 = input_steps_[i-1];}
-    Eigen::Matrix3d R_Theta_i_0 = input_steps_[i].rotation().transpose();
+    Eigen::Matrix3d R_Theta_i_0 = X_0_step_im1.rotation().transpose();
 
     if(i + 1 < input_steps_.size())
     {
@@ -628,6 +628,7 @@ void ISMPC_Solver::FootSteps_Constraints()
     {
       l *= -1;
     }
+
 
     Rectangle Kinematic_Rectangle = Rectangle(theta_i, Eigen::Vector2d{m_dx_f, m_dy_f});
     SupportPolygon Kinematic_Poly = SupportPolygon(Kinematic_Rectangle);
@@ -684,8 +685,7 @@ void ISMPC_Solver::FootSteps_Constraints()
     cstr_index += ineq.rows();
   }
 
-  Aineq_steps.block(0, 2 * m_C, N_footsteps_kin_cstr, 2 * j_Max_C) = foosteps_kin_cstr * Delta;
-  bineq_steps.segment(0,N_footsteps_kin_cstr) = b_kin_cstr;
+
 
   step = 0;
   cstr_index = 0;
@@ -701,7 +701,8 @@ void ISMPC_Solver::FootSteps_Constraints()
     cstr_index += ineq.rows();
   }
 
-
+  Aineq_steps.block(0, 2 * m_C, N_footsteps_kin_cstr, 2 * j_Max_C) = foosteps_kin_cstr * Delta;
+  bineq_steps.segment(0,N_footsteps_kin_cstr) = b_kin_cstr;
   Aineq_steps.block(N_footsteps_kin_cstr, 2 * m_C, N_footsteps_cstr, 2 * j_Max_C) = foosteps_cstr;
   bineq_steps.segment(N_footsteps_kin_cstr,N_footsteps_cstr) = b_steps_cstr;
 }
