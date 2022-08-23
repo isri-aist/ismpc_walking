@@ -62,11 +62,9 @@ public :
         Controller_Config.MPC_ZMP_cstr_square_offset_sg_supp = config("ismpc")("offset_sg_supp");
         Controller_Config.MPC_ZMP_Constraint_size_sg_supp = config("ismpc")("zmp_cstr_square_sg_supp");
 
-        Controller_Config.Tp = config("footsteps_planner")("Tp");
-        Controller_Config.Footstps_Generation_Ts_range = config("footsteps_planner")("Ts_limit");
-        Controller_Config.Footsteps_Generation_Kinematics_cstr = config("footsteps_planner")("kinematics_cstr");
-        Controller_Config.Footsteps_Generation_feet_distance = config("footsteps_planner")("feet_distance");
-        Controller_Config.Foosteps_Generation_mean_vel = config("footsteps_planner")("mean_speed");
+        Controller_Config.Ts_max = config("walking_controller")("max_step_duration");
+        Controller_Config.T_ss_min = config("walking_controller")("min_sg_suport_duration");
+        Controller_Config.T_ds_min = config("walking_controller")("min_dbl_suport_duration");
         
 
         Controller_Config.SwingFootStiffness = config("tasks")("swingfoot_stiffness");
@@ -74,9 +72,6 @@ public :
         Controller_Config.SwingFootStiffness_Dim = config("tasks")("swingfoot_dimstiffness");
         Controller_Config.SwingFootWeight_Dim = config("tasks")("swingfoot_dimweight");
 
-
-
-        
         Configure(Controller_Config);
 
     }
@@ -92,26 +87,27 @@ public :
         Controller_Config.MPC_ZMP_Constraint_size.y() = std::min(Controller_Config.MPC_ZMP_Constraint_max_size,
                                                                  std::max(Controller_Config.MPC_ZMP_Constraint_min_size,
                                                                  Controller_Config.MPC_ZMP_Constraint_size.y()));
+        Controller_Config.Ts_min = Controller_Config.T_ds_min + Controller_Config.T_ss_min;
         MPCSolver.configure(Controller_Config);
     }
 
-    bool double_support_state()
+    const bool double_support_state() noexcept
     {
         return DoubleSupport_state;
     }
-    bool stop_phase()
+    const bool stop_phase() noexcept
     {
         return Stop;
     }
-    bool robot_walking()
+    const bool robot_walking() noexcept
     {
         return Robot_Walking;
     }
-    void start_stop()
+    const void start_stop() noexcept
     {
         Stop = !Stop;
     }
-    double get_t()
+    const double get_t() noexcept
     {
         return t;
     }
@@ -123,7 +119,7 @@ public :
         }
         return 0.;
     }
-    double tds()
+    const double tds() noexcept
     {
         return mpc_state_.get_tds();
     }
@@ -133,7 +129,7 @@ public :
                                                     Controller_Config.Ts_max / Controller_Config.Double_Step_Ratio,
                                                     "Tds capped");
     }
-    double ts()
+    const double ts() noexcept
     {
         return T_Steps;
     }
@@ -142,11 +138,11 @@ public :
         T_Steps = mc_filter::utils::clampAndWarn(ts, Controller_Config.T_ds_min + Controller_Config.T_ss_min, Controller_Config.Ts_max,
                                         "Ts capped");
     }
-    int n_steps()
+    const int n_steps() noexcept
     {
         return N_Steps_Desired;
     }
-    void n_steps(int steps)
+    const void n_steps(int steps) noexcept
     {
         N_Steps_Desired = steps;
     }

@@ -88,7 +88,7 @@ void Walking_controller::addToGUI()
             reference_velocity = vel;
           }),      
       mc_rtc::gui::NumberInput(
-          "Ts", [this]() -> double { return T_Steps; }, [this](const double & t) { T_Steps = t; }),
+          "Ts", [this]() -> double { return ts(); }, [this](const double & t) { ts(t); }),
       mc_rtc::gui::NumberInput(
           "Steps", [this]() -> int { return N_Steps_Desired; }, [this](const double & n) { N_Steps_Desired = n;  }),
 

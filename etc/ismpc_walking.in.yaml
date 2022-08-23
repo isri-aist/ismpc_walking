@@ -94,11 +94,15 @@ tasks:
   swingfoot_dimweight: [1.,1.,1.,1.,1.,1.]
   swingfoot_dimstiffness: [1.,1.,1.,1.,1.,1.]
 
-controller:
-  start_at_launch: false
-  steps: 10
-  speed: [0,0.0,0]
-  t_steps: 2
+walking_controller:
+  auto_start:
+    activate: false
+    steps: 10
+    speed: [0,0.0,0]
+    t_steps: 1.1
+  min_sg_suport_duration: 0.75
+  min_dbl_suport_duration: 0.25
+  max_step_duration: 2
   robot:
     hrp4:
       torsoBodyName: "torso"

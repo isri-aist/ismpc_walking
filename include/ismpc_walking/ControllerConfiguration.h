@@ -23,9 +23,6 @@ struct ControllerConfiguration
     double Ts_min = T_ds_min + T_ss_min;
 
     Eigen::Vector2d Footsteps_Generation_Kinematics_cstr{0.3,0.1};
-    Eigen::Vector2d Footstps_Generation_Ts_range{0.7,1.2};
-    double Footsteps_Generation_feet_distance = 0.15;
-    double Foosteps_Generation_mean_vel = 0.1;
 
     
     double Beta = 1e4; //1e4; 

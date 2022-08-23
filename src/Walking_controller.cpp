@@ -34,7 +34,7 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, c
   Configure(Controller_Config);
   Configure(config);
 
-  auto rConfig = config("controller")("robot")(robot().name());
+  auto rConfig = config("walking_controller")("robot")(robot().name());
   rConfig("torsoBodyName", torsoBodyName_);
   rConfig("rightFootLink", RightFootLinkName_);
   rConfig("leftFootLink", LeftFootLinkName_);
@@ -114,16 +114,15 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, c
   create_datastore();
   getTransformations();
 
-  bool start_now = config("controller")("start_at_launch");
+  bool start_now = config("walking_controller")("auto_start")("activate");
   if(start_now)
   {
     Stop = false;
-    N_Steps_Desired = config("controller")("steps");
-    T_Steps = config("controller")("t_steps");
-    Eigen::Vector3d v = config("controller")("speed");
+    N_Steps_Desired = config("walking_controller")("auto_start")("steps");
+    double t_step = config("walking_controller")("auto_start")("t_steps");
+    ts(t_step);
+    reference_velocity = config("walking_controller")("auto_start")("speed");
     
-    datastore().assign<double>("ismpc_walking::input_timestep",T_Steps);
-    datastore().assign<Eigen::Vector3d>("ismpc_walking::input_vel",v);
   }
   
   MPCSolver.Allow_none(Controller_Config.MPC_allow_None);
