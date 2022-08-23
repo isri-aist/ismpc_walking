@@ -60,7 +60,7 @@ ismpc:
   Tc: 1.5
   Tp: 4
   delta: 5e-2
-  beta: 1e8
+  beta: 1e5
   beta_stab: 1e8
   beta_traj : 1e1
   zmp_cstr_square: [0.1,0.05]
@@ -70,7 +70,7 @@ ismpc:
   offset_sg_supp: [0.00,0.0]
   allow_none_tail: true
   foosteps_kin_cstr: [0.4,0.02]
-  footsteps_cstr_square: [0.4,0.02]
+  footsteps_cstr_square: [0.15,0.02]
   double_support_ratio: 0.25
   sliding_zmp_cstr_region: false
   use_stability_task: false

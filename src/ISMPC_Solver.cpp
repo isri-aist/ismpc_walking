@@ -647,16 +647,17 @@ void ISMPC_Solver::FootSteps_Constraints()
       b_kin_cstr_vec.push_back(offsets
                             + normals * X_0_support_foot.translation().segment(0,2)
                             + normals * R_Theta_i_0.block(0,0,2,2) * Eigen::Vector2d{0, l});
+    
+      Rectangle step_admissible_region_rect = Rectangle(X_0_step_i,Eigen::Vector2d{m_dx_f_rect, m_dy_f_rect});
+      SupportPolygon step_admissible_region_poly = SupportPolygon(step_admissible_region_rect);
+      normals = step_admissible_region_poly.normals();
+      
+      step_cstr_normals_vec.push_back(normals);
+      b_step_cstr_vec.push_back(step_admissible_region_poly.offsets());
+      N_footsteps_cstr += static_cast<int>(step_cstr_normals_vec.back().rows());
+   
     }
     N_footsteps_kin_cstr += static_cast<int>(kin_cstr_normals_vec.back().rows());
-
-    Rectangle step_admissible_region_rect = Rectangle(X_0_step_i,Eigen::Vector2d{m_dx_f_rect, m_dy_f_rect});
-    SupportPolygon step_admissible_region_poly = SupportPolygon(step_admissible_region_rect);
-    normals = step_admissible_region_poly.normals();
-    
-    step_cstr_normals_vec.push_back(normals);
-    b_step_cstr_vec.push_back(step_admissible_region_poly.offsets());
-    N_footsteps_cstr += static_cast<int>(step_cstr_normals_vec.back().rows());
 
   }
 
