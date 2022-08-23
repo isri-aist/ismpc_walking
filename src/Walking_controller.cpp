@@ -493,7 +493,7 @@ void Walking_controller::UpdateInitialVectors()
       mpc_state_.Pck = robot().com() * (1 - K) + K * realRobot().com();
       mpc_state_.Vck = robot().comVelocity() * (1 - K) + K * realRobot().comVelocity();
 
-      mpc_state_.Pu = StabTask->measuredDCMUnbiased();
+      mpc_state_.Pu = StabTask->measuredDCM();
     }
     else
     {

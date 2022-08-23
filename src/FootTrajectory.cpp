@@ -161,7 +161,7 @@ std::vector<Eigen::Vector3d> FootTrajectory::getSwingFootTrajectory(const sva::P
                             .norm();
 
     // std::cout << "ss d_dur" << std::abs(prev_dur - dur) << std::endl;
-    if(d_footpose > 1e-2 || ( std::abs(prev_dur - dur) > 0.05) && dur > 0.2)
+    if( (d_footpose > 1e-2 ||  std::abs(prev_dur - dur) > 0.05 ) && (dur > 0.2 && dur - t > 0.2) )
     {
       New_traj = true;
     }
