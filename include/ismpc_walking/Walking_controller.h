@@ -213,6 +213,8 @@ protected:
         datastore().make_call("ismpc_walking::start/stop", [this]() { Stop = !Stop; });
         datastore().make_call("ismpc_walking::configure", [this](const ControllerConfiguration & config) { Configure(config); });
         datastore().make_call("ismpc_walking::get_config", [this]() -> ControllerConfiguration & { return Controller_Config; });
+        datastore().make_call("ismpc_walking::set_com_height", [this](const double & h )  { Controller_Config.Stab_config.comHeight = h ; });
+        datastore().make_call("ismpc_walking::set_torso_pitch", [this](const double & h )  { Controller_Config.Stab_config.torsoPitch = h ; StabTask->torsoPitch(h); });
         datastore().make_call("ismpc_walking::zmp_target", [this]() -> Eigen::Vector3d { return zmpTarget; });
         datastore().make_call("ismpc_walking::dcm_target", [this]() -> Eigen::Vector3d { return dcmTarget; });
         datastore().make_call("ismpc_walking::zmp", [this]() -> Eigen::Vector3d { return StabTask->measuredDCM(); });
