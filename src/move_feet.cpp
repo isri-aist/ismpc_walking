@@ -48,9 +48,9 @@ bool Walking_controller::MoveFeet(double t)
       solver().addTask(SwingFootTask);
       Eigen::Vector3d supp_pose;
       double supp_yaw;
-      supp_pose = robot().surfacePose(supportFootName).translation();
+      supp_pose = robot().surfacePose(supportFootName + "Center").translation();
       supp_pose.z() = 0.0;
-      supp_yaw = mc_rbdyn::rpyFromMat(robot().surfacePose(supportFootName).rotation()).z();
+      supp_yaw = mc_rbdyn::rpyFromMat(robot().surfacePose(supportFootName + "Center").rotation()).z();
       if(supportFootName == "LeftFoot")
       {
         StabTask->setContacts(
@@ -132,14 +132,14 @@ bool Walking_controller::MoveFeet(double t)
 
       Eigen::Vector3d supp_pose;
       double supp_yaw;
-      supp_pose = robot().surfacePose(supportFootName).translation();
+      supp_pose = robot().surfacePose(supportFootName + "Center").translation();
       supp_pose.z() = 0.0;
-      supp_yaw = mc_rbdyn::rpyFromMat(robot().surfacePose(supportFootName).rotation()).z();
+      supp_yaw = mc_rbdyn::rpyFromMat(robot().surfacePose(supportFootName + "Center").rotation()).z();
       Eigen::Vector3d swing_pose;
       double swing_yaw;
-      swing_pose = robot().surfacePose(swingFootName).translation();
+      swing_pose = robot().surfacePose(swingFootName + "Center").translation();
       swing_pose.z() = 0.0;
-      swing_yaw = mc_rbdyn::rpyFromMat(robot().surfacePose(swingFootName).rotation()).z();
+      swing_yaw = mc_rbdyn::rpyFromMat(robot().surfacePose(swingFootName + "Center").rotation()).z();
       if(supportFootName == "LeftFoot")
       {
         StabTask->setContacts(
