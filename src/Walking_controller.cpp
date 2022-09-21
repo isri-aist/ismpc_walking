@@ -78,10 +78,10 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, c
   leftLegIndex = robot().jointIndexByName("L_HIP_P");
 
   leftSwingFootTask =
-      std::make_shared<mc_tasks::SurfaceTransformTask>("LeftFoot", robots(), robots().robotIndex(), 10.0, 10.);
+      std::make_shared<mc_tasks::SurfaceTransformTask>("LeftFootCenter", robots(), robots().robotIndex(), 10.0, 10.);
 
   rightSwingFootTask =
-      std::make_shared<mc_tasks::SurfaceTransformTask>("RightFoot", robots(), robots().robotIndex(), 10.0, 10.);
+      std::make_shared<mc_tasks::SurfaceTransformTask>("RightFootCenter", robots(), robots().robotIndex(), 10.0, 10.);
  
   StabTask = std::make_shared<mc_tasks::lipm_stabilizer::StabilizerTask>(solver().robots(), solver().realRobots(),
                                                                          solver().robots().robotIndex(), solver().dt());
@@ -99,10 +99,10 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, c
   supportFootName = "RightFoot";
   swingFootName = "LeftFoot";
 
-  SupportFootPose = robot().surfacePose(supportFootName).translation();
+  SupportFootPose = robot().surfacePose(supportFootName+ "Center").translation();
   SupportFootPose.z() = 0;
 
-  SwingFootInitialPose = robot().surfacePose(swingFootName).translation();
+  SwingFootInitialPose = robot().surfacePose(swingFootName+ "Center").translation();
   X_0_SwingFootInitial = SwingFootInitialPose;
 
   StaticPose = ((robot().surfacePose("LeftFoot").translation() + robot().surfacePose("RightFoot").translation()) / 2);
@@ -321,12 +321,12 @@ void Walking_controller::UpdatePlanner_input()
   mpc_state_.input_steps_.clear();
   // mpc._state_.input_Pf.push_back(Step_Target);
   mpc_state_.input_Support_FootName = supportFootName;
-  mpc_state_.X_0_SupportFoot = sva::PTransformd(sva::RotZ(mc_rbdyn::rpyFromMat(robot().surfacePose(supportFootName).rotation()).z()) ,
-                                                robot().surfacePose(supportFootName).translation());
-  mpc_state_.X_0_Initial_SwingFoot = sva::PTransformd(sva::RotZ(mc_rbdyn::rpyFromMat(robot().surfacePose(swingFootName).rotation()).z()) ,
-                                                      robot().surfacePose(swingFootName).translation());
-  mpc_state_.SupportFootPose = robot().surfacePose(supportFootName).translation();
-  mpc_state_.SupportFootPose.z() = mc_rbdyn::rpyFromMat(robot().surfacePose(supportFootName).rotation()).z();
+  mpc_state_.X_0_SupportFoot = sva::PTransformd(sva::RotZ(mc_rbdyn::rpyFromMat(robot().surfacePose(supportFootName+ "Center").rotation()).z()) ,
+                                                robot().surfacePose(supportFootName+ "Center").translation());
+  mpc_state_.X_0_Initial_SwingFoot = sva::PTransformd(sva::RotZ(mc_rbdyn::rpyFromMat(robot().surfacePose(swingFootName+ "Center").rotation()).z()) ,
+                                                      robot().surfacePose(swingFootName+ "Center").translation());
+  mpc_state_.SupportFootPose = robot().surfacePose(supportFootName+ "Center").translation();
+  mpc_state_.SupportFootPose.z() = mc_rbdyn::rpyFromMat(robot().surfacePose(supportFootName+ "Center").rotation()).z();
 
   Eigen::Vector3d Pf_m1(SwingFootInitialPose);
   Pf_m1.z() = SupportFootPose.z();
@@ -543,17 +543,17 @@ void Walking_controller::reset(const mc_control::ControllerResetData & reset_dat
   mpc_state_.input_steps_.clear();
 
 
-  SupportFootPose = robot().surfacePose(supportFootName).translation();
+  SupportFootPose = robot().surfacePose(supportFootName + "Center").translation();
   SupportFootPose.z() = 0;
 
   mpc_state_.Pck = robot().com();
   mpc_state_.Pck.z() = Controller_Config.Stab_config.comHeight;
-  mpc_state_.Pzk = robot().surfacePose(swingFootName).translation();
+  mpc_state_.Pzk = robot().surfacePose(swingFootName+ "Center").translation();
   mpc_state_.Pzk.z() = 0;
   mpc_state_.Pu = mpc_state_.Pck;
   mpc_state_.Vck = robot().comVelocity();
 
-  SwingFootInitialPose = robot().surfacePose(swingFootName).translation();
+  SwingFootInitialPose = robot().surfacePose(swingFootName+ "Center").translation();
   X_0_SwingFootInitial = SwingFootInitialPose;
   updateTasks();
 

@@ -31,8 +31,8 @@ bool Walking_controller::MoveFeet(double t)
   }
 
 
-  Eigen::Vector3d SupportFootPose = robot().surfacePose(supportFootName).translation();
-  SupportFootPose.z() = mc_rbdyn::rpyFromMat(robot().surfacePose(supportFootName).rotation()).z();
+  Eigen::Vector3d SupportFootPose = robot().surfacePose(supportFootName+ "Center").translation();
+  SupportFootPose.z() = mc_rbdyn::rpyFromMat(robot().surfacePose(supportFootName+ "Center").rotation()).z();
 
   std::string sensorName = swingFootName + "ForceSensor";
   const auto & sensor = robot().forceSensor(sensorName);
@@ -92,7 +92,7 @@ bool Walking_controller::MoveFeet(double t)
   sva::MotionVecd V_0_FootTask_Target = SwingFootTrajectory.GetVelocity();
   sva::MotionVecd A_0_FootTask_Target = SwingFootTrajectory.GetAccel();
 
-  const Eigen::Vector3d & SwingFoot_rpy_real = mc_rbdyn::rpyFromMat(realRobot().surfacePose(swingFootName).rotation());
+  const Eigen::Vector3d & SwingFoot_rpy_real = mc_rbdyn::rpyFromMat(realRobot().surfacePose(swingFootName+ "Center").rotation());
   Eigen::Vector3d SwingFoot_rpy_initial_real = mc_rbdyn::rpyFromMat(X_0_SwingFootInitial_real.rotation());
   const Eigen::Vector3d & SwingFoot_rpy_target = mc_rbdyn::rpyFromMat(X_0_FootTask_Target.rotation());
   Eigen::Vector3d SwingFoot_delta_rpy = SwingFoot_rpy_real - SwingFoot_rpy_initial_real;
@@ -115,10 +115,10 @@ bool Walking_controller::MoveFeet(double t)
   {
 
     double Step_Time = t - t_lift;
-    double swing_foot_height = robot().surfacePose(swingFootName).translation().z();
-    double support_foot_height = robot().surfacePose(supportFootName).translation().z();
+    double swing_foot_height = robot().surfacePose(swingFootName+ "Center").translation().z();
+    double support_foot_height = robot().surfacePose(supportFootName+ "Center").translation().z();
     double foot_diff_height =
-        (realRobot().surfacePose(swingFootName).translation() - realRobot().surfacePose(supportFootName).translation())
+        (realRobot().surfacePose(swingFootName+ "Center").translation() - realRobot().surfacePose(supportFootName+ "Center").translation())
             .z();
 
     bool TouchDown = (sensor.force().norm() > 42);
@@ -203,13 +203,13 @@ bool Walking_controller::MoveFeet(double t)
     // SwingFootTask->refVelB(sva::MotionVecd::Zero());
     // SwingFootTask->refAccel(sva::MotionVecd::Zero());
   
-    SwingFootInitialPose = robot().surfacePose(swingFootName).translation();
-    SwingFootInitialAngle = mc_rbdyn::rpyFromMat(robot().surfacePose(swingFootName).rotation()).z();
+    SwingFootInitialPose = robot().surfacePose(swingFootName+ "Center").translation();
+    SwingFootInitialAngle = mc_rbdyn::rpyFromMat(robot().surfacePose(swingFootName+ "Center").rotation()).z();
 
-    X_0_SwingFootInitial = sva::PTransformd(sva::RotZ(mc_rbdyn::rpyFromMat(robot().surfacePose(swingFootName).rotation()).z()) ,
-                                                          robot().surfacePose(swingFootName).translation());
+    X_0_SwingFootInitial = sva::PTransformd(sva::RotZ(mc_rbdyn::rpyFromMat(robot().surfacePose(swingFootName+ "Center").rotation()).z()) ,
+                                                          robot().surfacePose(swingFootName+ "Center").translation());
     
-    X_0_SwingFootInitial = robot().surfacePose(swingFootName);
+    X_0_SwingFootInitial = robot().surfacePose(swingFootName+ "Center");
 
 
 

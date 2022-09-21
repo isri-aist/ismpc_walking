@@ -13,8 +13,8 @@ void Walking_controller::getTransformations()
   // }
   // floatingbaseWorldRPY << mc_rbdyn::rpyFromMat(floatingbaseWorldOri.inverse());
 
-  X_0_leftFoot = robot().surfacePose("LeftFoot");
-  X_0_rightFoot = robot().surfacePose("RightFoot");
+  X_0_leftFoot = robot().surfacePose("LeftFootCenter");
+  X_0_rightFoot = robot().surfacePose("RightFootCenter");
 
   R_0_leftFoot = X_0_leftFoot.rotation();
   R_leftFoot_0 = X_0_leftFoot.rotation().transpose();

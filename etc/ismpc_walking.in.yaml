@@ -120,9 +120,9 @@ stabilizer:
       stabilizer:
         dcm_tracking:
           gains:
-            prop: 4
-            integral: 5
-            deriv: 0.
+            prop: [4,4]
+            integral: [5,5]
+            deriv: [0.,0.]
             comdError: 0.
         admittance:
           cop: [0.03, 0.04]
