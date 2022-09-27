@@ -52,7 +52,6 @@ void Walking_controller::AddToLog()
   logger().addLogEntry("ISMPC_State_CoM", [this]() -> const Eigen::Vector3d {
     if (MPC_thread_on)
     {
-      std::lock_guard<std::mutex> lk_copy_state(mutex_mpc_);
       return mpc_state_.Get_PlannedFootstep(0).rotation() * mpc_state_.getPck();
     }
     return Eigen::Vector3d::Zero();
@@ -60,7 +59,6 @@ void Walking_controller::AddToLog()
   logger().addLogEntry("ISMPC_State_CoMd", [this]() -> const Eigen::Vector3d {
     if (MPC_thread_on)
     {
-      std::lock_guard<std::mutex> lk_copy_state(mutex_mpc_);
       return mpc_state_.Get_PlannedFootstep(0).rotation() * mpc_state_.getVck();
     }
     return Eigen::Vector3d::Zero();
@@ -68,7 +66,6 @@ void Walking_controller::AddToLog()
   logger().addLogEntry("ISMPC_State_ZMP", [this]() -> const Eigen::Vector3d {
     if (MPC_thread_on)
     {
-      std::lock_guard<std::mutex> lk_copy_state(mutex_mpc_);
       return mpc_state_.Get_PlannedFootstep(0).rotation() * mpc_state_.getPzk();
     }
     return Eigen::Vector3d::Zero();
@@ -81,7 +78,6 @@ void Walking_controller::AddToLog()
   logger().addLogEntry("ISMPC_State_DCM", [this]() -> Eigen::Vector3d {
     if (MPC_thread_on)
     {
-      std::lock_guard<std::mutex> lk_copy_state(mutex_mpc_);
       return mpc_state_.Get_PlannedFootstep(0).rotation() * (mpc_state_.Pck + mpc_state_.getVck() / eta());
     }
     return Eigen::Vector3d::Zero();

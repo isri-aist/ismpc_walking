@@ -173,7 +173,7 @@ protected:
     /**
      * Update the stabilizer task with the ISMPC outputs stored in X_MPC and Y_MPC vectors
      */
-    void MoveCoM(double t);
+    void MoveCoM();
     /**
      * Handle the contact of the foot and the trajectory depending on the planned footsteps
      */ 

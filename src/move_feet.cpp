@@ -185,23 +185,6 @@ bool Walking_controller::MoveFeet(double t)
 
   if(DoubleSupport_state)
   {
-
-    // Eigen::Vector3d pos;
-    // double yaw;
-
-    // pos = robot().surfacePose(supportFootName).translation();
-    // pos.z() = 0.0;
-    // yaw = mc_rbdyn::rpyFromMat(robot().surfacePose(supportFootName).rotation()).z();
-    // SupportFootTask->target(sva::PTransformd(sva::RotZ(yaw), pos));
-    // SupportFootTask->refVelB(sva::MotionVecd::Zero());
-    // SupportFootTask->refAccel(sva::MotionVecd::Zero());
-
-    // pos = robot().surfacePose(swingFootName).translation();
-    // pos.z() = 0.0;
-    // yaw = mc_rbdyn::rpyFromMat(robot().surfacePose(swingFootName).rotation()).z();
-    // SwingFootTask->target(sva::PTransformd(sva::RotZ(yaw), pos));
-    // SwingFootTask->refVelB(sva::MotionVecd::Zero());
-    // SwingFootTask->refAccel(sva::MotionVecd::Zero());
   
     SwingFootInitialPose = robot().surfacePose(swingFootName+ "Center").translation();
     SwingFootInitialAngle = mc_rbdyn::rpyFromMat(robot().surfacePose(swingFootName+ "Center").rotation()).z();

@@ -132,7 +132,6 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, c
   solver().addTask(StabTask);
   solver().addTask(leftSwingFootTask);
   solver().addTask(rightSwingFootTask);
-  solver().addTask(armTask);
   updateTasks();
   addToGUI();
   AddToLog();
@@ -151,6 +150,8 @@ void Walking_controller::wait_for_mpc_thread()
     }
     // auto config_func = datastore().get<std::function<void(mc_rtc::Configuration const&)>>("footstep_planner::configure");
     // config_func(planner_config_);
+    UpdateInitialVectors();
+    UpdatePlanner_input();
     MPC_thread_on = true;
     ComputeTrajectoryOnce = true;
     WalkingTrajectory_Computing = true;
@@ -193,8 +194,6 @@ void Walking_controller::ComputeWalkingTrajectory()
 
     {
       std::lock_guard<std::mutex> lk_copy_state(mutex_mpc_);
-      UpdateInitialVectors();
-      UpdatePlanner_input();
       mpc_thread_state = mpc_state_;
     }
     
@@ -351,8 +350,21 @@ bool Walking_controller::run()
   if(emergencyFlag) return false;
 
   t = (count - countStart) * controller_timestep;
+  
 
   getTransformations();
+
+  MoveCoM();
+
+
+  {
+    std::lock_guard<std::mutex> lk_copy_state(mutex_mpc_);
+    UpdateInitialVectors();
+    UpdatePlanner_input();
+    mpc_state_.Index += 1;
+  }
+
+  
 
   if(!(Stop && Swing_Foot_Contact))
   {
@@ -362,11 +374,11 @@ bool Walking_controller::run()
     // }
     if(t - t_k >= Controller_Config.delta)
     {
-      ComputeTrajectoryOnce = true;
-      std::lock_guard<std::mutex> lk_copy_state(mutex_mpc_);
+      
+      //std::lock_guard<std::mutex> lk_copy_state(mutex_mpc_);
       t_k += Controller_Config.delta  ;
+      ComputeTrajectoryOnce = true;
     }
-    MoveCoM(t);
     MoveFeet(t);
 
     Robot_Walking = true;
@@ -381,7 +393,7 @@ bool Walking_controller::run()
     //   StabTask->staticTarget(StaticPose);
     // }
     MoveFeet(0);
-    MoveCoM(0);
+
     updateTasks();
 
     t_stop = (count - count_stop) * controller_timestep;
@@ -405,20 +417,6 @@ bool Walking_controller::run()
     Robot_Walking = false;
   }
 
-  //{ ARM SWING
-
-  currentLeftLeg = robot().mbc().q[leftLegIndex][0];
-  currentRightLeg = robot().mbc().q[rightLegIndex][0];
-
-  auto arm_posture = robot().mbc().q;
-  arm_posture = armTask->posture();
-
-  arm_posture[rightShoulderIndex][0] = 0.5 * currentLeftLeg - currentRightLeg;
-  arm_posture[leftShoulderIndex][0] = 0.5 * currentRightLeg - currentLeftLeg;
-  armTask->posture(arm_posture);
-
-  //} ARM SWING
-
   count += 1;
 
 
@@ -429,7 +427,7 @@ bool Walking_controller::run()
   return ret;
 }
 
-void Walking_controller::MoveCoM(double t)
+void Walking_controller::MoveCoM()
 {
 
   // mc_rtc::log::info("//Index : " + std::to_string(Index));
@@ -458,10 +456,7 @@ void Walking_controller::MoveCoM(double t)
 
   StabTask->target(Pcom, Vc, Ac, zmpTarget);
 
-  {
-    std::lock_guard<std::mutex> lk_copy_state(mutex_mpc_);
-    mpc_state_.Index += 1;
-  }
+
 }
 
 void Walking_controller::UpdateInitialVectors()
