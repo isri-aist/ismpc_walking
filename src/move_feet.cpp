@@ -95,7 +95,7 @@ bool Walking_controller::MoveFeet(double t)
   const Eigen::Vector3d & SwingFoot_rpy_real = mc_rbdyn::rpyFromMat(realRobot().surfacePose(swingFootName+ "Center").rotation());
   Eigen::Vector3d SwingFoot_rpy_initial_real = mc_rbdyn::rpyFromMat(X_0_SwingFootInitial_real.rotation());
   const Eigen::Vector3d & SwingFoot_rpy_target = mc_rbdyn::rpyFromMat(X_0_FootTask_Target.rotation());
-  Eigen::Vector3d SwingFoot_delta_rpy = SwingFoot_rpy_real - SwingFoot_rpy_initial_real;
+  Eigen::Vector3d SwingFoot_delta_rpy = Eigen::Vector3d{SwingFoot_rpy_real.x(),SwingFoot_rpy_real.y(),0} ;
   SwingFoot_delta_rpy.z() = 0.;
   SwingFoot_rpy_initial_real.z() = 0.;
 
@@ -105,6 +105,9 @@ bool Walking_controller::MoveFeet(double t)
   //       mc_rbdyn::rpyToMat(SwingFoot_rpy_initial_real - SwingFoot_delta_rpy + SwingFoot_rpy_target);
   //   // X_0_FootTask_Target.rotation() = mc_rbdyn::rpyToMat( -SwingFoot_delta_rpy + SwingFoot_rpy_target);
   // }
+
+  X_0_FootTask_Target.rotation() =
+      mc_rbdyn::rpyToMat( - SwingFoot_delta_rpy + SwingFoot_rpy_target);
 
   SwingFootTask->target(X_0_FootTask_Target);
   SwingFootTask->refVelB(sva::PTransformd(X_0_swing.rotation()) * V_0_FootTask_Target);
