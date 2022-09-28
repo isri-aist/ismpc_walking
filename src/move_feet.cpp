@@ -124,7 +124,7 @@ bool Walking_controller::MoveFeet(double t)
         (realRobot().surfacePose(swingFootName+ "Center").translation() - realRobot().surfacePose(supportFootName+ "Center").translation())
             .z();
 
-    bool TouchDown = (sensor.force().norm() > 42);
+    bool TouchDown = (std::abs(SwingFootTask->frame().forceSensor().force().z()) > 84);
     // TouchDown = false;
 
     if(((Step_Time > 0.25 && TouchDown) || Step_Time >= SingleSupportDuration) && !DoubleSupport_state)
