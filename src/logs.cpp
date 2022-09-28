@@ -22,9 +22,9 @@ void Walking_controller::AddToLog()
   logger().addLogEntry("Kinematic LeftFoot ratio", [this]() -> double { return LeftFootRatio; });
   logger().addLogEntry("SwingFoot Vel", [this]() -> const Eigen::Vector3d & { return SwingFootVel; });
   logger().addLogEntry("SwingFoot Accel", [this]() -> const Eigen::Vector3d & { return SwingFootAcc; });
-  logger().addLogEntry("wrench_LeftFoot", [this] () -> const sva::ForceVecd  {return leftSwingFootTask->frame().wrench();} );
-  logger().addLogEntry("wrench_RightFoot", [this] () -> const sva::ForceVecd  {return rightSwingFootTask->frame().wrench();} );
-  logger().addLogEntry("wrench_SwingFoot", [this] () -> const sva::ForceVecd  {return SwingFootTask->frame().wrench();} );
+  logger().addLogEntry("foot_wrench_LeftFoot", [this] () -> const sva::ForceVecd  {return leftSwingFootTask->frame().wrench();} );
+  logger().addLogEntry("foot_wrench_RightFoot", [this] () -> const sva::ForceVecd  {return rightSwingFootTask->frame().wrench();} );
+  logger().addLogEntry("foot_wrench_SwingFoot", [this] () -> const sva::ForceVecd  {return SwingFootTask->frame().wrench();} );
   logger().addLogEntry("RealRobot LeftFoot Accel",
                        [this]() -> const Eigen::Vector3d & { return robot().bodyAccB(LeftFootLinkName_).linear(); });
   logger().addLogEntry("RealRobot RightFoot Accel",
