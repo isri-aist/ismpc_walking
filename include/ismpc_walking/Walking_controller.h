@@ -156,7 +156,7 @@ public :
             updateTasks();
             MoveFeet(0);
             // UpdatePlanner_input();
-            ComputeTrajectoryOnce = true;
+            compute_trajectory_once.notify_all();
         }
     }
 
@@ -292,7 +292,8 @@ private:
     bool UseMPCState = true;
     bool Stop = true ; //If true, the robot is at stop or the robot is about to stop at next step;
     bool Robot_Walking = false; //If false, the robot is not moving;
-    bool ComputeTrajectoryOnce = true; 
+    std::mutex compute_trajectory_once_mtx;
+    std::condition_variable compute_trajectory_once;
     bool WalkingTrajectory_Computing = false;
     bool emergencyFlag = false; //Stop controller run loop
     bool AutoFootstepPlacement = true; //To enable the Autofootstep placement MPC

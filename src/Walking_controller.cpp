@@ -5,6 +5,7 @@ Walking_controller::~Walking_controller()
   MPC_thread_on = false;
   if(WalkingTrajectoryThread.joinable())
   {
+    compute_trajectory_once.notify_all();
     WalkingTrajectoryThread.join();
   }
 }
@@ -146,21 +147,20 @@ bool Walking_controller::wait_for_mpc_thread()
       mc_rtc::log::info("waiting for footsteps_planner plugin");
       return false;
     }
-    if(!WalkingTrajectory_Computing)
+    if(!MPC_thread_on)
     {
       mc_rtc::log::info("Start MPC thread");
       UpdateInitialVectors();
       UpdatePlanner_input();
-      ComputeTrajectoryOnce = true;
       WalkingTrajectory_Computing = true;
       MPC_thread_on = true;
       WalkingTrajectoryThread = std::thread(&Walking_controller::WalkingTrajectoryLoop, this);
+      compute_trajectory_once.notify_all();
     }
     else
     {
-      if(!ComputeTrajectoryOnce)
+      if(!WalkingTrajectory_Computing)
       {
-        WalkingTrajectory_Computing = false;
         MPC_thread_ready = true;
         mc_rtc::log::success("MPC thread on");
         addToGUI();
@@ -177,127 +177,113 @@ bool Walking_controller::wait_for_mpc_thread()
 
 void Walking_controller::WalkingTrajectoryLoop()
 {
-  while(MPC_thread_on)
+  do
   {
-
+    WalkingTrajectory_Computing = true;
     ComputeWalkingTrajectory();
-    
-  }
+    WalkingTrajectory_Computing = false;
+    std::unique_lock<std::mutex> lock(compute_trajectory_once_mtx);
+    compute_trajectory_once.wait(lock);
+  } while(MPC_thread_on);
 }
 
 void Walking_controller::ComputeWalkingTrajectory()
 {
-  
-  WalkingTrajectory_Computing = true;
-  if(ComputeTrajectoryOnce)
-  {   
-    std::chrono::high_resolution_clock::time_point t_clock = std::chrono::high_resolution_clock::now();
+  std::chrono::high_resolution_clock::time_point t_clock = std::chrono::high_resolution_clock::now();
 
-    {
-      std::lock_guard<std::mutex> lk_copy_state(mutex_mpc_);
-      mpc_thread_state = mpc_state_;
-    }
-    
+  {
+    std::lock_guard<std::mutex> lk_copy_state(mutex_mpc_);
+    mpc_thread_state = mpc_state_;
+  }
 
-    MPCSolver.AutoFootstepPlacement = AutoFootstepPlacement;
+  MPCSolver.AutoFootstepPlacement = AutoFootstepPlacement;
 
 
-    if(mpc_thread_state.input_steps_.size() != 0)
-    {
-      N_Steps = 0;
-      N_Steps_Desired = mpc_state_.input_steps_.size();
-    }
+  if(mpc_thread_state.input_steps_.size() != 0)
+  {
+    N_Steps = 0;
+    N_Steps_Desired = mpc_state_.input_steps_.size();
+  }
 
-    datastore().assign<std::vector<sva::MotionVecd>>("footsteps_planner::input_vel",mpc_thread_state.input_v_);
-    datastore().assign<std::vector<sva::PTransformd>>("footsteps_planner::input_steps",mpc_thread_state.input_steps_);
-    datastore().assign<std::string>("footsteps_planner::support_foot_name",mpc_thread_state.input_Support_FootName);
-    datastore().assign<sva::PTransformd>("footsteps_planner::support_foot_pose",mpc_thread_state.X_0_SupportFoot);
-    datastore().assign<std::vector<double>>("footsteps_planner::input_time_steps",mpc_thread_state.input_timesteps_);
+  datastore().assign<std::vector<sva::MotionVecd>>("footsteps_planner::input_vel",mpc_thread_state.input_v_);
+  datastore().assign<std::vector<sva::PTransformd>>("footsteps_planner::input_steps",mpc_thread_state.input_steps_);
+  datastore().assign<std::string>("footsteps_planner::support_foot_name",mpc_thread_state.input_Support_FootName);
+  datastore().assign<sva::PTransformd>("footsteps_planner::support_foot_pose",mpc_thread_state.X_0_SupportFoot);
+  datastore().assign<std::vector<double>>("footsteps_planner::input_time_steps",mpc_thread_state.input_timesteps_);
 
-    mc_rtc::DataStore & data_s(datastore());
-    auto & lambda = datastore().get<std::function<void(mc_rtc::DataStore*)>>("footstep_planner::compute_plan");
-    lambda(&data_s);
+  mc_rtc::DataStore & data_s(datastore());
+  auto & lambda = datastore().get<std::function<void(mc_rtc::DataStore*)>>("footstep_planner::compute_plan");
+  lambda(&data_s);
 
-    std::vector<sva::PTransformd> & planned_steps_ = datastore().get<std::vector<sva::PTransformd>>("footsteps_planner::output_steps");
-    // for (int k = 0 ; k < planned_steps_.size() ; k++)
-    // {
-    //   std::cout << "step " << k << ": " << planned_steps_[k].translation() << std::endl;
-    // }
-    std::vector<double> & timesteps = datastore().get<std::vector<double>>("footsteps_planner::output_time_steps");
-    // mc_rtc::log::info("tds by ratio {}",Tds_by_ratio);
-    double tds = Controller_Config.Double_Step_Ratio * timesteps[0];
-    if ( !Tds_by_ratio)
-    {
-      tds = mpc_thread_state.input_tds;
-    }
-    int Steps = N_Steps;
-    int Steps_Desired = N_Steps_Desired;
-    if(Stop && !Swing_Foot_Contact)
-    {
-      Steps_Desired = Steps + 1;
-    }
+  std::vector<sva::PTransformd> & planned_steps_ = datastore().get<std::vector<sva::PTransformd>>("footsteps_planner::output_steps");
+  // for (int k = 0 ; k < planned_steps_.size() ; k++)
+  // {
+  //   std::cout << "step " << k << ": " << planned_steps_[k].translation() << std::endl;
+  // }
+  std::vector<double> & timesteps = datastore().get<std::vector<double>>("footsteps_planner::output_time_steps");
+  // mc_rtc::log::info("tds by ratio {}",Tds_by_ratio);
+  double tds = Controller_Config.Double_Step_Ratio * timesteps[0];
+  if ( !Tds_by_ratio)
+  {
+    tds = mpc_thread_state.input_tds;
+  }
+  int Steps = N_Steps;
+  int Steps_Desired = N_Steps_Desired;
+  if(Stop && !Swing_Foot_Contact)
+  {
+    Steps_Desired = Steps + 1;
+  }
 
-    std::string tail = Tail;
-    if(mpc_thread_state.Index > 10. * MPCSolver.delta_mpc() / MPCSolver.delta_control())
-    {
+  std::string tail = Tail;
+  if(mpc_thread_state.Index > 10. * MPCSolver.delta_mpc() / MPCSolver.delta_control())
+  {
 
-      tail = "None";
-      mc_rtc::log::warning("[ISMPC] Approaching Control Horizon, Tail temporary switched to None");
-    }
+    tail = "None";
+    mc_rtc::log::warning("[ISMPC] Approaching Control Horizon, Tail temporary switched to None");
+  }
 
-    MPCSolver.init_MPC(mpc_thread_state , planned_steps_, timesteps , Tail , Steps_Desired,Steps);
-    // MPCSolver.Puk(mpc_state_.Pu);
+  MPCSolver.init_MPC(mpc_thread_state , planned_steps_, timesteps , Tail , Steps_Desired,Steps);
+  // MPCSolver.Puk(mpc_state_.Pu);
 
-  
-    if (Use_w){
-      MPCSolver.Disturbance(mpc_thread_state.w);
-    }
-    else{MPCSolver.Disturbance(Eigen::Vector3d::Zero());}
+  if (Use_w){
+    MPCSolver.Disturbance(mpc_thread_state.w);
+  }
+  else{MPCSolver.Disturbance(Eigen::Vector3d::Zero());}
 
-    MPCSolver.GetWalkingParameters(mpc_thread_state.t_k, tds,mpc_thread_state.stop);
+  MPCSolver.GetWalkingParameters(mpc_thread_state.t_k, tds,mpc_thread_state.stop);
 
-    std::chrono::duration<double, std::milli> time_span = std::chrono::high_resolution_clock::now() - t_clock;
-    mpc_thread_process_time = time_span.count();
+  std::chrono::duration<double, std::milli> time_span = std::chrono::high_resolution_clock::now() - t_clock;
+  mpc_thread_process_time = time_span.count();
 
-    if(MPCSolver.QPsucceeded())
-    {
-      std::lock_guard<std::mutex> lk_copy_state(mutex_mpc_);
-      mpc_thread_state.tds = tds;
-      mpc_thread_state.TimeStamps = timesteps;
-      mpc_thread_state.planned_steps_ = planned_steps_;
-      mpc_thread_state.opti_steps = MPCSolver.optimal_steps();
-      mpc_thread_state.QPSuccess = true;
-      mpc_thread_state.X_MPC = MPCSolver.X_MPC();
-      mpc_thread_state.Y_MPC = MPCSolver.Y_MPC();
-      mpc_thread_state.Index = static_cast<int>(mpc_thread_process_time * 1e-3 / controller_timestep);
-      mpc_thread_state.SupPolygon = MPCSolver.get_polynome_support();
-      mpc_thread_state.Traj_ant = MPCSolver.GetAfterTc_ZMP_trajectory();
-      mpc_thread_state.Tail = MPCSolver.Tail() != "None";
-      mpc_thread_state.stab_error = MPCSolver.stability_error();
-      mpc_thread_state.Pu_max = MPCSolver.Puk_max().segment(0, 2);
-      mpc_thread_state.Pu_min = MPCSolver.Puk_min().segment(0, 2);
+  if(MPCSolver.QPsucceeded())
+  {
+    std::lock_guard<std::mutex> lk_copy_state(mutex_mpc_);
+    mpc_thread_state.tds = tds;
+    mpc_thread_state.TimeStamps = timesteps;
+    mpc_thread_state.planned_steps_ = planned_steps_;
+    mpc_thread_state.opti_steps = MPCSolver.optimal_steps();
+    mpc_thread_state.QPSuccess = true;
+    mpc_thread_state.X_MPC = MPCSolver.X_MPC();
+    mpc_thread_state.Y_MPC = MPCSolver.Y_MPC();
+    mpc_thread_state.Index = static_cast<int>(mpc_thread_process_time * 1e-3 / controller_timestep);
+    mpc_thread_state.SupPolygon = MPCSolver.get_polynome_support();
+    mpc_thread_state.Traj_ant = MPCSolver.GetAfterTc_ZMP_trajectory();
+    mpc_thread_state.Tail = MPCSolver.Tail() != "None";
+    mpc_thread_state.stab_error = MPCSolver.stability_error();
+    mpc_thread_state.Pu_max = MPCSolver.Puk_max().segment(0, 2);
+    mpc_thread_state.Pu_min = MPCSolver.Puk_min().segment(0, 2);
 
 
-      kfoot = 0;
-      NewThreadState = true;
-    }
-    else
-    {
-      mpc_state_.Pu_max = MPCSolver.Puk_max().segment(0, 2);
-      mpc_state_.Pu_min = MPCSolver.Puk_min().segment(0, 2);
-      mpc_state_.SupPolygon = MPCSolver.get_polynome_support();
-      mpc_state_.QPSuccess = false;
-    }
-
-    ComputeTrajectoryOnce = false;
-
+    kfoot = 0;
+    NewThreadState = true;
   }
   else
   {
-    std::this_thread::sleep_for(std::chrono::milliseconds(2)); 
+    mpc_state_.Pu_max = MPCSolver.Puk_max().segment(0, 2);
+    mpc_state_.Pu_min = MPCSolver.Puk_min().segment(0, 2);
+    mpc_state_.SupPolygon = MPCSolver.get_polynome_support();
+    mpc_state_.QPSuccess = false;
   }
-  
-  WalkingTrajectory_Computing = false;
 }
 
 void Walking_controller::UpdatePlanner_input()
@@ -381,7 +367,7 @@ bool Walking_controller::run()
       
       //std::lock_guard<std::mutex> lk_copy_state(mutex_mpc_);
       t_k += Controller_Config.delta  ;
-      ComputeTrajectoryOnce = true;
+      compute_trajectory_once.notify_all();
     }
     MoveFeet(t);
 
@@ -403,7 +389,7 @@ bool Walking_controller::run()
     t_stop = (count - count_stop) * controller_timestep;
     if(t_stop > 1 * Controller_Config.delta)
     {
-      ComputeTrajectoryOnce = true;
+      compute_trajectory_once.notify_all();
       count_stop = count - 1;
     }
 
@@ -563,6 +549,7 @@ void Walking_controller::reset(const mc_control::ControllerResetData & reset_dat
   MPC_thread_ready = false;
   if (WalkingTrajectoryThread.joinable())
   {
+    compute_trajectory_once.notify_all();
     WalkingTrajectoryThread.join();
   }
 

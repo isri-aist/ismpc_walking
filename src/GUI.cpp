@@ -12,7 +12,7 @@ void Walking_controller::addToGUI()
 
                     mc_rtc::gui::Button("Start Move",
                                         [this]() {
-                                          ComputeTrajectoryOnce = true;
+                                          compute_trajectory_once.notify_all();
                                           Stop = false;
                                         }),
                     mc_rtc::gui::Button("Stop",
@@ -23,7 +23,7 @@ void Walking_controller::addToGUI()
                         "Velocity Tail", {"Periodic", "Truncated", "Anticipative", "None"}, [this]() { return Tail; },
                         [this](const std::string str) {
                           Tail = str;
-                          ComputeTrajectoryOnce = true;
+                          compute_trajectory_once.notify_all();
                         }),
                     mc_rtc::gui::Label("Velocity Tail used", [this]() { return this->MPCSolver.Tail(); }),
                     mc_rtc::gui::Label("Timing", [this]() { return this->t; }),
@@ -47,7 +47,7 @@ void Walking_controller::addToGUI()
                         [this]() {
                           UseRealRobot = !UseRealRobot;
                           if(UseMPCState) UseMPCState = false;
-                          ComputeTrajectoryOnce = true;
+                          compute_trajectory_once.notify_all();
                         }),
                     mc_rtc::gui::NumberInput(
                         "K feedback", [this]() -> double { return K_feedback; }, [this](const double & n) { K_feedback = n;  }),
@@ -56,7 +56,7 @@ void Walking_controller::addToGUI()
                         [this]() {
                           UseMPCState = !UseMPCState;
                           if(UseRealRobot) UseRealRobot = false;
-                          ComputeTrajectoryOnce = true;
+                          compute_trajectory_once.notify_all();
                         }),
                     mc_rtc::gui::Checkbox(
                         "Distrubance", [this]() { return Use_w; },
@@ -96,7 +96,7 @@ void Walking_controller::addToGUI()
                            [this]() {
                              return Eigen::Vector3d{x, y, 0};
                            }),
-      mc_rtc::gui::Button("Compute Trajectory", [this]() { ComputeTrajectoryOnce = true; }));
+      mc_rtc::gui::Button("Compute Trajectory", [this]() { compute_trajectory_once.notify_all(); }));
 
 
   gui()->addElement(
