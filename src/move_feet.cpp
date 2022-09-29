@@ -111,8 +111,8 @@ bool Walking_controller::MoveFeet(double t)
 
   SwingFootTask->target(X_0_FootTask_Target);
   SwingFootTask->refVelB(sva::PTransformd(X_0_swing.rotation()) * V_0_FootTask_Target);
-  SwingFootTask->refAccel(sva::MotionVecd(Eigen::Vector3d::Zero(),A_0_FootTask_Target.linear()));
-  // SwingFootTask->refAccel(sva::PTransformd(X_0_swing.rotation()) *sva::MotionVecd(Eigen::Vector3d::Zero(),A_0_FootTask_Target.linear()));
+  // SwingFootTask->refAccel(sva::MotionVecd(Eigen::Vector3d::Zero(),A_0_FootTask_Target.linear()));
+  SwingFootTask->refAccel(sva::PTransformd(X_0_swing.rotation()) *sva::MotionVecd(Eigen::Vector3d::Zero(),A_0_FootTask_Target.linear()));
 
   if(!Swing_Foot_Contact)
   {
