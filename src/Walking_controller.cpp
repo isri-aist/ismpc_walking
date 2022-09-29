@@ -189,7 +189,7 @@ void Walking_controller::ComputeWalkingTrajectory()
 {
   
   WalkingTrajectory_Computing = true;
-  if(ComputeTrajectoryOnce && datastore().has("footsteps_planner::planner_config"))
+  if(ComputeTrajectoryOnce)
   {   
     std::chrono::high_resolution_clock::time_point t_clock = std::chrono::high_resolution_clock::now();
 
