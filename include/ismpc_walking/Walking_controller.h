@@ -321,6 +321,8 @@ private:
 
     double t_stop = 0;   
     int count_stop = 0;
+    double vertical_force_offset_ = 0;
+    std::vector<double> vertical_force_measure_; //measure the vertical force values during swing foot phase;
 
     Eigen::Vector3d SwingFootAcc;
     Eigen::Vector3d SwingFootVel;

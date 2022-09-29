@@ -68,8 +68,8 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, c
   // solver().addConstraintSet(dynamicsConstraint);
 
   footcontact_dof << 0, 0, 1, 1, 1, 0;
-  addContact({robot().name(), "ground", "RightFoot", "AllGround", 0.7, footcontact_dof});
-  addContact({robot().name(), "ground", "LeftFoot", "AllGround", 0.7, footcontact_dof});
+  addContact({robot().name(), "ground", "RightFootCenter", "AllGround", 0.7, footcontact_dof});
+  addContact({robot().name(), "ground", "LeftFootCenter", "AllGround", 0.7, footcontact_dof});
 
   rightShoulderIndex = robot().jointIndexByName("R_SHOULDER_P");
   rightLegIndex = robot().jointIndexByName("R_HIP_P");
@@ -438,7 +438,7 @@ void Walking_controller::MoveCoM()
   }
 
   Eigen::Vector3d Pcom(mpc_state_.Get_CoM_planarTarget(mpc_state_.Index));
-  Pcom.z() = Controller_Config.Stab_config.comHeight + X_0_support.translation().z();
+  Pcom.z() = Controller_Config.Stab_config.comHeight + 0*X_0_support.translation().z();
   zmpTarget = mpc_state_.Get_ZMP_planarTarget(mpc_state_.Index);
 
   Eigen::Vector3d Vc(mpc_state_.Get_CoMVel_planarTarget(mpc_state_.Index));
@@ -552,8 +552,8 @@ void Walking_controller::reset(const mc_control::ControllerResetData & reset_dat
   X_0_SwingFootInitial = SwingFootInitialPose;
   updateTasks();
 
-  addContact({robot().name(), "ground", "RightFoot", "AllGround", 0.7, footcontact_dof});
-  addContact({robot().name(), "ground", "LeftFoot", "AllGround", 0.7, footcontact_dof});
+  addContact({robot().name(), "ground", "RightFootCenter", "AllGround", 0.7, footcontact_dof});
+  addContact({robot().name(), "ground", "LeftFootCenter", "AllGround", 0.7, footcontact_dof});
 
   MPC_thread_on = false;
   if (WalkingTrajectoryThread.joinable())
