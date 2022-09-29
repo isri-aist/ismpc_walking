@@ -133,45 +133,46 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, c
   solver().addTask(leftSwingFootTask);
   solver().addTask(rightSwingFootTask);
   updateTasks();
-  addToGUI();
-  AddToLog();
 
   mc_rtc::log::success("ismpc_walking controller init done ");
 }
 
-void Walking_controller::wait_for_mpc_thread()
+bool Walking_controller::wait_for_mpc_thread()
 {
-  if (!MPC_thread_on)
+  if (!MPC_thread_ready)
   {
-    mc_rtc::log::info("waiting for footsteps_planner plugin");
-    while (!datastore().has("footstep_planner::configure"))
+    if(!datastore().has("footstep_planner::configure"))
     {
-      std::this_thread::sleep_for(std::chrono::milliseconds(50));
+      mc_rtc::log::info("waiting for footsteps_planner plugin");
+      return false;
     }
-    // auto config_func = datastore().get<std::function<void(mc_rtc::Configuration const&)>>("footstep_planner::configure");
-    // config_func(planner_config_);
-    UpdateInitialVectors();
-    UpdatePlanner_input();
-    MPC_thread_on = true;
-    ComputeTrajectoryOnce = true;
-    WalkingTrajectory_Computing = true;
-    WalkingTrajectoryThread = std::thread(&Walking_controller::WalkingTrajectoryLoop, this);
-    WalkingTrajectoryThread.detach();
-
-    mc_rtc::log::info("waiting for first computation");
-    std::chrono::high_resolution_clock::time_point t_clock = std::chrono::high_resolution_clock::now();
-    while(ComputeTrajectoryOnce)
+    if(!WalkingTrajectory_Computing)
     {
-      std::this_thread::sleep_for(std::chrono::milliseconds(50));
-      std::chrono::duration<double, std::milli> time_span = std::chrono::high_resolution_clock::now() - t_clock;
-      if (time_span.count() > 5e3)
+      mc_rtc::log::info("Start MPC thread");
+      UpdateInitialVectors();
+      UpdatePlanner_input();
+      ComputeTrajectoryOnce = true;
+      WalkingTrajectory_Computing = true;
+      MPC_thread_on = true;
+      WalkingTrajectoryThread = std::thread(&Walking_controller::WalkingTrajectoryLoop, this);
+    }
+    else
+    {
+      if(!ComputeTrajectoryOnce)
       {
-        mc_rtc::log::error("Exiting waiting loop");
         WalkingTrajectory_Computing = false;
+        MPC_thread_ready = true;
+        mc_rtc::log::success("MPC thread on");
+        addToGUI();
+        AddToLog();
+      }
+      else
+      {
+        mc_rtc::log::info("Waiting for first computation");
       }
     }
-    mc_rtc::log::success("MPC thread on");
   }
+  return MPC_thread_ready;
 }
 
 void Walking_controller::WalkingTrajectoryLoop()
@@ -335,7 +336,10 @@ void Walking_controller::UpdatePlanner_input()
 
 bool Walking_controller::run()
 {
-  wait_for_mpc_thread();
+  if(!wait_for_mpc_thread())
+  {
+    return mc_control::fsm::Controller::run();
+  }
 
   std::chrono::duration<double, std::milli> time_span = std::chrono::high_resolution_clock::now() - t_clock;
   ControllerLoopTime = time_span.count();
@@ -556,6 +560,7 @@ void Walking_controller::reset(const mc_control::ControllerResetData & reset_dat
   addContact({robot().name(), "ground", "LeftFoot", "AllGround", 0.7, footcontact_dof});
 
   MPC_thread_on = false;
+  MPC_thread_ready = false;
   if (WalkingTrajectoryThread.joinable())
   {
     WalkingTrajectoryThread.join();

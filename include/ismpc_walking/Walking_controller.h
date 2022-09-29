@@ -239,7 +239,7 @@ protected:
     }
     
  
-    void wait_for_mpc_thread();
+    bool wait_for_mpc_thread();
 
 
     std::shared_ptr<mc_tasks::lipm_stabilizer::StabilizerTask> StabTask;    
@@ -258,6 +258,7 @@ private:
     MPC_state mpc_thread_state;
     MPC_state mpc_state_;
     bool MPC_thread_on = false;
+    bool MPC_thread_ready = false;
     bool NewThreadState = false;
     std::thread WalkingTrajectoryThread;
     
