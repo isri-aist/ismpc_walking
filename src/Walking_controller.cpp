@@ -349,9 +349,6 @@ bool Walking_controller::run()
 
   getTransformations();
 
-  MoveCoM();
-
-
   {
     std::lock_guard<std::mutex> lk_copy_state(mutex_mpc_);
     if(NewThreadState)
@@ -364,7 +361,8 @@ bool Walking_controller::run()
     mpc_state_.Index += 1;
   }
 
-  
+  MoveCoM();
+
 
   if(!(Stop && Swing_Foot_Contact))
   {
