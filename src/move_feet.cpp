@@ -41,7 +41,7 @@ bool Walking_controller::MoveFeet(double t)
   if(Swing_Foot_Contact)
   {
     t_lift = PrevStepTiming + mpc_state_.get_tds();
-    if(t - 0 * Controller_Config.delta >= PrevStepTiming + mpc_state_.get_tds() && (std::abs(sensor_support.force().z()) > 50 || !force_contact_safety_ ))
+    if(t - 0 * controller_config_.delta >= PrevStepTiming + mpc_state_.get_tds() && (std::abs(sensor_support.force().z()) > 50 || !force_contact_safety_ ))
     {
 
       mc_rtc::log::success("lifting " + swingFootName);
@@ -82,7 +82,7 @@ bool Walking_controller::MoveFeet(double t)
   SwingFootTrajectory.set_Z_ContactOffset(height_off);
 
   SwingFootTrajectory.getSwingFootTrajectory(X_0_SwingFootTarget, X_0_SwingFootInitial, t,
-                                             Controller_Config.FootStepHeight, SingleSupportDuration, t_lift,
+                                             controller_config_.FootStepHeight, SingleSupportDuration, t_lift,
                                              controller_timestep);
 
   SwingFootVel = SwingFootTrajectory.GetVelocity().linear();
@@ -116,7 +116,7 @@ bool Walking_controller::MoveFeet(double t)
 
   if(!Swing_Foot_Contact)
   {
-    if(Controller_Config.FootStepHeight - X_0_FootTask_Target.translation().z() < 0.005)
+    if(controller_config_.FootStepHeight - X_0_FootTask_Target.translation().z() < 0.005)
     {
       vertical_force_measure_.push_back((float) SwingFootTask->frame().forceSensor().force().z());
       const int size = vertical_force_measure_.size();
@@ -131,7 +131,7 @@ bool Walking_controller::MoveFeet(double t)
         (realRobot().surfacePose(swingFootName+ "Center").translation() - realRobot().surfacePose(supportFootName+ "Center").translation())
             .z();
 
-    bool TouchDown = (SwingFootTask->frame().forceSensor().force().z() - vertical_force_offset_ > 50);
+    bool TouchDown = (SwingFootTask->frame().forceSensor().force().z() - vertical_force_offset_ > controller_config_.impact_threshold;
     // TouchDown = false;
 
     if(((Step_Time > 0.25 && TouchDown) || Step_Time >= SingleSupportDuration) && !DoubleSupport_state)
@@ -187,7 +187,7 @@ bool Walking_controller::MoveFeet(double t)
       {
         Stop = true;
       }
-      t_k = - Controller_Config.delta;
+      t_k = - controller_config_.delta;
       countStart = count - 1;
 
     }
@@ -227,9 +227,9 @@ void Walking_controller::updateTasks()
   }
   Eigen::MatrixXd dimW(Eigen::VectorXd::Zero(6));
   dimW(5) = 1;
-  SwingFootTask->weight(Controller_Config.SwingFootWeight);
+  SwingFootTask->weight(controller_config_.SwingFootWeight);
   SwingFootTask->dimWeight(Eigen::VectorXd::Ones(6));
-  SwingFootTask->stiffness(Controller_Config.SwingFootStiffness);
+  SwingFootTask->stiffness(controller_config_.SwingFootStiffness);
 
 
   // Eigen::VectorXd dimW_com(Eigen::VectorXd::Ones(3)); dimW_com(2) = 0.1;

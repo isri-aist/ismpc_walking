@@ -37,59 +37,60 @@ public :
 
     void reset(const mc_control::ControllerResetData & reset_data) override;
 
-    ControllerConfiguration Controller_Config;
+    ControllerConfiguration controller_config_;
     mc_rtc::Configuration planner_config_;
 
     void Configure(const mc_rtc::Configuration & config){
         
-        Controller_Config.Beta = config("ismpc")("beta");
-        Controller_Config.Beta_range = config("ismpc")("safety_thresholds")("beta_range");
-        Controller_Config.MPC_ZMP_Constraint_size = config("ismpc")("zmp_cstr_square");
-        Controller_Config.MPC_ZMP_Constraint_min_size = config("ismpc")("safety_thresholds")("zmp_cstr_square_min");
-        Controller_Config.MPC_ZMP_Constraint_max_size = config("ismpc")("safety_thresholds")("zmp_cstr_square_max");
-        Controller_Config.MPC_Footsteps_Constraint_size = config("ismpc")("footsteps_cstr_square");
-        Controller_Config.MPC_Footsteps_kin_Constraint_size = config("ismpc")("foosteps_kin_cstr");
-        Controller_Config.Double_Step_Ratio = config("ismpc")("double_support_ratio");
-        Controller_Config.sliding_zmp_cstr_region = config("ismpc")("sliding_zmp_cstr_region");
-        Controller_Config.delta =  config("ismpc")("delta");
-        Controller_Config.MPC_ZMP_next_stp_cstr_ratio = config("ismpc")("next_stp_cstr_ratio");
-        Controller_Config.MPC_ZMP_cstr_square_offset = config("ismpc")("offset");
-        Controller_Config.MPC_allow_None = config("ismpc")("allow_none_tail");
-        Controller_Config.Tc = config("ismpc")("Tc");
-        Controller_Config.delta = config("ismpc")("delta");
-        Controller_Config.use_stability_task = config("ismpc")("use_stability_task");
-        Controller_Config.Beta_stab  = config("ismpc")("beta_stab");
-        Controller_Config.Beta_traj = config("ismpc")("beta_traj");
-        Controller_Config.MPC_ZMP_cstr_square_offset_sg_supp = config("ismpc")("offset_sg_supp");
-        Controller_Config.MPC_ZMP_Constraint_size_sg_supp = config("ismpc")("zmp_cstr_square_sg_supp");
+        controller_config_.Beta = config("ismpc")("beta");
+        controller_config_.Beta_range = config("ismpc")("safety_thresholds")("beta_range");
+        controller_config_.MPC_ZMP_Constraint_size = config("ismpc")("zmp_cstr_square");
+        controller_config_.MPC_ZMP_Constraint_min_size = config("ismpc")("safety_thresholds")("zmp_cstr_square_min");
+        controller_config_.MPC_ZMP_Constraint_max_size = config("ismpc")("safety_thresholds")("zmp_cstr_square_max");
+        controller_config_.MPC_Footsteps_Constraint_size = config("ismpc")("footsteps_cstr_square");
+        controller_config_.MPC_Footsteps_kin_Constraint_size = config("ismpc")("foosteps_kin_cstr");
+        controller_config_.Double_Step_Ratio = config("ismpc")("double_support_ratio");
+        controller_config_.sliding_zmp_cstr_region = config("ismpc")("sliding_zmp_cstr_region");
+        controller_config_.delta =  config("ismpc")("delta");
+        controller_config_.MPC_ZMP_next_stp_cstr_ratio = config("ismpc")("next_stp_cstr_ratio");
+        controller_config_.MPC_ZMP_cstr_square_offset = config("ismpc")("offset");
+        controller_config_.MPC_allow_None = config("ismpc")("allow_none_tail");
+        controller_config_.Tc = config("ismpc")("Tc");
+        controller_config_.delta = config("ismpc")("delta");
+        controller_config_.use_stability_task = config("ismpc")("use_stability_task");
+        controller_config_.Beta_stab  = config("ismpc")("beta_stab");
+        controller_config_.Beta_traj = config("ismpc")("beta_traj");
+        controller_config_.MPC_ZMP_cstr_square_offset_sg_supp = config("ismpc")("offset_sg_supp");
+        controller_config_.MPC_ZMP_Constraint_size_sg_supp = config("ismpc")("zmp_cstr_square_sg_supp");
 
-        Controller_Config.Ts_max = config("walking_controller")("max_step_duration");
-        Controller_Config.T_ss_min = config("walking_controller")("min_sg_suport_duration");
-        Controller_Config.T_ds_min = config("walking_controller")("min_dbl_suport_duration");
+        controller_config_.Ts_max = config("walking_controller")("max_step_duration");
+        controller_config_.T_ss_min = config("walking_controller")("min_sg_suport_duration");
+        controller_config_.T_ds_min = config("walking_controller")("min_dbl_suport_duration");
+        controller_config_.impact_threshold = config("walking_controller")("impact_threshold");
         
 
-        Controller_Config.SwingFootStiffness = config("tasks")("swingfoot_stiffness");
-        Controller_Config.SwingFootWeight = config("tasks")("swingfoot_weight");
-        Controller_Config.SwingFootStiffness_Dim = config("tasks")("swingfoot_dimstiffness");
-        Controller_Config.SwingFootWeight_Dim = config("tasks")("swingfoot_dimweight");
+        controller_config_.SwingFootStiffness = config("tasks")("swingfoot_stiffness");
+        controller_config_.SwingFootWeight = config("tasks")("swingfoot_weight");
+        controller_config_.SwingFootStiffness_Dim = config("tasks")("swingfoot_dimstiffness");
+        controller_config_.SwingFootWeight_Dim = config("tasks")("swingfoot_dimweight");
 
-        Configure(Controller_Config);
+        Configure(controller_config_);
 
     }
 
     void Configure(const ControllerConfiguration & config){
-        Controller_Config = config;
-        // Controller_Config.update_config();
+        controller_config_ = config;
+        // controller_config_.update_config();
          
-        Controller_Config.Beta = std::min(Controller_Config.Beta_range(1),std::max(Controller_Config.Beta_range(0),Controller_Config.Beta));
-        Controller_Config.MPC_ZMP_Constraint_size.x() = std::min(Controller_Config.MPC_ZMP_Constraint_max_size,
-                                                                 std::max(Controller_Config.MPC_ZMP_Constraint_min_size,
-                                                                 Controller_Config.MPC_ZMP_Constraint_size.x()));
-        Controller_Config.MPC_ZMP_Constraint_size.y() = std::min(Controller_Config.MPC_ZMP_Constraint_max_size,
-                                                                 std::max(Controller_Config.MPC_ZMP_Constraint_min_size,
-                                                                 Controller_Config.MPC_ZMP_Constraint_size.y()));
-        Controller_Config.Ts_min = Controller_Config.T_ds_min + Controller_Config.T_ss_min;
-        MPCSolver.configure(Controller_Config);
+        controller_config_.Beta = std::min(controller_config_.Beta_range(1),std::max(controller_config_.Beta_range(0),controller_config_.Beta));
+        controller_config_.MPC_ZMP_Constraint_size.x() = std::min(controller_config_.MPC_ZMP_Constraint_max_size,
+                                                                 std::max(controller_config_.MPC_ZMP_Constraint_min_size,
+                                                                 controller_config_.MPC_ZMP_Constraint_size.x()));
+        controller_config_.MPC_ZMP_Constraint_size.y() = std::min(controller_config_.MPC_ZMP_Constraint_max_size,
+                                                                 std::max(controller_config_.MPC_ZMP_Constraint_min_size,
+                                                                 controller_config_.MPC_ZMP_Constraint_size.y()));
+        controller_config_.Ts_min = controller_config_.T_ds_min + controller_config_.T_ss_min;
+        MPCSolver.configure(controller_config_);
     }
 
     const bool double_support_state() noexcept
@@ -126,8 +127,8 @@ public :
     }
     void tds(double t_ds)
     {
-        input_tds = mc_filter::utils::clampAndWarn(t_ds, Controller_Config.T_ds_min,
-                                                    Controller_Config.Ts_max / Controller_Config.Double_Step_Ratio,
+        input_tds = mc_filter::utils::clampAndWarn(t_ds, controller_config_.T_ds_min,
+                                                    controller_config_.Ts_max / controller_config_.Double_Step_Ratio,
                                                     "Tds capped");
     }
     const double ts() noexcept
@@ -136,7 +137,7 @@ public :
     }
     void ts(double ts)
     {
-        T_Steps = mc_filter::utils::clampAndWarn(ts, Controller_Config.T_ds_min + Controller_Config.T_ss_min, Controller_Config.Ts_max,
+        T_Steps = mc_filter::utils::clampAndWarn(ts, controller_config_.T_ds_min + controller_config_.T_ss_min, controller_config_.Ts_max,
                                         "Ts capped");
     }
     const int n_steps() noexcept
@@ -212,9 +213,9 @@ protected:
         datastore().make_call("ismpc_walking::double_support", [this]() -> bool { return DoubleSupport_state; });
         datastore().make_call("ismpc_walking::start/stop", [this]() { Stop = !Stop; });
         datastore().make_call("ismpc_walking::configure", [this](const ControllerConfiguration & config) { Configure(config); });
-        datastore().make_call("ismpc_walking::get_config", [this]() -> ControllerConfiguration & { return Controller_Config; });
-        datastore().make_call("ismpc_walking::set_com_height", [this](const double & h )  { Controller_Config.Stab_config.comHeight = h ; });
-        datastore().make_call("ismpc_walking::set_torso_pitch", [this](const double & h )  { Controller_Config.Stab_config.torsoPitch = h ; StabTask->torsoPitch(h); });
+        datastore().make_call("ismpc_walking::get_config", [this]() -> ControllerConfiguration & { return controller_config_; });
+        datastore().make_call("ismpc_walking::set_com_height", [this](const double & h )  { controller_config_.Stab_config.comHeight = h ; });
+        datastore().make_call("ismpc_walking::set_torso_pitch", [this](const double & h )  { controller_config_.Stab_config.torsoPitch = h ; StabTask->torsoPitch(h); });
         datastore().make_call("ismpc_walking::zmp_target", [this]() -> Eigen::Vector3d { return zmpTarget; });
         datastore().make_call("ismpc_walking::dcm_target", [this]() -> Eigen::Vector3d { return dcmTarget; });
         datastore().make_call("ismpc_walking::zmp", [this]() -> Eigen::Vector3d { return StabTask->measuredDCM(); });
@@ -276,7 +277,7 @@ private:
     Eigen::VectorXd Traj_ant;
 
     double eta(){
-        return std::sqrt(std::abs(mc_rtc::constants::gravity.z())/Controller_Config.Stab_config.comHeight);
+        return std::sqrt(std::abs(mc_rtc::constants::gravity.z())/controller_config_.Stab_config.comHeight);
     }
 
 
