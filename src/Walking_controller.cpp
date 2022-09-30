@@ -330,12 +330,6 @@ bool Walking_controller::run()
   std::chrono::duration<double, std::milli> time_span = std::chrono::high_resolution_clock::now() - t_clock;
   ControllerLoopTime = time_span.count();
   t_clock = std::chrono::high_resolution_clock::now();
-  if(NewThreadState)
-  {
-    std::lock_guard<std::mutex> lk_copy_state(mutex_mpc_);
-    mpc_state_ = mpc_thread_state;
-    NewThreadState = false;
-  }
 
   if(emergencyFlag) return false;
 
@@ -349,6 +343,11 @@ bool Walking_controller::run()
 
   {
     std::lock_guard<std::mutex> lk_copy_state(mutex_mpc_);
+    if(NewThreadState)
+    {
+      mpc_state_ = mpc_thread_state;
+      NewThreadState = false;
+    }
     UpdateInitialVectors();
     UpdatePlanner_input();
     mpc_state_.Index += 1;
