@@ -62,7 +62,7 @@ bool Walking_controller::MoveFeet(double t)
             { {mc_tasks::lipm_stabilizer::ContactState::Right, sva::PTransformd(sva::RotZ(supp_yaw), supp_pose)}});
       }
 
-      removeContact({robot().name(), "ground", swingFootName, "AllGround", 0.7, footcontact_dof});
+      removeContact({robot().name(), "ground", swingFootName+"Center", "AllGround", 0.7, footcontact_dof});
 
       t_lift = t;
 
@@ -111,11 +111,18 @@ bool Walking_controller::MoveFeet(double t)
 
   SwingFootTask->target(X_0_FootTask_Target);
   SwingFootTask->refVelB(sva::PTransformd(X_0_swing.rotation()) * V_0_FootTask_Target);
-  SwingFootTask->refAccel(sva::MotionVecd(Eigen::Vector3d::Zero(),A_0_FootTask_Target.linear()));
-  // SwingFootTask->refAccel(sva::PTransformd(X_0_swing.rotation()) *sva::MotionVecd(Eigen::Vector3d::Zero(),A_0_FootTask_Target.linear()));
+  // SwingFootTask->refAccel(sva::MotionVecd(Eigen::Vector3d::Zero(),A_0_FootTask_Target.linear()));
+  SwingFootTask->refAccel(sva::PTransformd(X_0_swing.rotation()) *sva::MotionVecd(Eigen::Vector3d::Zero(),A_0_FootTask_Target.linear()));
 
   if(!Swing_Foot_Contact)
   {
+    if(Controller_Config.FootStepHeight - X_0_FootTask_Target.translation().z() < 0.005)
+    {
+      vertical_force_measure_.push_back((float) SwingFootTask->frame().forceSensor().force().z());
+      const int size = vertical_force_measure_.size();
+      Eigen::VectorXd force_measure = Eigen::Map<Eigen::VectorXd, Eigen::Unaligned>(vertical_force_measure_.data(), vertical_force_measure_.size());
+      vertical_force_offset_ = force_measure.mean();
+    }
 
     double Step_Time = t - t_lift;
     double swing_foot_height = robot().surfacePose(swingFootName+ "Center").translation().z();
@@ -124,7 +131,7 @@ bool Walking_controller::MoveFeet(double t)
         (realRobot().surfacePose(swingFootName+ "Center").translation() - realRobot().surfacePose(supportFootName+ "Center").translation())
             .z();
 
-    bool TouchDown = (std::abs(SwingFootTask->frame().forceSensor().force().z()) > 84);
+    bool TouchDown = (SwingFootTask->frame().forceSensor().force().z() - vertical_force_offset_ > 50);
     // TouchDown = false;
 
     if(((Step_Time > 0.25 && TouchDown) || Step_Time >= SingleSupportDuration) && !DoubleSupport_state)
@@ -146,12 +153,12 @@ bool Walking_controller::MoveFeet(double t)
       if(supportFootName == "LeftFoot")
       {
         StabTask->setContacts(
-            {{mc_tasks::lipm_stabilizer::ContactState::Left, sva::PTransformd(sva::RotZ(supp_yaw), supp_pose)}, {mc_tasks::lipm_stabilizer::ContactState::Right, sva::PTransformd(sva::RotZ(swing_yaw), swing_pose)}});
+            {{mc_tasks::lipm_stabilizer::ContactState::Left, robot().surfacePose(supportFootName+"Center")}, {mc_tasks::lipm_stabilizer::ContactState::Right, sva::PTransformd(sva::RotZ(swing_yaw), swing_pose)}});
       }
       else
       {
         StabTask->setContacts(
-            {{mc_tasks::lipm_stabilizer::ContactState::Left, sva::PTransformd(sva::RotZ(swing_yaw), swing_pose)}, {mc_tasks::lipm_stabilizer::ContactState::Right, sva::PTransformd(sva::RotZ(supp_yaw), supp_pose)}});
+            {{mc_tasks::lipm_stabilizer::ContactState::Left, sva::PTransformd(sva::RotZ(swing_yaw), swing_pose)}, {mc_tasks::lipm_stabilizer::ContactState::Right, robot().surfacePose(supportFootName+"Center")}});
       }
       DoubleSupport_state = true;
 
@@ -160,7 +167,7 @@ bool Walking_controller::MoveFeet(double t)
       // mc_rtc::log::info("Locking " + swingFootName + "at t : " + std::to_string(t));
       mc_rtc::log::info("T_contact - T_steps : {}", t - NextTimeStep);
 
-      addContact({robot().name(), "ground", swingFootName, "AllGround", 0.7, footcontact_dof});
+      addContact({robot().name(), "ground", swingFootName + "Center", "AllGround", 0.7, footcontact_dof});
 
 
       mc_rtc::log::success("Locked " + swingFootName);
@@ -198,7 +205,7 @@ bool Walking_controller::MoveFeet(double t)
     X_0_SwingFootInitial = robot().surfacePose(swingFootName+ "Center");
 
 
-
+    vertical_force_measure_.clear();
 
     solver().removeTask(leftSwingFootTask);
     solver().removeTask(rightSwingFootTask);

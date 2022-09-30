@@ -704,8 +704,8 @@ void ISMPC_Solver::FootSteps_Constraints()
 
   Aineq_steps.block(0, 2 * m_C, N_footsteps_kin_cstr, 2 * j_Max_C) = foosteps_kin_cstr * Delta;
   bineq_steps.segment(0,N_footsteps_kin_cstr) = b_kin_cstr;
-  Aineq_steps.block(N_footsteps_kin_cstr, 2 * m_C, N_footsteps_cstr, 2 * j_Max_C) = foosteps_cstr;
-  bineq_steps.segment(N_footsteps_kin_cstr,N_footsteps_cstr) = b_steps_cstr;
+  // Aineq_steps.block(N_footsteps_kin_cstr, 2 * m_C, N_footsteps_cstr, 2 * j_Max_C) = foosteps_cstr;
+  // bineq_steps.segment(N_footsteps_kin_cstr,N_footsteps_cstr) = b_steps_cstr;
 }
 
 void ISMPC_Solver::AntTailTrajectory()
