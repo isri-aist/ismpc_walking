@@ -31,7 +31,7 @@ struct ControllerConfiguration
     Eigen::Vector2d Beta_range{1e10,1e2};
     bool sliding_zmp_cstr_region = false;
     bool use_stability_task = false;
-    double FootStepHeight = 0.035;
+    double FootStepHeight = 0.04;
     double maxVelX=0.15;
     double minVelX=-0.15;
     double delta = 5e-2 ; //MPC TimeStep;

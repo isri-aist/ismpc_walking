@@ -126,7 +126,7 @@ bool Walking_controller::MoveFeet(double t)
     bool TouchDown = (SwingFootTask->frame().forceSensor().force().z() - vertical_force_offset_ > controller_config_.impact_threshold);
     // TouchDown = false;
 
-    if(((Step_Time > 0.25 && TouchDown) || Step_Time >= SingleSupportDuration) && !DoubleSupport_state)
+    if(((Step_Time > 0.25 && TouchDown) || Step_Time >= SingleSupportDuration - controller_config_.delta) && !DoubleSupport_state)
 
     {
 
@@ -152,29 +152,33 @@ bool Walking_controller::MoveFeet(double t)
         StabTask->setContacts(
             {{mc_tasks::lipm_stabilizer::ContactState::Left, sva::PTransformd(sva::RotZ(swing_yaw), swing_pose)}, {mc_tasks::lipm_stabilizer::ContactState::Right, robot().surfacePose(supportFootName)}});
       }
+      
       DoubleSupport_state = true;
-
       mc_rtc::log::info("height : {} ", swing_foot_height);
       mc_rtc::log::info("touchdown : {} ", TouchDown);
       // mc_rtc::log::info("Locking " + swingFootName + "at t : " + std::to_string(t));
       mc_rtc::log::info("T_contact - T_steps : {}", t - NextTimeStep);
 
-      addContact({robot().name(), "ground", swingFootName, "AllGround", 0.7, footcontact_dof});
-
-
+      
       mc_rtc::log::success("Locked " + swingFootName);
 
-      Swing_Foot_Contact = true;
-      switchFootSupport();
-      updateTasks();
-
+      
       // PrevStepTiming = NextTimeStep;
       // if(kfoot + 1 < mpc_state_.planned_steps().size())
       // {
       //   kfoot += 1;
       // }
+    }
+    if (DoubleSupport_state && t - t_contact >= 0.05)
+    {
+      addContact({robot().name(), "ground", swingFootName, "AllGround", 0.7, footcontact_dof});
+      
+      switchFootSupport();
+      updateTasks();
 
       N_Steps += 1;
+      
+      Swing_Foot_Contact = true;
       if(N_Steps == N_Steps_Desired)
       {
         Stop = true;
