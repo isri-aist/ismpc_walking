@@ -227,9 +227,6 @@ void Walking_controller::updateTasks()
   SwingFootTask->dimWeight(Eigen::VectorXd::Ones(6));
   SwingFootTask->stiffness(controller_config_.SwingFootStiffness);
 
-
-  // Eigen::VectorXd dimW_com(Eigen::VectorXd::Ones(3)); dimW_com(2) = 0.1;
-  // CoMTask->dimWeight(dimW_com);
 }
 
 void Walking_controller::switchFootSupport()
