@@ -177,6 +177,7 @@ bool Walking_controller::wait_for_mpc_thread()
         MPC_thread_ready = true;
         mc_rtc::log::success("MPC thread on");
         addToGUI();
+        add_FootSteps_GUI();
         AddToLog();
       }
       else
@@ -372,14 +373,9 @@ bool Walking_controller::run()
 
   if(!(Stop && Swing_Foot_Contact))
   {
-    // if(!Robot_Walking)
-    // {
-    //   StabTask->comStiffness(controller_config_.Stab_config.comStiffness);
-    // }
+
     if(t - t_k >= controller_config_.delta)
     {
-      
-      //std::lock_guard<std::mutex> lk_copy_state(mutex_mpc_);
       t_k += controller_config_.delta  ;
       compute_trajectory_once.notify_all();
     }
@@ -389,13 +385,7 @@ bool Walking_controller::run()
   }
   else
   {
-    // if (Robot_Walking)
-    // {
-    //   count = 0;
-    //   StaticPose = ((robot().surfacePose("leftFootname_").translation() + robot().surfacePose("rightFootname_").translation()) / 2);
-    //   StaticPose.z() = controller_config_.Stab_config.comHeight;
-    //   StabTask->staticTarget(StaticPose);
-    // }
+
     MoveFeet(0);
 
     updateTasks();
@@ -407,12 +397,6 @@ bool Walking_controller::run()
       count_stop = count - 1;
     }
 
-    // double ratio = (count * controller_timestep - linearStiffTimeThreshold_)
-    //                 / (maxStiffTimeThreshold_ - linearStiffTimeThreshold_);
-    // mc_filter::utils::clampInPlace(ratio, 0, 1);
-    // StabTask->comStiffness(Eigen::Vector3d::Ones() * (minStiffness_ + ratio * (maxStiffness_ - minStiffness_)));
-
-
     t_k = 0;
     kfoot = 0;
     N_Steps = 0;
@@ -423,9 +407,6 @@ bool Walking_controller::run()
 
   count += 1;
 
-
-  gui()->removeCategory({"Walking", "Visualization", "FootStep"});
-  add_FootSteps_GUI();
   bool ret = mc_control::fsm::Controller::run();
 
   return ret;
