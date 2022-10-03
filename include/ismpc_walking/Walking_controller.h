@@ -67,6 +67,8 @@ public :
         controller_config_.T_ss_min = config("walking_controller")("min_sg_suport_duration");
         controller_config_.T_ds_min = config("walking_controller")("min_dbl_suport_duration");
         controller_config_.impact_threshold = config("walking_controller")("impact_threshold");
+
+
         
 
         controller_config_.SwingFootStiffness = config("tasks")("swingfoot_stiffness");
@@ -351,8 +353,11 @@ private:
 
     Eigen::Matrix3d R_body_world_Step = Eigen::Matrix3d::Identity(); //Orientation of floating base updated at each steps
 
-    std::string supportFootName = "RightFoot";
-    std::string swingFootName = "LeftFoot";
+    std::string leftFootName_ = "LeftFootCenter";
+    std::string rightFootName_ = "RightFootCenter";
+
+    std::string supportFootName = "RightFootCenter";
+    std::string swingFootName = "LeftFootCenter";
 
     ISMPC_Solver MPCSolver; 
     FootTrajectory SwingFootTrajectory;

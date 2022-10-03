@@ -39,6 +39,8 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, c
   rConfig("torsoBodyName", torsoBodyName_);
   rConfig("rightFootLink", RightFootLinkName_);
   rConfig("leftFootLink", LeftFootLinkName_);
+  rConfig("left_foot_surface",leftFootName_);
+  rConfig("right_foot_surface",rightFootName_);
 
   mc_rtc::log::info(robots().envIndex());
   controller_timestep = dt;
@@ -46,20 +48,20 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, c
   // static auto constraint = mc_solver::ConstraintSetLoader::load(solver(), config("collisions")[0]);
 
   // datastore().make_call("KinematicAnchorFrame::" + robot().name(), [this] (const mc_rbdyn::Robot & robot) -> sva::PTransformd {
-  //   sva::PTransformd X_0_leftfoot = robot.surfacePose("LeftFoot");
-  //   sva::PTransformd X_0_rightfoot = robot.surfacePose("RightFoot");
+  //   sva::PTransformd X_0_leftfoot = robot.surfacePose("leftFootname_");
+  //   sva::PTransformd X_0_rightfoot = robot.surfacePose("rightFootname_");
   //   double height = robot.surfacePose(supportFootName).translation().z();
   //   Eigen::Vector3d T_0_leftfoot = X_0_leftfoot.translation();
   //   Eigen::Vector3d T_0_rightfoot = X_0_rightfoot.translation();
   //   sva::PTransformd X_0_leftfoot_floor(X_0_leftfoot.rotation(),Eigen::Vector3d{T_0_leftfoot.x(),T_0_leftfoot.y(),height});
   //   sva::PTransformd X_0_rightfoot_floor(X_0_rightfoot.rotation(),Eigen::Vector3d{T_0_rightfoot.x(),T_0_rightfoot.y(),height});
 
-  //   return sva::interpolate(X_0_leftfoot_floor, X_0_rightfoot_floor, LeftFootRatio);
+  //   return sva::interpolate(X_0_leftfoot_floor, X_0_rightfoot_floor, leftFootname_Ratio);
   
   // });
 
   datastore().make_call("KinematicAnchorFrame::" + robot().name(), [this](const mc_rbdyn::Robot & robot) {
-    return sva::interpolate(robot.surfacePose("LeftFoot"), robot.surfacePose("RightFoot"), LeftFootRatio);
+    return sva::interpolate(robot.surfacePose(leftFootName_), robot.surfacePose(rightFootName_), LeftFootRatio);
   });
 
 
@@ -69,8 +71,8 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, c
   // solver().addConstraintSet(dynamicsConstraint);
 
   footcontact_dof << 0, 0, 1, 1, 1, 0;
-  addContact({robot().name(), "ground", "RightFootCenter", "AllGround", 0.7, footcontact_dof});
-  addContact({robot().name(), "ground", "LeftFootCenter", "AllGround", 0.7, footcontact_dof});
+  addContact({robot().name(), "ground", rightFootName_, "AllGround", 0.7, footcontact_dof});
+  addContact({robot().name(), "ground", leftFootName_, "AllGround", 0.7, footcontact_dof});
 
   rightShoulderIndex = robot().jointIndexByName("R_SHOULDER_P");
   rightLegIndex = robot().jointIndexByName("R_HIP_P");
@@ -79,10 +81,13 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, c
   leftLegIndex = robot().jointIndexByName("L_HIP_P");
 
   leftSwingFootTask =
-      std::make_shared<mc_tasks::SurfaceTransformTask>("LeftFootCenter", robots(), robots().robotIndex(), 10.0, 10.);
+      std::make_shared<mc_tasks::SurfaceTransformTask>(leftFootName_, robots(), robots().robotIndex(), 10.0, 10.);
 
   rightSwingFootTask =
-      std::make_shared<mc_tasks::SurfaceTransformTask>("RightFootCenter", robots(), robots().robotIndex(), 10.0, 10.);
+      std::make_shared<mc_tasks::SurfaceTransformTask>(rightFootName_, robots(), robots().robotIndex(), 10.0, 10.);
+  
+  swingFootName = leftFootName_;
+  supportFootName = rightFootName_;
  
   StabTask = std::make_shared<mc_tasks::lipm_stabilizer::StabilizerTask>(solver().robots(), solver().realRobots(),
                                                                          solver().robots().robotIndex(), solver().dt());
@@ -97,16 +102,13 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, c
   armTask->selectActiveJoints(solver(), armTask_Joints);
   armTask->name("ArmPosture");
   
-  supportFootName = "RightFoot";
-  swingFootName = "LeftFoot";
-
-  SupportFootPose = robot().surfacePose(supportFootName+ "Center").translation();
+  SupportFootPose = robot().surfacePose(supportFootName).translation();
   SupportFootPose.z() = 0;
 
-  SwingFootInitialPose = robot().surfacePose(swingFootName+ "Center").translation();
+  SwingFootInitialPose = robot().surfacePose(swingFootName).translation();
   X_0_SwingFootInitial = SwingFootInitialPose;
 
-  StaticPose = ((robot().surfacePose("LeftFoot").translation() + robot().surfacePose("RightFoot").translation()) / 2);
+  StaticPose = ((robot().surfacePose(leftFootName_).translation() + robot().surfacePose(rightFootName_).translation()) / 2);
   StaticPose.z() = controller_config_.Stab_config.comHeight;
 
   SwingFootAcc.setZero();
@@ -300,7 +302,7 @@ void Walking_controller::ComputeWalkingTrajectory()
 void Walking_controller::UpdatePlanner_input()
 {
   mpc_state_.input_v_.clear();
-  if(supportFootName == "LeftFoot")
+  if(supportFootName == leftFootName_)
   {
     reference_velocity.y() = mc_filter::utils::clamp(reference_velocity.y(), -0.07, 0.0);
   }
@@ -317,13 +319,17 @@ void Walking_controller::UpdatePlanner_input()
   mpc_state_.set_input_tds(input_tds);
   mpc_state_.input_steps_.clear();
   // mpc._state_.input_Pf.push_back(Step_Target);
-  mpc_state_.input_Support_FootName = supportFootName;
-  mpc_state_.X_0_SupportFoot = sva::PTransformd(sva::RotZ(mc_rbdyn::rpyFromMat(robot().surfacePose(supportFootName+ "Center").rotation()).z()) ,
-                                                robot().surfacePose(supportFootName+ "Center").translation());
-  mpc_state_.X_0_Initial_SwingFoot = sva::PTransformd(sva::RotZ(mc_rbdyn::rpyFromMat(robot().surfacePose(swingFootName+ "Center").rotation()).z()) ,
-                                                      robot().surfacePose(swingFootName+ "Center").translation());
-  mpc_state_.SupportFootPose = robot().surfacePose(supportFootName+ "Center").translation();
-  mpc_state_.SupportFootPose.z() = mc_rbdyn::rpyFromMat(robot().surfacePose(supportFootName+ "Center").rotation()).z();
+  mpc_state_.input_Support_FootName = "LeftFoot";
+  if (supportFootName == rightFootName_)
+  {
+    mpc_state_.input_Support_FootName = "RightFoot";
+  }
+  mpc_state_.X_0_SupportFoot = sva::PTransformd(sva::RotZ(mc_rbdyn::rpyFromMat(robot().surfacePose(supportFootName).rotation()).z()) ,
+                                                robot().surfacePose(supportFootName).translation());
+  mpc_state_.X_0_Initial_SwingFoot = sva::PTransformd(sva::RotZ(mc_rbdyn::rpyFromMat(robot().surfacePose(swingFootName).rotation()).z()) ,
+                                                      robot().surfacePose(swingFootName).translation());
+  mpc_state_.SupportFootPose = robot().surfacePose(supportFootName).translation();
+  mpc_state_.SupportFootPose.z() = mc_rbdyn::rpyFromMat(robot().surfacePose(supportFootName).rotation()).z();
 
   Eigen::Vector3d Pf_m1(SwingFootInitialPose);
   Pf_m1.z() = SupportFootPose.z();
@@ -386,7 +392,7 @@ bool Walking_controller::run()
     // if (Robot_Walking)
     // {
     //   count = 0;
-    //   StaticPose = ((robot().surfacePose("LeftFoot").translation() + robot().surfacePose("RightFoot").translation()) / 2);
+    //   StaticPose = ((robot().surfacePose("leftFootname_").translation() + robot().surfacePose("rightFootname_").translation()) / 2);
     //   StaticPose.z() = controller_config_.Stab_config.comHeight;
     //   StabTask->staticTarget(StaticPose);
     // }
@@ -528,30 +534,30 @@ void Walking_controller::reset(const mc_control::ControllerResetData & reset_dat
 
   SwingFootTask.reset();
   SupportFootTask.reset();
-  supportFootName = "RightFoot";
-  swingFootName = "LeftFoot";
+  supportFootName = rightFootName_;
+  swingFootName = leftFootName_;
 
   mpc_state_.input_v_.clear();
   mpc_state_.input_timesteps_.clear();
   mpc_state_.input_steps_.clear();
 
 
-  SupportFootPose = robot().surfacePose(supportFootName + "Center").translation();
+  SupportFootPose = robot().surfacePose(supportFootName).translation();
   SupportFootPose.z() = 0;
 
   mpc_state_.Pck = robot().com();
   mpc_state_.Pck.z() = controller_config_.Stab_config.comHeight;
-  mpc_state_.Pzk = robot().surfacePose(swingFootName+ "Center").translation();
+  mpc_state_.Pzk = robot().surfacePose(swingFootName).translation();
   mpc_state_.Pzk.z() = 0;
   mpc_state_.Pu = mpc_state_.Pck;
   mpc_state_.Vck = robot().comVelocity();
 
-  SwingFootInitialPose = robot().surfacePose(swingFootName+ "Center").translation();
+  SwingFootInitialPose = robot().surfacePose(swingFootName).translation();
   X_0_SwingFootInitial = SwingFootInitialPose;
   updateTasks();
 
-  addContact({robot().name(), "ground", "RightFootCenter", "AllGround", 0.7, footcontact_dof});
-  addContact({robot().name(), "ground", "LeftFootCenter", "AllGround", 0.7, footcontact_dof});
+  addContact({robot().name(), "ground", rightFootName_, "AllGround", 0.7, footcontact_dof});
+  addContact({robot().name(), "ground", leftFootName_, "AllGround", 0.7, footcontact_dof});
 
   MPC_thread_on = false;
   MPC_thread_ready = false;

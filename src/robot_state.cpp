@@ -2,7 +2,7 @@
 
 void Walking_controller::getTransformations()
 {
-  // X_world_floatingbase = robot().surfacePose("RightFoot");
+  // X_world_floatingbase = robot().surfacePose(rightFootname_);
   // X_world_floatingbase = robot().mbc().bodyPosW[robot().bodyIndexByName("base_link")];
 
   // floatingbaseWorldPos = X_world_floatingbase.translation();
@@ -13,8 +13,8 @@ void Walking_controller::getTransformations()
   // }
   // floatingbaseWorldRPY << mc_rbdyn::rpyFromMat(floatingbaseWorldOri.inverse());
 
-  X_0_leftFoot = robot().surfacePose("LeftFootCenter");
-  X_0_rightFoot = robot().surfacePose("RightFootCenter");
+  X_0_leftFoot = robot().surfacePose(leftFootName_);
+  X_0_rightFoot = robot().surfacePose(rightFootName_);
 
   R_0_leftFoot = X_0_leftFoot.rotation();
   R_leftFoot_0 = X_0_leftFoot.rotation().transpose();
@@ -24,7 +24,7 @@ void Walking_controller::getTransformations()
   R_rightFoot_0 = X_0_rightFoot.rotation().transpose();
   T_rightFoot_0 = X_0_rightFoot.translation();
 
-  if(supportFootName == "LeftFoot")
+  if(supportFootName == leftFootName_)
   {
     X_0_support = X_0_leftFoot;
     X_0_swing = X_0_rightFoot;

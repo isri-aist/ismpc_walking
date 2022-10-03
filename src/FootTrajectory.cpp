@@ -216,6 +216,7 @@ std::vector<Eigen::Vector3d> FootTrajectory::getSwingFootTrajectory(const sva::P
 
       New_traj = false;
     }
+    
     else
     {
       m_t += delta;
@@ -285,6 +286,19 @@ std::vector<Eigen::Vector3d> FootTrajectory::getSwingFootTrajectory(const sva::P
     swingFootAcc(0) = poly_X(2);
     swingFootAcc(1) = poly_Y(2);
     swingFootAcc(2) = poly_Z(2);
+  }
+
+  if( std::abs((X_0_StartPose.translation() - X_0_StepTarget.translation()).x()) < 1e-2)
+  {
+    swingFootPosition.x() = X_0_StartPose.translation().x();
+    swingFootVelocity.x() = 0;
+    swingFootAcc.x() = 0;
+  }
+  if( std::abs((X_0_StartPose.translation() - X_0_StepTarget.translation()).y()) < 1e-2)
+  {
+    swingFootPosition.y() = X_0_StartPose.translation().y();
+    swingFootVelocity.y() = 0;
+    swingFootAcc.y() = 0;
   }
 
   Output.push_back(swingFootPosition);

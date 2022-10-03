@@ -96,6 +96,8 @@ tasks:
   swingfoot_dimstiffness: [1.,1.,1.,1.,1.,1.]
 
 walking_controller:
+  right_foot_surface: "RightFootCenter"
+  left_foot_surface: "LeftFootCenter"
   auto_start:
     activate: true
     steps: 10
@@ -110,10 +112,14 @@ walking_controller:
       torsoBodyName: "torso"
       leftFootLink: "l_ankle"
       rightFootLink: "r_ankle"
+      right_foot_surface: "RightFootCenter"
+      left_foot_surface: "LeftFootCenter"
     hrp4cr:
       torsoBodyName: "CHEST_P_LINK"
       leftFootLink: "L_TOE_P_LINK"
       rightFootLink: "R_TOE_P_LINK"
+      right_foot_surface: "RightFootCenter"
+      left_foot_surface: "LeftFootCenter"
 
 stabilizer:
   robot:

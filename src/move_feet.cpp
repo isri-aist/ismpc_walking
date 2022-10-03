@@ -31,12 +31,18 @@ bool Walking_controller::MoveFeet(double t)
   }
 
 
-  Eigen::Vector3d SupportFootPose = robot().surfacePose(supportFootName+ "Center").translation();
-  SupportFootPose.z() = mc_rbdyn::rpyFromMat(robot().surfacePose(supportFootName+ "Center").rotation()).z();
+  Eigen::Vector3d SupportFootPose = robot().surfacePose(supportFootName).translation();
+  SupportFootPose.z() = mc_rbdyn::rpyFromMat(robot().surfacePose(supportFootName).rotation()).z();
 
-  std::string sensorName = swingFootName + "ForceSensor";
-  const auto & sensor = robot().forceSensor(sensorName);
-  const auto & sensor_support = robot().forceSensor(supportFootName + "ForceSensor");
+  std::string swingFoot_sensorName = "RightFootForceSensor";
+  std::string supportFoot_sensorName = "LeftFootForceSensor";
+  if(swingFootName == leftFootName_)
+  {
+    swingFoot_sensorName = "LeftFootForceSensor";
+    supportFoot_sensorName = "RightFootForceSensor";
+  }
+  const auto & sensor = robot().forceSensor(swingFoot_sensorName);
+  const auto & sensor_support = robot().forceSensor(supportFoot_sensorName);
 
   if(Swing_Foot_Contact)
   {
@@ -48,10 +54,10 @@ bool Walking_controller::MoveFeet(double t)
       solver().addTask(SwingFootTask);
       Eigen::Vector3d supp_pose;
       double supp_yaw;
-      supp_pose = robot().surfacePose(supportFootName + "Center").translation();
+      supp_pose = robot().surfacePose(supportFootName).translation();
       supp_pose.z() = 0.0;
-      supp_yaw = mc_rbdyn::rpyFromMat(robot().surfacePose(supportFootName + "Center").rotation()).z();
-      if(supportFootName == "LeftFoot")
+      supp_yaw = mc_rbdyn::rpyFromMat(robot().surfacePose(supportFootName).rotation()).z();
+      if(supportFootName == leftFootName_)
       {
         StabTask->setContacts(
             {{mc_tasks::lipm_stabilizer::ContactState::Left, sva::PTransformd(sva::RotZ(supp_yaw), supp_pose)}});
@@ -62,12 +68,12 @@ bool Walking_controller::MoveFeet(double t)
             { {mc_tasks::lipm_stabilizer::ContactState::Right, sva::PTransformd(sva::RotZ(supp_yaw), supp_pose)}});
       }
 
-      removeContact({robot().name(), "ground", swingFootName+"Center", "AllGround", 0.7, footcontact_dof});
+      removeContact({robot().name(), "ground", swingFootName, "AllGround", 0.7, footcontact_dof});
 
       t_lift = t;
 
       std::string swingFootLinkName = LeftFootLinkName_;
-      if(swingFootName == "RightFoot")
+      if(swingFootName == rightFootName_)
       {
         swingFootLinkName = RightFootLinkName_;
       }
@@ -92,11 +98,12 @@ bool Walking_controller::MoveFeet(double t)
   sva::MotionVecd V_0_FootTask_Target = SwingFootTrajectory.GetVelocity();
   sva::MotionVecd A_0_FootTask_Target = SwingFootTrajectory.GetAccel();
 
+  double swing_yaw = mc_rbdyn::rpyFromMat(X_0_swing.rotation()).z();
 
   SwingFootTask->target(X_0_FootTask_Target);
-  SwingFootTask->refVelB(sva::PTransformd(X_0_swing.rotation()) * V_0_FootTask_Target);
-  // SwingFootTask->refAccel(sva::MotionVecd(Eigen::Vector3d::Zero(),A_0_FootTask_Target.linear()));
-  SwingFootTask->refAccel(sva::PTransformd(X_0_swing.rotation()) *sva::MotionVecd(Eigen::Vector3d::Zero(),A_0_FootTask_Target.linear()));
+  SwingFootTask->refVelB(sva::PTransformd(sva::RotZ(swing_yaw)) * V_0_FootTask_Target);
+  SwingFootTask->refAccel(sva::MotionVecd(Eigen::Vector3d::Zero(), sva::RotZ(swing_yaw) * A_0_FootTask_Target.linear()));
+  // SwingFootTask->refAccel(sva::PTransformd(X_0_swing.rotation()) *sva::MotionVecd(Eigen::Vector3d::Zero(),A_0_FootTask_Target.linear()));
 
   if(!Swing_Foot_Contact)
   {
@@ -109,10 +116,10 @@ bool Walking_controller::MoveFeet(double t)
     }
 
     double Step_Time = t - t_lift;
-    double swing_foot_height = robot().surfacePose(swingFootName+ "Center").translation().z();
-    double support_foot_height = robot().surfacePose(supportFootName+ "Center").translation().z();
+    double swing_foot_height = robot().surfacePose(swingFootName).translation().z();
+    double support_foot_height = robot().surfacePose(supportFootName).translation().z();
     double foot_diff_height =
-        (realRobot().surfacePose(swingFootName+ "Center").translation() - realRobot().surfacePose(supportFootName+ "Center").translation())
+        (realRobot().surfacePose(swingFootName).translation() - realRobot().surfacePose(supportFootName).translation())
             .z();
 
     bool TouchDown = (SwingFootTask->frame().forceSensor().force().z() - vertical_force_offset_ > controller_config_.impact_threshold);
@@ -126,23 +133,23 @@ bool Walking_controller::MoveFeet(double t)
 
       Eigen::Vector3d supp_pose;
       double supp_yaw;
-      supp_pose = robot().surfacePose(supportFootName + "Center").translation();
+      supp_pose = robot().surfacePose(supportFootName).translation();
       supp_pose.z() = 0.0;
-      supp_yaw = mc_rbdyn::rpyFromMat(robot().surfacePose(supportFootName + "Center").rotation()).z();
+      supp_yaw = mc_rbdyn::rpyFromMat(robot().surfacePose(supportFootName).rotation()).z();
       Eigen::Vector3d swing_pose;
       double swing_yaw;
-      swing_pose = robot().surfacePose(swingFootName + "Center").translation();
+      swing_pose = robot().surfacePose(swingFootName).translation();
       swing_pose.z() = 0.0;
-      swing_yaw = mc_rbdyn::rpyFromMat(robot().surfacePose(swingFootName + "Center").rotation()).z();
-      if(supportFootName == "LeftFoot")
+      swing_yaw = mc_rbdyn::rpyFromMat(robot().surfacePose(swingFootName).rotation()).z();
+      if(supportFootName == leftFootName_)
       {
         StabTask->setContacts(
-            {{mc_tasks::lipm_stabilizer::ContactState::Left, robot().surfacePose(supportFootName+"Center")}, {mc_tasks::lipm_stabilizer::ContactState::Right, sva::PTransformd(sva::RotZ(swing_yaw), swing_pose)}});
+            {{mc_tasks::lipm_stabilizer::ContactState::Left, robot().surfacePose(supportFootName)}, {mc_tasks::lipm_stabilizer::ContactState::Right, sva::PTransformd(sva::RotZ(swing_yaw), swing_pose)}});
       }
       else
       {
         StabTask->setContacts(
-            {{mc_tasks::lipm_stabilizer::ContactState::Left, sva::PTransformd(sva::RotZ(swing_yaw), swing_pose)}, {mc_tasks::lipm_stabilizer::ContactState::Right, robot().surfacePose(supportFootName+"Center")}});
+            {{mc_tasks::lipm_stabilizer::ContactState::Left, sva::PTransformd(sva::RotZ(swing_yaw), swing_pose)}, {mc_tasks::lipm_stabilizer::ContactState::Right, robot().surfacePose(supportFootName)}});
       }
       DoubleSupport_state = true;
 
@@ -151,7 +158,7 @@ bool Walking_controller::MoveFeet(double t)
       // mc_rtc::log::info("Locking " + swingFootName + "at t : " + std::to_string(t));
       mc_rtc::log::info("T_contact - T_steps : {}", t - NextTimeStep);
 
-      addContact({robot().name(), "ground", swingFootName + "Center", "AllGround", 0.7, footcontact_dof});
+      addContact({robot().name(), "ground", swingFootName, "AllGround", 0.7, footcontact_dof});
 
 
       mc_rtc::log::success("Locked " + swingFootName);
@@ -180,13 +187,13 @@ bool Walking_controller::MoveFeet(double t)
   if(DoubleSupport_state)
   {
   
-    SwingFootInitialPose = robot().surfacePose(swingFootName+ "Center").translation();
-    SwingFootInitialAngle = mc_rbdyn::rpyFromMat(robot().surfacePose(swingFootName+ "Center").rotation()).z();
+    SwingFootInitialPose = robot().surfacePose(swingFootName ).translation();
+    SwingFootInitialAngle = mc_rbdyn::rpyFromMat(robot().surfacePose(swingFootName ).rotation()).z();
 
-    X_0_SwingFootInitial = sva::PTransformd(sva::RotZ(mc_rbdyn::rpyFromMat(robot().surfacePose(swingFootName+ "Center").rotation()).z()) ,
-                                                          robot().surfacePose(swingFootName+ "Center").translation());
+    X_0_SwingFootInitial = sva::PTransformd(sva::RotZ(mc_rbdyn::rpyFromMat(robot().surfacePose(swingFootName).rotation()).z()) ,
+                                                          robot().surfacePose(swingFootName).translation());
     
-    X_0_SwingFootInitial = robot().surfacePose(swingFootName+ "Center");
+    X_0_SwingFootInitial = robot().surfacePose(swingFootName);
 
 
     vertical_force_measure_.clear();
@@ -201,7 +208,7 @@ bool Walking_controller::MoveFeet(double t)
 
 void Walking_controller::updateTasks()
 {
-  if(supportFootName == "LeftFoot")
+  if(supportFootName == leftFootName_)
   {
     SwingFootTask = rightSwingFootTask;
   }
@@ -222,18 +229,18 @@ void Walking_controller::updateTasks()
 
 void Walking_controller::switchFootSupport()
 {
-  if(supportFootName == "LeftFoot")
+  if(supportFootName == leftFootName_)
   {
-    supportFootName = "RightFoot";
-    swingFootName = "LeftFoot";
+    supportFootName = rightFootName_;
+    swingFootName = leftFootName_;
 
   }
 
   else
   {
 
-    supportFootName = "LeftFoot";
-    swingFootName = "RightFoot";
+    supportFootName = leftFootName_;
+    swingFootName = rightFootName_;
 
   }
 }
