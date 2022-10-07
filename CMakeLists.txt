@@ -14,8 +14,7 @@ project(${PROJECT_NAME} CXX)
 if(NOT TARGET mc_rtc::mc_control)
   find_package(mc_rtc REQUIRED)
 endif()
-find_package(lipm_walking_controller REQUIRED)
-include_directories(${lipm_walking_controller_DIR}/../../../include)
+
 
 add_subdirectory(src)
 
