@@ -26,7 +26,7 @@ void Walking_controller::addToGUI()
                           compute_trajectory_once.notify_all();
                         }),
                     mc_rtc::gui::Label("Velocity Tail used", [this]() { return this->MPCSolver.Tail(); }),
-                    mc_rtc::gui::Label("Timing", [this]() { return this->t; }),
+                    mc_rtc::gui::Label("Timing", [this]() { return t; }),
                     mc_rtc::gui::Label("Double support duration", [this]() { return this->mpc_state_.get_tds(); }),
                     mc_rtc::gui::Label("Next Step Timing ",
                                        [this]() {
@@ -111,47 +111,48 @@ void Walking_controller::addToGUI()
             Eigen::Vector3d p3 =
                 p0 + R_support_0 * Eigen::Vector3d{0, this->MPCSolver.Puk_max().y() - this->MPCSolver.Puk_min().y(), 0};
             return {p0, p1, p2, p3};
-          }),
-      mc_rtc::gui::Point3D("Pu", mc_rtc::gui::PointConfig(mc_rtc::gui::Color(1, 0.5, 0.25)),
-                           [this]() {
-                             Eigen::Vector3d vec(this->MPCSolver.Puk());
-                             vec.z() = 0;
-                             return vec;
-                           }),
-      mc_rtc::gui::Point3D("DCM", mc_rtc::gui::PointConfig(mc_rtc::gui::Color(1, 0.75, 0.25)), [this]() {
-        Eigen::Vector3d vec(StabTask->measuredDCM());
-        vec.z() = 0;
-        return vec;
-      }));
+          })
+      // mc_rtc::gui::Point3D("Pu", mc_rtc::gui::PointConfig(mc_rtc::gui::Color(1, 0.5, 0.25)),
+      //                      [this]() {
+      //                        Eigen::Vector3d vec(this->MPCSolver.Puk());
+      //                        vec.z() = 0;
+      //                        return vec;
+      //                      }),
+      // mc_rtc::gui::Point3D("DCM", mc_rtc::gui::PointConfig(mc_rtc::gui::Color(1, 0.75, 0.25)), [this]() {
+      //   Eigen::Vector3d vec(StabTask->measuredDCM());
+      //   vec.z() = 0;
+      //   return vec;
+      // })
+      );
 
   gui()->addElement(
       {"Walking", "Visualization", "Trajectories"},
-      mc_rtc::gui::Trajectory(
-          "RealCoMTrajectory",
-          mc_rtc::gui::LineConfig(mc_rtc::gui::Color(1., 0., 0.), 0.01, mc_rtc::gui::LineStyle::Dotted),
-          [this]() {
-            if(UseRealRobot)
-            {
-              return realRobot().com();
-            }
-            else
-            {
-              return robot().com();
-            }
-          }),
-      mc_rtc::gui::Trajectory(
-          "SwingFoot Trajectory",
-          mc_rtc::gui::LineConfig(mc_rtc::gui::Color(0., 1., 0.), 0.01, mc_rtc::gui::LineStyle::Solid),
-          [this]() { return robot().surfacePose(swingFootName).translation(); }),
-      mc_rtc::gui::Trajectory(
-          "ZMPMeasured", mc_rtc::gui::LineConfig(mc_rtc::gui::Color(0.5, 1., 0.), 0.01, mc_rtc::gui::LineStyle::Solid),
-          [this]() { return StabTask->measuredZMP(); }),
-      mc_rtc::gui::Trajectory(
-          "Pzk", mc_rtc::gui::LineConfig(mc_rtc::gui::Color(0., 1., 0.), 0.01, mc_rtc::gui::LineStyle::Solid),
-          [this]() {
-            return mpc_state_.Pzk;
-            ;
-          }),
+  //     mc_rtc::gui::Trajectory(
+  //         "RealCoMTrajectory",
+  //         mc_rtc::gui::LineConfig(mc_rtc::gui::Color(1., 0., 0.), 0.01, mc_rtc::gui::LineStyle::Dotted),
+  //         [this]() {
+  //           if(UseRealRobot)
+  //           {
+  //             return realRobot().com();
+  //           }
+  //           else
+  //           {
+  //             return robot().com();
+  //           }
+  //         }),
+      // mc_rtc::gui::Trajectory(
+      //     "SwingFoot Trajectory",
+      //     mc_rtc::gui::LineConfig(mc_rtc::gui::Color(0., 1., 0.), 0.01, mc_rtc::gui::LineStyle::Solid),
+      //     [this]() { return robot().surfacePose(swingFootName).translation(); }),
+      // mc_rtc::gui::Trajectory(
+      //     "ZMPMeasured", mc_rtc::gui::LineConfig(mc_rtc::gui::Color(0.5, 1., 0.), 0.01, mc_rtc::gui::LineStyle::Solid),
+      //     [this]() { return StabTask->measuredZMP(); }),
+      // mc_rtc::gui::Trajectory(
+      //     "Pzk", mc_rtc::gui::LineConfig(mc_rtc::gui::Color(0., 1., 0.), 0.01, mc_rtc::gui::LineStyle::Solid),
+      //     [this]() {
+      //       return mpc_state_.Pzk;
+      //       ;
+      //     }),
       mc_rtc::gui::Trajectory("Predicted ZMP Trajectory", mc_rtc::gui::Color(0., 0., 1.),
                               [this]() -> std::vector<Eigen::Vector3d> {
                                 std::vector<Eigen::Vector3d> Output;
@@ -171,24 +172,23 @@ void Walking_controller::addToGUI()
                                 return Output;
                               }),
 
-      mc_rtc::gui::Trajectory("Anticipative Trajectory", mc_rtc::gui::Color(1., 0., 1.),
-                              [this]() -> std::vector<Eigen::Vector3d> {
-                                std::vector<Eigen::Vector3d> Output;
-                                Eigen::VectorXd Traj = MPCSolver.GetAfterTc_ZMP_trajectory();
-                                int n = (int)(Traj.size() / 2);
-                                for(int k = 0; k < n; k++)
-                                {
-                                  Output.push_back(Eigen::Vector3d{Traj(k), Traj(k + n), 0});
-                                }
-                                return Output;
-                              }),
+      // mc_rtc::gui::Trajectory("Anticipative Trajectory", mc_rtc::gui::Color(1., 0., 1.),
+      //                         [this]() -> std::vector<Eigen::Vector3d> {
+      //                           std::vector<Eigen::Vector3d> Output;
+      //                           Eigen::VectorXd Traj = MPCSolver.GetAfterTc_ZMP_trajectory();
+      //                           int n = (int)(Traj.size() / 2);
+      //                           for(int k = 0; k < n; k++)
+      //                           {
+      //                             Output.push_back(Eigen::Vector3d{Traj(k), Traj(k + n), 0});
+      //                           }
+      //                           return Output;
+      //                         }),
 
       // mc_rtc::gui::Polygon(
       //     "AllPoly", mc_rtc::gui::Color(1., 0.3, 0.),
       //     [this]() -> const std::vector<std::vector<Eigen::Vector3d>> & { return this->MPCSolver.get_allpolys(); }),
       mc_rtc::gui::Polygon("SupportPolygon", mc_rtc::gui::Color(1., 1., 0.), [this]() -> const std::vector<Eigen::Vector3d> & { return mpc_state_.get_SupPolygon(); })
-
-        );
+      );
 
  
 
