@@ -12,6 +12,7 @@
 #include <Tasks/QPContactConstr.h>
 #include <mc_tasks/SurfaceTransformTask.h>
 #include <mc_tasks/lipm_stabilizer/StabilizerTask.h>
+#include <mc_solver/CoMIncPlaneConstr.h>
 #include <mc_rbdyn/Robots.h>
 #include <mc_control/api.h>
 #include <mc_control/fsm/Controller.h>
@@ -253,9 +254,11 @@ protected:
     std::shared_ptr<mc_tasks::SurfaceTransformTask>  leftSwingFootTask;
     std::shared_ptr<mc_tasks::SurfaceTransformTask>  rightSwingFootTask;
     std::shared_ptr<mc_tasks::PostureTask> armTask;
+    std::shared_ptr<mc_solver::CoMIncPlaneConstr> comIncPlaneConstraintPtr_;
     
 
 private:
+
 
     std::mutex mutex_mpc_;
     MPC_state mpc_thread_state;
@@ -275,6 +278,8 @@ private:
     std::string torsoBodyName_ = "";
     std::string LeftFootLinkName_ = "";
     std::string RightFootLinkName_ = "";
+
+    std::vector<mc_rbdyn::Plane> planes_;
 
     Eigen::VectorXd Traj_ant;
 

@@ -47,22 +47,14 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, c
   // config_.load(config);
   // static auto constraint = mc_solver::ConstraintSetLoader::load(solver(), config("collisions")[0]);
 
-  // datastore().make_call("KinematicAnchorFrame::" + robot().name(), [this] (const mc_rbdyn::Robot & robot) -> sva::PTransformd {
-  //   sva::PTransformd X_0_leftfoot = robot.surfacePose("leftFootname_");
-  //   sva::PTransformd X_0_rightfoot = robot.surfacePose("rightFootname_");
-  //   double height = robot.surfacePose(supportFootName).translation().z();
-  //   Eigen::Vector3d T_0_leftfoot = X_0_leftfoot.translation();
-  //   Eigen::Vector3d T_0_rightfoot = X_0_rightfoot.translation();
-  //   sva::PTransformd X_0_leftfoot_floor(X_0_leftfoot.rotation(),Eigen::Vector3d{T_0_leftfoot.x(),T_0_leftfoot.y(),height});
-  //   sva::PTransformd X_0_rightfoot_floor(X_0_rightfoot.rotation(),Eigen::Vector3d{T_0_rightfoot.x(),T_0_rightfoot.y(),height});
 
-  //   return sva::interpolate(X_0_leftfoot_floor, X_0_rightfoot_floor, leftFootname_Ratio);
-  
-  // });
+  comIncPlaneConstraintPtr_.reset(new mc_solver::CoMIncPlaneConstr(robots(), robots().robotIndex(), dt) );
 
   datastore().make_call("KinematicAnchorFrame::" + robot().name(), [this](const mc_rbdyn::Robot & robot) {
     return sva::interpolate(robot.surfacePose(leftFootName_), robot.surfacePose(rightFootName_), LeftFootRatio);
   });
+
+  solver().addConstraintSet(*comIncPlaneConstraintPtr_);
 
 
   // solver().addConstraintSet(*constraint);
@@ -352,6 +344,9 @@ bool Walking_controller::run()
   if(emergencyFlag) return false;
 
   t = (count - countStart) * controller_timestep;
+
+  planes_.clear();
+
   
 
   getTransformations();
@@ -371,6 +366,7 @@ bool Walking_controller::run()
   MoveCoM();
 
 
+
   if(!(Stop && Swing_Foot_Contact))
   {
 
@@ -381,13 +377,20 @@ bool Walking_controller::run()
     }
     MoveFeet(t);
 
+
+    //Ax+b>=0
+  planes_ =  {
+    {{0., 0.,  -1.},  (controller_config_.Stab_config.comHeight + 0.01) },
+    {{0., 0.,   1.}, -(controller_config_.Stab_config.comHeight - 0.01) }
+  };
+  
+
     Robot_Walking = true;
   }
   else
   {
 
     MoveFeet(0);
-
     updateTasks();
 
     t_stop = (count - count_stop) * controller_timestep;
@@ -406,6 +409,9 @@ bool Walking_controller::run()
   }
 
   count += 1;
+
+  comIncPlaneConstraintPtr_->setPlanes(solver(), planes_);
+
 
   bool ret = mc_control::fsm::Controller::run();
 
