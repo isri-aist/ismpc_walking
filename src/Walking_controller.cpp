@@ -380,8 +380,8 @@ bool Walking_controller::run()
 
     //Ax+b>=0
   planes_ =  {
-    {{0., 0.,  -1.},  (controller_config_.Stab_config.comHeight + 0.02) },
-    {{0., 0.,   1.}, -(controller_config_.Stab_config.comHeight - 0.02) }
+    {{0., 0.,  -1.},  (controller_config_.Stab_config.comHeight + 0.005) },
+    {{0., 0.,   1.}, -(controller_config_.Stab_config.comHeight - 0.005) }
   };
   
 
@@ -410,7 +410,7 @@ bool Walking_controller::run()
 
   count += 1;
 
-  comIncPlaneConstraintPtr_->setPlanes(solver(), planes_,{},{},1e-2,1e-3);
+  comIncPlaneConstraintPtr_->setPlanes(solver(), planes_,{},{},2.5e-3,1e-3);
 
 
   bool ret = mc_control::fsm::Controller::run();
