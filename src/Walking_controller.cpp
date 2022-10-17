@@ -54,7 +54,7 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, c
     return sva::interpolate(robot.surfacePose(leftFootName_), robot.surfacePose(rightFootName_), LeftFootRatio);
   });
 
-  solver().addConstraintSet(*comIncPlaneConstraintPtr_);
+  // solver().addConstraintSet(*comIncPlaneConstraintPtr_);
 
 
   // solver().addConstraintSet(*constraint);
@@ -379,10 +379,10 @@ bool Walking_controller::run()
 
 
     //Ax+b>=0
-  planes_ =  {
-    {{0., 0.,  -1.},  (controller_config_.Stab_config.comHeight + 0.005) },
-    {{0., 0.,   1.}, -(controller_config_.Stab_config.comHeight - 0.005) }
-  };
+  // planes_ =  {
+  //   {{0., 0.,  -1.},  (controller_config_.Stab_config.comHeight + 0.005) },
+  //   {{0., 0.,   1.}, -(controller_config_.Stab_config.comHeight - 0.005) }
+  // };
   
 
     Robot_Walking = true;
@@ -410,7 +410,7 @@ bool Walking_controller::run()
 
   count += 1;
 
-  comIncPlaneConstraintPtr_->setPlanes(solver(), planes_,{},{},2.5e-3,1e-3);
+  // comIncPlaneConstraintPtr_->setPlanes(solver(), planes_,{},{},2.5e-3,1e-3);
 
 
   bool ret = mc_control::fsm::Controller::run();
