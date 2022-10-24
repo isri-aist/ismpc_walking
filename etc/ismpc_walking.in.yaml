@@ -99,10 +99,13 @@ walking_controller:
   right_foot_surface: "RightFootCenter"
   left_foot_surface: "LeftFootCenter"
   auto_start:
-    activate: true
+    activate: false
     steps: 10
     speed: [0.2,0.0,0]
     t_steps: 1.5
+  external_wrench_gains:
+    couple: [1., 1., 1.]
+    force: [1., 1., 1.]
   min_sg_suport_duration: 0.75
   min_dbl_suport_duration: 0.25
   max_step_duration: 2
@@ -146,7 +149,7 @@ stabilizer:
           com:
             stiffness: [1000.,1000.,100.]
             weight: 1000.
-            hieght: 0.817
+            height: 0.817
         dcm_bias:
           dcmMeasureErrorStd: 0.001
           biasDriftPerSecondStd: 0.0001

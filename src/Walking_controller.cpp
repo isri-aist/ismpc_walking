@@ -82,9 +82,6 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, c
   StabTask = std::make_shared<mc_tasks::lipm_stabilizer::StabilizerTask>(solver().robots(), solver().realRobots(),
                                                                          solver().robots().robotIndex(), solver().dt());
 
-  StabTask->reset();
-  StabTask->configure(controller_config_.Stab_config);
-
   mc_rtc::log::info("com stiff {}",controller_config_.Stab_config.comStiffness);
 
   armTask = std::make_shared<mc_tasks::PostureTask>(solver(), robots().robotIndex(), 100, 10);
@@ -514,6 +511,14 @@ void Walking_controller::UpdateInitialVectors()
 
 void Walking_controller::reset(const mc_control::ControllerResetData & reset_data)
 {
+  StabTask->reset();
+  StabTask->configure(controller_config_.Stab_config);
+
+  auto ext_wrench_gain = config()("walking_controller")("external_wrench_gains", sva::MotionVecd::Zero());
+  StabTask->setExternalWrenches(
+  {"LeftHand", "RightHand"},
+  {sva::ForceVecd::Zero(), sva::ForceVecd::Zero()},
+  {ext_wrench_gain, ext_wrench_gain});
 
   SwingFootTask.reset();
   SupportFootTask.reset();
