@@ -546,7 +546,11 @@ void Walking_controller::reset(const mc_control::ControllerResetData & reset_dat
   StabTask->reset();
   StabTask->configure(controller_config_.Stab_config);
 
-  auto ext_wrench_gain = config()("walking_controller")("external_wrench_gains", sva::MotionVecd::Zero());
+  mc_rbdyn::lipm_stabilizer::ExternalWrenchConfiguration ext_wrench_conf;
+  ext_wrench_conf.load(config()("walking_controller")("external_wrench"));
+  StabTask->externalWrenchConfiguration(ext_wrench_conf);
+  Eigen::Vector3d ext_wrench_gain_v =config()("walking_controller")("external_wrench")("ext_wrench_gain");
+  sva::MotionVecd ext_wrench_gain{ext_wrench_gain_v, ext_wrench_gain_v};
   StabTask->setExternalWrenches(
   {"LeftHand", "RightHand"},
   {sva::ForceVecd::Zero(), sva::ForceVecd::Zero()},
