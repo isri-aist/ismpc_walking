@@ -12,7 +12,6 @@
 #include <Tasks/QPContactConstr.h>
 #include <mc_tasks/SurfaceTransformTask.h>
 #include <mc_tasks/lipm_stabilizer/StabilizerTask.h>
-#include <mc_solver/CoMIncPlaneConstr.h>
 #include <mc_rbdyn/Robots.h>
 #include <mc_control/api.h>
 #include <mc_control/fsm/Controller.h>
@@ -254,7 +253,6 @@ protected:
     std::shared_ptr<mc_tasks::SurfaceTransformTask>  leftSwingFootTask;
     std::shared_ptr<mc_tasks::SurfaceTransformTask>  rightSwingFootTask;
     std::shared_ptr<mc_tasks::PostureTask> armTask;
-    std::shared_ptr<mc_solver::CoMIncPlaneConstr> comIncPlaneConstraintPtr_;
     
 
 private:

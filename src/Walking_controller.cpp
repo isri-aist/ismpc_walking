@@ -48,13 +48,11 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, c
   // static auto constraint = mc_solver::ConstraintSetLoader::load(solver(), config("collisions")[0]);
 
 
-  comIncPlaneConstraintPtr_.reset(new mc_solver::CoMIncPlaneConstr(robots(), robots().robotIndex(), dt) );
 
   datastore().make_call("KinematicAnchorFrame::" + robot().name(), [this](const mc_rbdyn::Robot & robot) {
     return sva::interpolate(robot.surfacePose(leftFootName_), robot.surfacePose(rightFootName_), LeftFootRatio);
   });
 
-  // solver().addConstraintSet(*comIncPlaneConstraintPtr_);
 
 
   // solver().addConstraintSet(*constraint);
@@ -409,8 +407,6 @@ bool Walking_controller::run()
   }
 
   count += 1;
-
-  // comIncPlaneConstraintPtr_->setPlanes(solver(), planes_,{},{},2.5e-3,1e-3);
 
 
   bool ret = mc_control::fsm::Controller::run();
