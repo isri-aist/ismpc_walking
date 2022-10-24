@@ -3,20 +3,6 @@
 void Walking_controller::AddToLog()
 {
 
-  logger().addLogEntry("tau", [this]() {
-    const auto & rjo = robot().refJointOrder();
-    std::vector<double> ret;
-    ret.reserve(rjo.size());
-    for(const auto & j : rjo)
-    {
-      if(robot().hasJoint(j))
-      {
-        ret.push_back(robot().mbc().jointTorque[robot().jointIndexByName(j)][0]);
-      }
-    }
-    return ret;
-  });
-
   logger().addLogEntry("Contact point angular momentum / (m*H)", [this]() -> Eigen::Vector3d { 
                       return compute_momentum_contact_point().couple()/(robot().mass() * controller_config_.Stab_config.comHeight) ; });
   logger().addLogEntry("Kinematic LeftFoot ratio", [this]() -> double { return LeftFootRatio; });
