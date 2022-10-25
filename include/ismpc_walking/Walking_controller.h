@@ -208,6 +208,8 @@ protected:
 
     void add_FootSteps_GUI();
 
+    void Stabilizer_GUI(mc_rbdyn::lipm_stabilizer::StabilizerConfiguration & config,std::string name);
+
     void create_datastore(){
 
         datastore().make_call("ismpc_walking::stop_phase", [this]() -> bool { return Stop; });

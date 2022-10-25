@@ -99,7 +99,7 @@ walking_controller:
   right_foot_surface: "RightFootCenter"
   left_foot_surface: "LeftFootCenter"
   auto_start:
-    activate: true
+    activate: false
     steps: 10
     speed: [0.2,0.0,0]
     t_steps: 1.5
@@ -152,7 +152,21 @@ stabilizer:
           biasDriftPerSecondStd: 0.0001
           zmpMeasureErrorStd: 0.0005
           biasLimit: [0.05, 0.02]
-          withDCMBias: true
+          withDCMBias: true  
+      stabilizer_sgsupp:
+        dcm_tracking:
+          gains:
+            prop: [4,4]
+            integral: [5,5]
+            deriv: [0.,0.]
+            comdError: 0.
+        admittance:
+          dfz: 0.0002
+          cop: [0.03, 0.04]
+          maxVel:
+            angular: [3., 3., 3.]
+            linear: [1., 1., 1.]
+
 
     hrp4:
       stabilizer:

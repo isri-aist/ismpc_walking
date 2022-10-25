@@ -15,10 +15,18 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, c
 {
   
   mc_rbdyn::lipm_stabilizer::StabilizerConfiguration Stabiconfig(robot().module().defaultLIPMStabilizerConfiguration());
+  mc_rbdyn::lipm_stabilizer::StabilizerConfiguration Stabiconfig_sg_supp(robot().module().defaultLIPMStabilizerConfiguration());
   if (config("stabilizer")("robot").has(robot().name()))
   {
     const auto & s_config = config("stabilizer")("robot")(robot().name())("stabilizer");
     Stabiconfig.load(s_config);
+    Stabiconfig_sg_supp.load( s_config );
+
+    if(config("stabilizer")("robot")(robot().name()).has("stabilizer_sgsupp"));
+    {
+      const auto & s_config_sg = config("stabilizer")("robot")(robot().name())("stabilizer_sgsupp");
+      Stabiconfig_sg_supp.load(s_config_sg);
+    }
   }
 
 
@@ -28,6 +36,7 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, c
   }
   
   controller_config_.Stab_config = Stabiconfig;
+  controller_config_.Stab_config_sg_supp = Stabiconfig_sg_supp;
   controller_config_.Controller_timestep = dt;
 
   MPCSolver = ISMPC_Solver(dt, controller_config_.delta, controller_config_.Tp, controller_config_.Tc);
@@ -168,6 +177,8 @@ bool Walking_controller::wait_for_mpc_thread()
         mc_rtc::log::success("MPC thread on");
         addToGUI();
         add_FootSteps_GUI();
+        Stabilizer_GUI(controller_config_.Stab_config_sg_supp,"single support");
+        Stabilizer_GUI(controller_config_.Stab_config,"double support");
         AddToLog();
       }
       else
@@ -365,6 +376,7 @@ bool Walking_controller::run()
 
 
 
+
   if(!(Stop && Swing_Foot_Contact))
   {
 
@@ -404,6 +416,15 @@ bool Walking_controller::run()
     countStart = count - 1;
 
     Robot_Walking = false;
+  }
+
+  if(!Swing_Foot_Contact)
+  {
+    StabTask->configure(controller_config_.Stab_config_sg_supp);
+  }
+  else
+  {
+    StabTask->configure(controller_config_.Stab_config);
   }
 
   count += 1;

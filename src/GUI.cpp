@@ -285,3 +285,28 @@ void Walking_controller::add_FootSteps_GUI()
                              return Output;
                            }));
 }
+
+void Walking_controller::Stabilizer_GUI(mc_rbdyn::lipm_stabilizer::StabilizerConfiguration & config,std::string name)
+{
+  gui()->addElement({"Walking","Stabilizer",name},
+    mc_rtc::gui::ArrayInput("Admittance",{"x","y"},[this,&config]() -> Eigen::Vector2d {return config.copAdmittance;},
+                                         [this,&config](Eigen::Vector2d in) {return config.copAdmittance = in;}),
+    mc_rtc::gui::ArrayInput("Ffdc admittance",[this,&config]() -> std::vector<double> {return std::vector<double>{config.dfzAdmittance};},
+                                         [this,&config](std::vector<double> in) {return config.dfzAdmittance = in[0];}),
+    mc_rtc::gui::ArrayInput("Ffdc damping",[this,&config]() -> std::vector<double> {return std::vector<double>{config.dfzDamping};},
+                                         [this,&config](std::vector<double> in) {return config.dfzDamping = in[0];}),                                         
+    mc_rtc::gui::ArrayInput("P gain",{"x","y"},[this,&config]() -> Eigen::Vector2d {return config.dcmPropGain;}, 
+                                     [this,&config] (Eigen::Vector2d in) {config.dcmPropGain = mc_rbdyn::Gains2d(in);}),
+    mc_rtc::gui::ArrayInput("D gain",{"x","y"},[this,&config]() -> Eigen::Vector2d {return config.dcmDerivGain;}, 
+                                     [this,&config] (Eigen::Vector2d in) {config.dcmDerivGain = mc_rbdyn::Gains2d(in);}),      
+    mc_rtc::gui::ArrayInput("I gain",{"x","y"},[this,&config]() -> Eigen::Vector2d {return config.dcmIntegralGain;}, 
+                                     [this,&config] (Eigen::Vector2d in) {config.dcmDerivGain = mc_rbdyn::Gains2d(in);}),
+    mc_rtc::gui::ArrayInput("Integrator constant",[this,&config]() -> std::vector<double> {return std::vector<double>{config.dcmIntegratorTimeConstant};},
+                                         [this,&config](std::vector<double> in) {return config.dcmIntegratorTimeConstant = in[0];}), 
+    mc_rtc::gui::ArrayInput("Derivator constant",[this,&config]() -> std::vector<double> {return std::vector<double>{config.dcmDerivatorTimeConstant};},
+                                         [this,&config](std::vector<double> in) {return config.dcmDerivatorTimeConstant = in[0];})
+  
+  
+  );
+
+}
