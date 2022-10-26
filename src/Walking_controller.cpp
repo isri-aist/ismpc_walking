@@ -15,18 +15,27 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, c
 {
   
   mc_rbdyn::lipm_stabilizer::StabilizerConfiguration Stabiconfig(robot().module().defaultLIPMStabilizerConfiguration());
+  mc_rbdyn::lipm_stabilizer::StabilizerConfiguration Stabiconfig_standing(robot().module().defaultLIPMStabilizerConfiguration());
   mc_rbdyn::lipm_stabilizer::StabilizerConfiguration Stabiconfig_sg_supp(robot().module().defaultLIPMStabilizerConfiguration());
+  mc_rbdyn::lipm_stabilizer::StabilizerConfiguration Stabiconfig_dbl_supp(robot().module().defaultLIPMStabilizerConfiguration());
   if (config("stabilizer")("robot").has(robot().name()))
   {
     const auto & s_config = config("stabilizer")("robot")(robot().name())("stabilizer");
-    Stabiconfig.load(s_config);
-    Stabiconfig_sg_supp.load( s_config );
+    Stabiconfig_standing.load(s_config);
+    Stabiconfig_sg_supp.load(s_config);
+    Stabiconfig_dbl_supp.load(s_config);
 
     if(config("stabilizer")("robot")(robot().name()).has("stabilizer_sgsupp"));
     {
       const auto & s_config_sg = config("stabilizer")("robot")(robot().name())("stabilizer_sgsupp");
       Stabiconfig_sg_supp.load(s_config_sg);
     }
+    if(config("stabilizer")("robot")(robot().name()).has("stabilizer_dblsupp"));
+    {
+      const auto & s_config_dbl = config("stabilizer")("robot")(robot().name())("stabilizer_dblsupp");
+      Stabiconfig_dbl_supp.load(s_config_dbl);
+    }
+
   }
 
 
@@ -35,8 +44,10 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, c
     planner_config_ = config("footsteps_planner");
   }
   
-  controller_config_.Stab_config = Stabiconfig;
+  controller_config_.Stab_config = Stabiconfig_standing;
+  controller_config_.Stab_config_standing = Stabiconfig_standing;
   controller_config_.Stab_config_sg_supp = Stabiconfig_sg_supp;
+  controller_config_.Stab_config_dbl_supp = Stabiconfig_dbl_supp;
   controller_config_.Controller_timestep = dt;
 
   MPCSolver = ISMPC_Solver(dt, controller_config_.delta, controller_config_.Tp, controller_config_.Tc);
@@ -175,7 +186,8 @@ bool Walking_controller::wait_for_mpc_thread()
         addToGUI();
         add_FootSteps_GUI();
         Stabilizer_GUI(controller_config_.Stab_config_sg_supp,"single support");
-        Stabilizer_GUI(controller_config_.Stab_config,"double support");
+        Stabilizer_GUI(controller_config_.Stab_config_dbl_supp,"double support");
+        Stabilizer_GUI(controller_config_.Stab_config_standing,"standing");
         AddToLog();
       }
       else
@@ -384,14 +396,6 @@ bool Walking_controller::run()
     }
     MoveFeet(t);
 
-
-    //Ax+b>=0
-  // planes_ =  {
-  //   {{0., 0.,  -1.},  (controller_config_.Stab_config.comHeight + 0.005) },
-  //   {{0., 0.,   1.}, -(controller_config_.Stab_config.comHeight - 0.005) }
-  // };
-  
-
     Robot_Walking = true;
   }
   else
@@ -419,10 +423,15 @@ bool Walking_controller::run()
   {
     StabTask->configure(controller_config_.Stab_config_sg_supp);
   }
+  else if(Robot_Walking)
+  {
+    StabTask->configure(controller_config_.Stab_config_dbl_supp);
+  }
   else
   {
-    StabTask->configure(controller_config_.Stab_config);
+    StabTask->configure(controller_config_.Stab_config_standing);
   }
+  controller_config_.Stab_config = StabTask->config();
 
   count += 1;
 

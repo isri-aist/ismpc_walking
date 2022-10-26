@@ -57,7 +57,9 @@ struct ControllerConfiguration
     sva::MotionVecd CoPMaxVel = sva::MotionVecd(Eigen::Vector3d{1.5,1.5,0.3},Eigen::Vector3d{.5,.5,0.3});
 
     mc_rbdyn::lipm_stabilizer::StabilizerConfiguration Stab_config;
+    mc_rbdyn::lipm_stabilizer::StabilizerConfiguration Stab_config_standing;
     mc_rbdyn::lipm_stabilizer::StabilizerConfiguration Stab_config_sg_supp;
+    mc_rbdyn::lipm_stabilizer::StabilizerConfiguration Stab_config_dbl_supp;
 
 
 

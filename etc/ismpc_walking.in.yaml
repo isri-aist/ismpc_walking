@@ -169,6 +169,19 @@ stabilizer:
           maxVel:
             angular: [3., 3., 3.]
             linear: [1., 1., 1.]
+      stabilizer_dblsupp:
+        dcm_tracking:
+          gains:
+            prop: [7,7]
+            integral: [5,5]
+            deriv: [0.3,0.3]
+            comdError: 0.
+        admittance:
+          dfz: 0.0002
+          cop: [0.03, 0.04]
+          maxVel:
+            angular: [3., 3., 3.]
+            linear: [1., 1., 1.]
 
 
     hrp4:
