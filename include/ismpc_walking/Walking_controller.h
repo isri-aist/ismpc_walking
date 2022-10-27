@@ -109,7 +109,10 @@ public :
     }
     const void start_stop() noexcept
     {
-        Stop = !Stop;
+        if(!(Stop && !stabilizer_active_))
+        {
+            Stop = !Stop;
+        }
     }
     const double get_t() noexcept
     {
@@ -266,6 +269,7 @@ private:
     bool MPC_thread_on = false;
     bool MPC_thread_ready = false;
     bool NewThreadState = false;
+    bool stabilizer_active_ = true;
     std::thread WalkingTrajectoryThread;
     
     Eigen::Vector3d dcmTarget;

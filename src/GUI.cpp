@@ -13,7 +13,7 @@ void Walking_controller::addToGUI()
                     mc_rtc::gui::Button("Start Move",
                                         [this]() {
                                           compute_trajectory_once.notify_all();
-                                          Stop = false;
+                                          if(stabilizer_active_){ Stop = false;}
                                         }),
                     mc_rtc::gui::Button("Stop",
                                         [this]() {
@@ -288,6 +288,19 @@ void Walking_controller::add_FootSteps_GUI()
 
 void Walking_controller::Stabilizer_GUI(mc_rbdyn::lipm_stabilizer::StabilizerConfiguration & config,std::string name)
 {
+  if(!gui()->hasElement({"Walking","Stabilizer"},"Activate") )
+  {
+    gui()->addElement({"Walking","Stabilizer"},
+        mc_rtc::gui::Button("Activate",[this](){StabTask->enable();stabilizer_active_ = true;}),
+        mc_rtc::gui::Button("Deactivate",[this](){
+          if(!robot_walking())
+          {
+            StabTask->disable();
+            stabilizer_active_ = false;
+          }
+        })
+    );
+  }
   gui()->addElement({"Walking","Stabilizer",name},
     mc_rtc::gui::ArrayInput("Admittance",{"x","y"},[this,&config]() -> Eigen::Vector2d {return config.copAdmittance;},
                                          [this,&config](Eigen::Vector2d in) {return config.copAdmittance = in;}),

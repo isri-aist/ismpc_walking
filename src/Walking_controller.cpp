@@ -427,12 +427,11 @@ bool Walking_controller::run()
   {
     StabTask->configure(controller_config_.Stab_config_dbl_supp);
   }
-  else
+  else if(stabilizer_active_)
   {
     StabTask->configure(controller_config_.Stab_config_standing);
   }
   controller_config_.Stab_config = StabTask->config();
-
   count += 1;
 
 
