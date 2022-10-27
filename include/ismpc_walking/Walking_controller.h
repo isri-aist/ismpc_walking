@@ -221,8 +221,8 @@ protected:
         datastore().make_call("ismpc_walking::start/stop", [this]() { Stop = !Stop; });
         datastore().make_call("ismpc_walking::configure", [this](const ControllerConfiguration & config) { Configure(config); });
         datastore().make_call("ismpc_walking::get_config", [this]() -> ControllerConfiguration & { return controller_config_; });
-        datastore().make_call("ismpc_walking::set_com_height", [this](const double & h )  { controller_config_.Stab_config.comHeight = h ; });
-        datastore().make_call("ismpc_walking::set_torso_pitch", [this](const double & h )  { controller_config_.Stab_config.torsoPitch = h ; StabTask->torsoPitch(h); });
+        datastore().make_call("ismpc_walking::set_com_height", [this](const double & h )  { comHeight(h) ; });
+        datastore().make_call("ismpc_walking::set_torso_pitch", [this](const double & h )  { torsoPitch(h); });
         datastore().make_call("ismpc_walking::zmp_target", [this]() -> Eigen::Vector3d { return zmpTarget; });
         datastore().make_call("ismpc_walking::dcm_target", [this]() -> Eigen::Vector3d { return dcmTarget; });
         datastore().make_call("ismpc_walking::zmp", [this]() -> Eigen::Vector3d { return StabTask->measuredDCM(); });
@@ -244,6 +244,19 @@ protected:
         datastore().make_call("ismpc_walking::arm_swing_on", [this]() { armTask->weight(10); });
         datastore().make_call("ismpc_walking::switch_support_foot", [this]() { SwitchFootSupport_manual(); });
 
+    }
+
+    void comHeight(double h)
+    {
+        controller_config_.Stab_config_dbl_supp.comHeight = h;
+        controller_config_.Stab_config_sg_supp.comHeight = h;
+        controller_config_.Stab_config_standing.comHeight = h;
+    }
+    void torsoPitch(double p)
+    {
+        controller_config_.Stab_config_dbl_supp.torsoPitch = p;
+        controller_config_.Stab_config_sg_supp.torsoPitch = p;
+        controller_config_.Stab_config_standing.torsoPitch = p;        
     }
     
  
