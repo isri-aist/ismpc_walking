@@ -126,7 +126,7 @@ bool Walking_controller::MoveFeet(double t)
     bool TouchDown = (SwingFootTask->frame().forceSensor().force().z() - vertical_force_offset_ > controller_config_.impact_threshold);
     // TouchDown = false;
 
-    if(((Step_Time > 0.25 && TouchDown) || Step_Time >= SingleSupportDuration - controller_config_.delta) && !DoubleSupport_state)
+    if(((Step_Time > SingleSupportDuration * 0.9 && TouchDown) || Step_Time >= SingleSupportDuration - controller_config_.delta) && !DoubleSupport_state)
 
     {
 
