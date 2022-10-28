@@ -25,6 +25,14 @@
 #include <condition_variable>
 #include <mutex>
 
+enum class StabilizerState
+{
+    Standing,
+    DoubleSupport,
+    SingleSupport,
+    None
+};
+
 struct Walking_controller_DLLAPI Walking_controller : public mc_control::fsm::Controller
 {
 public : 
@@ -337,6 +345,9 @@ private:
     double PrevStepTiming = 0;
     double K_feedback = 1;
 
+    StabilizerState stabilizer_state_ = StabilizerState::None;
+
+
     double maxStiffTimeThreshold_ = 3; // Time after which hand task gain reach max [s]
     double linearStiffTimeThreshold_ = 1.5; // Time after which hand task gain switch from min to gradually reach max [s]
     double minStiffness_ = 10;
@@ -464,6 +475,7 @@ private:
     
 
 };
+
 
 
 
