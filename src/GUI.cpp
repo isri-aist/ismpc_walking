@@ -63,6 +63,7 @@ void Walking_controller::addToGUI()
                         [this]() {
                           Use_w = !Use_w;
                         }),
+                    mc_rtc::gui::ArrayInput("Input Disturbance",[this](){return w_;},[this](const Eigen::Vector3d & in){w_ = in;}),
                     mc_rtc::gui::Checkbox(
                         "Force Contact Safety", [this]() { return force_contact_safety_; },
                         [this]() {

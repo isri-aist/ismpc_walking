@@ -355,7 +355,7 @@ class ISMPC_Solver {
             return w_k;
         }
 
-        void Disturbance(const Eigen::Vector3d & w) noexcept
+        void Disturbance(const Eigen::Vector3d w) noexcept
         {
             w_k = w;
         }

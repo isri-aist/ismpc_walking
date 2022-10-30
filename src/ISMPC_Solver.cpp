@@ -809,13 +809,13 @@ void ISMPC_Solver::Stability_Constraints()
   }
   if(m_Tail == "Periodic")
   {
-    b_stab(0) = m_eta * ((1 - exp(-m_eta * m_delta * m_C)) / (1 - exp(-m_eta * m_delta))) * (P_u_k.x() - P_z_k.x());
-    b_stab(1) = m_eta * ((1 - exp(-m_eta * m_delta * m_C)) / (1 - exp(-m_eta * m_delta))) * (P_u_k.y() - P_z_k.y());
+    b_stab(0) = m_eta * ((1 - exp(-m_eta * m_delta * m_C)) / (1 - exp(-m_eta * m_delta))) * (P_u_k.x() - P_z_k.x() + w_k.x());
+    b_stab(1) = m_eta * ((1 - exp(-m_eta * m_delta * m_C)) / (1 - exp(-m_eta * m_delta))) * (P_u_k.y() - P_z_k.y() + w_k.y());
   }
   else if(m_Tail == "Truncated")
   {
-    b_stab(0) = (m_eta / (1 - exp(-m_eta * m_delta))) * (P_u_k.x() - P_z_k.x());
-    b_stab(1) = (m_eta / (1 - exp(-m_eta * m_delta))) * (P_u_k.y() - P_z_k.y());
+    b_stab(0) = (m_eta / (1 - exp(-m_eta * m_delta))) * (P_u_k.x() - P_z_k.x() + w_k.x() );
+    b_stab(1) = (m_eta / (1 - exp(-m_eta * m_delta))) * (P_u_k.y() - P_z_k.y() + w_k.y() );
   }
   else
   {
@@ -831,12 +831,9 @@ void ISMPC_Solver::Stability_Constraints()
         Ant_Tail_Y += exp(-(k + m_C) * m_eta * m_delta) * AfterTc_ZMP_velocity(k + PreviewSize - 1);
       }
     }
-    // b_stab(0) = m_eta * ((1 - exp(-m_eta * m_delta * m_P)) / (1 - exp(-m_eta * m_delta))) * (P_u_k.x() - P_z_k.x())
-    //          - Ant_Tail_X;
-    // b_stab(1) = m_eta * ((1 - exp(-m_eta * m_delta * m_P)) / (1 - exp(-m_eta * m_delta))) * (P_u_k.y() - P_z_k.y())
-    //          - Ant_Tail_Y;
-    b_stab(0) = (m_eta / (1 - exp(-m_eta * m_delta))) * (P_u_k.x() - P_z_k.x() + (w_k.x()/std::pow(m_eta,2))) - Ant_Tail_X;
-    b_stab(1) = (m_eta / (1 - exp(-m_eta * m_delta))) * (P_u_k.y() - P_z_k.y() + (w_k.y()/std::pow(m_eta,2))) - Ant_Tail_Y;
+
+    b_stab(0) = (m_eta / (1 - exp(-m_eta * m_delta))) * (P_u_k.x() - P_z_k.x() + w_k.x()) - Ant_Tail_X;
+    b_stab(1) = (m_eta / (1 - exp(-m_eta * m_delta))) * (P_u_k.y() - P_z_k.y() + w_k.y()) - Ant_Tail_Y;
   }
 
   std::chrono::duration<double, std::milli> time_span = std::chrono::high_resolution_clock::now() - t_clock;
@@ -879,8 +876,8 @@ void ISMPC_Solver::IntegrateZMPVel()
 
   m_X_MPC.clear();
   m_Y_MPC.clear();
-  m_X_MPC.push_back(Integration_Mat * Eigen::Vector3d{P_c_k.x(), V_c_k.x(), P_z_k.x()} + Integration_Vec * v_z_i.x());
-  m_Y_MPC.push_back(Integration_Mat * Eigen::Vector3d{P_c_k.y(), V_c_k.y(), P_z_k.y()} + Integration_Vec * v_z_i.y());
+  m_X_MPC.push_back(Integration_Mat * ( Eigen::Vector3d{P_c_k.x(), V_c_k.x(), P_z_k.x() - w_k.x()} ) + Integration_Vec * v_z_i.x() );
+  m_Y_MPC.push_back(Integration_Mat * ( Eigen::Vector3d{P_c_k.y(), V_c_k.y(), P_z_k.y() - w_k.y()}) + Integration_Vec * v_z_i.y() );
 
   for(int k = 1; k < N; k++)
   {
@@ -901,6 +898,11 @@ void ISMPC_Solver::IntegrateZMPVel()
 
       m_Y_MPC.push_back(Integration_Mat * m_Y_MPC.back() + Integration_Vec * v_z_i.y());
     }
+  }
+  for(int i = 0 ; i < m_Y_MPC.size() ; i++)
+  {
+    m_X_MPC[i].z() += w_k.x();
+    m_Y_MPC[i].z() += w_k.y();
   }
 }
 
@@ -1086,7 +1088,7 @@ void ISMPC_Solver::GetWalkingParameters(double t_k, double Tds,bool stop)
 
     if(m_Tail == "None" || Use_Stability_Task)
     {
-      Eigen::Vector3d P_u_k_2 = P_z_k;
+      Eigen::Vector3d P_u_k_2 = P_z_k - w_k;
       if(m_Tail_save == "Periodic")
         for(int k = 0; k < m_C; k++)
         {

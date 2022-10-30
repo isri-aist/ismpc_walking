@@ -270,7 +270,9 @@ void Walking_controller::ComputeWalkingTrajectory()
   // MPCSolver.Puk(mpc_state_.Pu);
 
   if (Use_w){
-    MPCSolver.Disturbance(mpc_thread_state.w);
+    //MPCSolver.Disturbance( w_.norm()*( (robot().forceSensor("LeftHandForceSensor").worldWrench(robot()).force()/robot().mass())/std::pow(eta(),2) ) );
+    //mc_rtc::log::info("Disturbance {}",Eigen::Vector3d{0,15.,0}/robot().mass());
+    MPCSolver.Disturbance(w_);
   }
   else{MPCSolver.Disturbance(Eigen::Vector3d::Zero());}
 
@@ -389,7 +391,7 @@ bool Walking_controller::run()
   if(!(Stop && Swing_Foot_Contact))
   {
 
-    if(t - t_k >= controller_config_.delta)
+    if(t - t_k >= 1 * controller_config_.delta)
     {
       t_k += controller_config_.delta  ;
       compute_trajectory_once.notify_all();
@@ -465,7 +467,7 @@ void Walking_controller::MoveCoM()
   double diffV_in = std::abs((Vc - robot_vc).y());
 
 
-  Eigen::Vector3d Ac = std::pow(eta(), 2) * (Pcom - zmpTarget);
+  Eigen::Vector3d Ac = std::pow(eta(), 2) * (Pcom - zmpTarget );
 
   Ac.z() = 0;
   dcmTarget = Pcom + Vc / eta();
