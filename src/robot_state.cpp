@@ -70,6 +70,29 @@ void Walking_controller::getTransformations()
   const auto & X_0_torso_reference = ReferenceFrame_Origin_Offset * X_0_torso_link;
 
   LeftFootRatio = mc_filter::utils::clamp(StabTask->leftFootRatio(), LeftFootRatio - 0.019, LeftFootRatio + 0.019);
+
+  sva::ForceVecd left_wrench = robot().frame("LeftHand").wrench();
+  filter_left_hand_wrench_.update(left_wrench);
+  Eigen::Vector3d left_pos;
+  Eigen::Vector3d left_force;
+  Eigen::Vector3d left_moment;
+  // computeExternalContact("LeftHand",filter_left_hand_wrench_.eval(),left_pos,left_force,left_moment);
+
+
+  sva::ForceVecd right_wrench = robot().frame("RightHand").wrench();
+  filter_right_hand_wrench_.update(right_wrench);
+  Eigen::Vector3d right_pos;
+  Eigen::Vector3d right_force;
+  Eigen::Vector3d right_moment;
+  // computeExternalContact("RightHand",filter_right_hand_wrench_.eval(),right_pos,right_force,right_moment);
+
+  Eigen::Vector3d ext_wrench_gain_v =
+      config()("stabilizer")("robot")(robot().name())("stabilizer")("external_wrench")("ext_wrench_gain");
+  sva::MotionVecd ext_wrench_gain{ext_wrench_gain_v, ext_wrench_gain_v};
+  StabTask->setExternalWrenches({"LeftHand", "RightHand"}, {filter_left_hand_wrench_.eval(), filter_right_hand_wrench_.eval()},
+                                {ext_wrench_gain, ext_wrench_gain});
+
+
 }
 
 Eigen::Vector3d Walking_controller::computeInSupportFootFlat(const Eigen::Vector3d & t_world)
@@ -129,6 +152,23 @@ Eigen::Vector3d Walking_controller::computeZMP()
   Eigen::Vector3d moment_p = moment_0 - floor_p.cross(force);
   Eigen::Vector3d zmp = floor_p + floor_n.cross(moment_p) / floor_n.dot(force);
   return zmp;
+}
+
+void Walking_controller::computeExternalContact(const std::string & surfaceName,
+                                                const sva::ForceVecd & surfaceWrench,
+                                                Eigen::Vector3d & pos,
+                                                Eigen::Vector3d & force,
+                                                Eigen::Vector3d & moment)
+                                            
+{
+  sva::PTransformd surfacePose = robot().surfacePose(surfaceName);
+  sva::PTransformd T_s_0(Eigen::Matrix3d(surfacePose.rotation().transpose()));
+  // Represent the surface wrench in the frame whose position is same with the surface frame and orientation is same
+  // with the world frame
+  sva::ForceVecd surfaceWrenchW = T_s_0.dualMul(surfaceWrench);
+  pos = surfacePose.translation();
+  force = surfaceWrenchW.force();
+  moment = surfaceWrenchW.moment();
 }
 
 sva::ForceVecd Walking_controller::compute_momentum_contact_point()

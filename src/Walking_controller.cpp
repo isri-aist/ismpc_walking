@@ -11,7 +11,7 @@ Walking_controller::~Walking_controller()
 }
 
 Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, const mc_rtc::Configuration & config)
-: mc_control::fsm::Controller(rm, dt, config)
+: mc_control::fsm::Controller(rm, dt, config), filter_left_hand_wrench_(0.005, 0), filter_right_hand_wrench_(0.005, 0), filter_gamma_(0.005, 0)
 {
 
   mc_rbdyn::lipm_stabilizer::StabilizerConfiguration Stabiconfig(robot().module().defaultLIPMStabilizerConfiguration());
@@ -121,6 +121,10 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, c
 
   SwingFootAcc.setZero();
   SwingFootVel.setZero();
+
+  filter_left_hand_wrench_ = mc_filter::LowPass<sva::ForceVecd>(solver().dt(),controller_config_.wrench_filter_cutoff);
+  filter_right_hand_wrench_ = mc_filter::LowPass<sva::ForceVecd>(solver().dt(),controller_config_.wrench_filter_cutoff);
+  filter_gamma_ = mc_filter::LowPass<Eigen::Vector3d>(solver().dt(),controller_config_.gamma_filter_cutoff);
 
   create_datastore();
   getTransformations();
@@ -527,7 +531,8 @@ void Walking_controller::UpdateInitialVectors()
   }
 
   // mpc_state_.w = - (StabTask->measuredDCM() - mpc_state_.Pu) + - (StabTask->measuredZMP() - mpc_state_.Pzk);
-  mpc_state_.w = StabTask->comOffsetMeasured();
+  filter_gamma_.update(StabTask->comOffsetMeasured());
+  mpc_state_.w = filter_gamma_.eval();
 
   mpc_state_.Pck.z() = controller_config_.Stab_config.comHeight;
   mpc_state_.Vck.z() = 0;
@@ -565,6 +570,10 @@ void Walking_controller::reset(const mc_control::ControllerResetData & reset_dat
   mpc_state_.Pzk.z() = 0;
   mpc_state_.Pu = mpc_state_.Pck;
   mpc_state_.Vck = robot().comVelocity();
+
+  filter_left_hand_wrench_ = mc_filter::LowPass<sva::ForceVecd>(solver().dt(),controller_config_.wrench_filter_cutoff);
+  filter_right_hand_wrench_ = mc_filter::LowPass<sva::ForceVecd>(solver().dt(),controller_config_.wrench_filter_cutoff);
+  filter_gamma_ = mc_filter::LowPass<Eigen::Vector3d>(solver().dt(),controller_config_.gamma_filter_cutoff);
 
   SwingFootInitialPose = robot().surfacePose(swingFootName).translation();
   X_0_SwingFootInitial = SwingFootInitialPose;

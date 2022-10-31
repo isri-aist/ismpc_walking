@@ -107,6 +107,8 @@ walking_controller:
   min_dbl_suport_duration: 0.25
   max_step_duration: 2
   impact_threshold: 30
+  wrench_filter_cutoff_T: 2
+  gamma_filter_cutoff_T: 2
   robot:
     hrp4:
       torsoBodyName: "torso"

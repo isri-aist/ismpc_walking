@@ -76,11 +76,15 @@ public:
     controller_config_.T_ss_min = config("walking_controller")("min_sg_suport_duration");
     controller_config_.T_ds_min = config("walking_controller")("min_dbl_suport_duration");
     controller_config_.impact_threshold = config("walking_controller")("impact_threshold");
+    controller_config_.wrench_filter_cutoff = config("walking_controller")("wrench_filter_cutoff_T");
+    controller_config_.gamma_filter_cutoff = config("walking_controller")("gamma_filter_cutoff_T");
 
     controller_config_.SwingFootStiffness = config("tasks")("swingfoot_stiffness");
     controller_config_.SwingFootWeight = config("tasks")("swingfoot_weight");
     controller_config_.SwingFootStiffness_Dim = config("tasks")("swingfoot_dimstiffness");
     controller_config_.SwingFootWeight_Dim = config("tasks")("swingfoot_dimweight");
+
+    
 
     Configure(controller_config_);
   }
@@ -183,6 +187,7 @@ protected:
   Eigen::Vector3d computeInSupportFootFlat(const Eigen::Vector3d & t_world);
   Eigen::Vector3d computeVelocityInSupportFoot(const Eigen::Vector3d & v_world);
   sva::ForceVecd measuredContactWrench();
+  void computeExternalContact(const std::string & surfaceName, const sva::ForceVecd & surfaceWrenchW, Eigen::Vector3d & pos, Eigen::Vector3d & force, Eigen::Vector3d & moment);
   Eigen::Vector3d computeZMP();
   /**
    * Update the stabilizer task with the ISMPC outputs stored in X_MPC and Y_MPC vectors
@@ -391,6 +396,10 @@ private:
 
   ISMPC_Solver MPCSolver;
   FootTrajectory SwingFootTrajectory;
+
+  mc_filter::LowPass<sva::ForceVecd> filter_left_hand_wrench_;
+  mc_filter::LowPass<sva::ForceVecd> filter_right_hand_wrench_;
+  mc_filter::LowPass<Eigen::Vector3d> filter_gamma_;
 
   bool FeetUp = false;
 
