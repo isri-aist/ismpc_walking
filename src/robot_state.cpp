@@ -69,9 +69,7 @@ void Walking_controller::getTransformations()
   const auto & X_0_torso_link = robot().bodyPosW(torsoBodyName_);
   const auto & X_0_torso_reference = ReferenceFrame_Origin_Offset * X_0_torso_link;
 
-  LeftFootRatio = mc_filter::utils::clamp(StabTask->leftFootRatio(),LeftFootRatio - 0.019,LeftFootRatio + 0.019);
-
-
+  LeftFootRatio = mc_filter::utils::clamp(StabTask->leftFootRatio(), LeftFootRatio - 0.019, LeftFootRatio + 0.019);
 }
 
 Eigen::Vector3d Walking_controller::computeInSupportFootFlat(const Eigen::Vector3d & t_world)
@@ -142,7 +140,5 @@ sva::ForceVecd Walking_controller::compute_momentum_contact_point()
 
   Eigen::Vector3d L = CoM_momentum.couple() + (com - contact_point).cross(com_vel) * robot().mass();
 
-  return sva::ForceVecd(L,CoM_momentum.force());
-
-  
+  return sva::ForceVecd(L, CoM_momentum.force());
 }

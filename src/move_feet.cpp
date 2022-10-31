@@ -13,7 +13,6 @@ bool Walking_controller::MoveFeet(double t)
 
   NextTimeStep = mpc_state_.get_Ts(kfoot);
 
- 
   // if(kfoot != 0)
   // {
   //   PrevStepTiming = mpc_state_.get_Ts(kfoot-1);
@@ -29,7 +28,6 @@ bool Walking_controller::MoveFeet(double t)
   {
     X_0_SwingFootTarget = mpc_state_.Get_PlannedFootstep(kfoot);
   }
-
 
   Eigen::Vector3d SupportFootPose = robot().surfacePose(supportFootName).translation();
   SupportFootPose.z() = mc_rbdyn::rpyFromMat(robot().surfacePose(supportFootName).rotation()).z();
@@ -47,7 +45,8 @@ bool Walking_controller::MoveFeet(double t)
   if(Swing_Foot_Contact)
   {
     t_lift = PrevStepTiming + mpc_state_.get_tds();
-    if(t - 0 * controller_config_.delta >= PrevStepTiming + mpc_state_.get_tds() && (std::abs(sensor_support.force().z()) > 50 || !force_contact_safety_ ))
+    if(t - 0 * controller_config_.delta >= PrevStepTiming + mpc_state_.get_tds()
+       && (std::abs(sensor_support.force().z()) > 50 || !force_contact_safety_))
     {
 
       mc_rtc::log::success("lifting " + swingFootName);
@@ -65,7 +64,7 @@ bool Walking_controller::MoveFeet(double t)
       else
       {
         StabTask->setContacts(
-            { {mc_tasks::lipm_stabilizer::ContactState::Right, sva::PTransformd(sva::RotZ(supp_yaw), supp_pose)}});
+            {{mc_tasks::lipm_stabilizer::ContactState::Right, sva::PTransformd(sva::RotZ(supp_yaw), supp_pose)}});
       }
 
       removeContact({robot().name(), "ground", swingFootName, "AllGround", 0.7, footcontact_dof});
@@ -103,16 +102,19 @@ bool Walking_controller::MoveFeet(double t)
 
   SwingFootTask->target(X_0_FootTask_Target);
   SwingFootTask->refVelB(sva::PTransformd(sva::RotZ(swing_yaw)) * V_0_FootTask_Target);
-  SwingFootTask->refAccel(sva::MotionVecd(Eigen::Vector3d::Zero(), sva::RotZ(swing_yaw) * A_0_FootTask_Target.linear()));
-  // SwingFootTask->refAccel(sva::PTransformd(X_0_swing.rotation()) *sva::MotionVecd(Eigen::Vector3d::Zero(),A_0_FootTask_Target.linear()));
+  SwingFootTask->refAccel(
+      sva::MotionVecd(Eigen::Vector3d::Zero(), sva::RotZ(swing_yaw) * A_0_FootTask_Target.linear()));
+  // SwingFootTask->refAccel(sva::PTransformd(X_0_swing.rotation())
+  // *sva::MotionVecd(Eigen::Vector3d::Zero(),A_0_FootTask_Target.linear()));
 
   if(!Swing_Foot_Contact)
   {
     if(controller_config_.FootStepHeight - X_0_FootTask_Target.translation().z() < 0.005)
     {
-      vertical_force_measure_.push_back((float) SwingFootTask->frame().forceSensor().force().z());
+      vertical_force_measure_.push_back((float)SwingFootTask->frame().forceSensor().force().z());
       const int size = vertical_force_measure_.size();
-      Eigen::VectorXd force_measure = Eigen::Map<Eigen::VectorXd, Eigen::Unaligned>(vertical_force_measure_.data(), vertical_force_measure_.size());
+      Eigen::VectorXd force_measure =
+          Eigen::Map<Eigen::VectorXd, Eigen::Unaligned>(vertical_force_measure_.data(), vertical_force_measure_.size());
       vertical_force_offset_ = force_measure.mean();
     }
 
@@ -123,10 +125,13 @@ bool Walking_controller::MoveFeet(double t)
         (realRobot().surfacePose(swingFootName).translation() - realRobot().surfacePose(supportFootName).translation())
             .z();
 
-    bool TouchDown = (SwingFootTask->frame().forceSensor().force().z() - vertical_force_offset_ > controller_config_.impact_threshold);
+    bool TouchDown = (SwingFootTask->frame().forceSensor().force().z() - vertical_force_offset_
+                      > controller_config_.impact_threshold);
     // TouchDown = false;
 
-    if(((Step_Time > SingleSupportDuration * 0.9 && TouchDown) || Step_Time >= SingleSupportDuration - controller_config_.delta) && !DoubleSupport_state)
+    if(((Step_Time > SingleSupportDuration * 0.9 && TouchDown)
+        || Step_Time >= SingleSupportDuration - controller_config_.delta)
+       && !DoubleSupport_state)
 
     {
 
@@ -145,67 +150,65 @@ bool Walking_controller::MoveFeet(double t)
       if(supportFootName == leftFootName_)
       {
         StabTask->setContacts(
-            {{mc_tasks::lipm_stabilizer::ContactState::Left, robot().surfacePose(supportFootName)}, {mc_tasks::lipm_stabilizer::ContactState::Right, sva::PTransformd(sva::RotZ(swing_yaw), swing_pose)}});
+            {{mc_tasks::lipm_stabilizer::ContactState::Left, robot().surfacePose(supportFootName)},
+             {mc_tasks::lipm_stabilizer::ContactState::Right, sva::PTransformd(sva::RotZ(swing_yaw), swing_pose)}});
       }
       else
       {
         StabTask->setContacts(
-            {{mc_tasks::lipm_stabilizer::ContactState::Left, sva::PTransformd(sva::RotZ(swing_yaw), swing_pose)}, {mc_tasks::lipm_stabilizer::ContactState::Right, robot().surfacePose(supportFootName)}});
+            {{mc_tasks::lipm_stabilizer::ContactState::Left, sva::PTransformd(sva::RotZ(swing_yaw), swing_pose)},
+             {mc_tasks::lipm_stabilizer::ContactState::Right, robot().surfacePose(supportFootName)}});
       }
-      
+
       DoubleSupport_state = true;
       mc_rtc::log::info("height : {} ", swing_foot_height);
       mc_rtc::log::info("touchdown : {} ", TouchDown);
       // mc_rtc::log::info("Locking " + swingFootName + "at t : " + std::to_string(t));
       mc_rtc::log::info("T_contact - T_steps : {}", t - NextTimeStep);
 
-      
       mc_rtc::log::success("Locked " + swingFootName);
 
-      
       // PrevStepTiming = NextTimeStep;
       // if(kfoot + 1 < mpc_state_.planned_steps().size())
       // {
       //   kfoot += 1;
       // }
     }
-    if (DoubleSupport_state && t - t_contact >= 0.05)
+    if(DoubleSupport_state && t - t_contact >= 0.05)
     {
       addContact({robot().name(), "ground", swingFootName, "AllGround", 0.7, footcontact_dof});
-      
+
       switchFootSupport();
       updateTasks();
 
       N_Steps += 1;
-      
+
       Swing_Foot_Contact = true;
       if(N_Steps == N_Steps_Desired)
       {
         Stop = true;
       }
-      t_k = - controller_config_.delta;
+      t_k = -controller_config_.delta;
       countStart = count - 1;
-
     }
   }
 
   if(DoubleSupport_state)
   {
-  
-    SwingFootInitialPose = robot().surfacePose(swingFootName ).translation();
-    SwingFootInitialAngle = mc_rbdyn::rpyFromMat(robot().surfacePose(swingFootName ).rotation()).z();
 
-    X_0_SwingFootInitial = sva::PTransformd(sva::RotZ(mc_rbdyn::rpyFromMat(robot().surfacePose(swingFootName).rotation()).z()) ,
-                                                          robot().surfacePose(swingFootName).translation());
-    
+    SwingFootInitialPose = robot().surfacePose(swingFootName).translation();
+    SwingFootInitialAngle = mc_rbdyn::rpyFromMat(robot().surfacePose(swingFootName).rotation()).z();
+
+    X_0_SwingFootInitial =
+        sva::PTransformd(sva::RotZ(mc_rbdyn::rpyFromMat(robot().surfacePose(swingFootName).rotation()).z()),
+                         robot().surfacePose(swingFootName).translation());
+
     X_0_SwingFootInitial = robot().surfacePose(swingFootName);
-
 
     vertical_force_measure_.clear();
 
     solver().removeTask(leftSwingFootTask);
     solver().removeTask(rightSwingFootTask);
-
   }
 
   return 0;
@@ -226,7 +229,6 @@ void Walking_controller::updateTasks()
   SwingFootTask->weight(controller_config_.SwingFootWeight);
   SwingFootTask->dimWeight(Eigen::VectorXd::Ones(6));
   SwingFootTask->stiffness(controller_config_.SwingFootStiffness);
-
 }
 
 void Walking_controller::switchFootSupport()
@@ -235,7 +237,6 @@ void Walking_controller::switchFootSupport()
   {
     supportFootName = rightFootName_;
     swingFootName = leftFootName_;
-
   }
 
   else
@@ -243,6 +244,5 @@ void Walking_controller::switchFootSupport()
 
     supportFootName = leftFootName_;
     swingFootName = rightFootName_;
-
   }
 }

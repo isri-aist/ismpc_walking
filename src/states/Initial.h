@@ -10,8 +10,6 @@ struct Initial : mc_control::fsm::State
   void start(mc_control::fsm::Controller & ctl_) override;
   bool run(mc_control::fsm::Controller & ctl_) override;
   void teardown(mc_control::fsm::Controller & ctl_) override;
+
 private:
 };
-
-
-
