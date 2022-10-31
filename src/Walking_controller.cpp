@@ -274,7 +274,7 @@ void Walking_controller::ComputeWalkingTrajectory()
   if (Use_w){
     //MPCSolver.Disturbance( w_.norm()*( (robot().forceSensor("LeftHandForceSensor").worldWrench(robot()).force()/robot().mass())/std::pow(eta(),2) ) );
     //mc_rtc::log::info("Disturbance {}",Eigen::Vector3d{0,15.,0}/robot().mass());
-    MPCSolver.Disturbance(w_);
+    MPCSolver.Disturbance( mpc_state_.w);
   }
   else{MPCSolver.Disturbance(Eigen::Vector3d::Zero());}
 
@@ -538,7 +538,9 @@ void Walking_controller::UpdateInitialVectors()
     mpc_state_.Pzk = mpc_state_.Pck;
   }
 
-  mpc_state_.w = - (StabTask->measuredDCM() - mpc_state_.Pu) + - (StabTask->measuredZMP() - mpc_state_.Pzk);
+  
+  // mpc_state_.w = - (StabTask->measuredDCM() - mpc_state_.Pu) + - (StabTask->measuredZMP() - mpc_state_.Pzk);
+  mpc_state_.w  = StabTask->comOffsetMeasured(); 
 
   mpc_state_.Pck.z() = controller_config_.Stab_config.comHeight;
   mpc_state_.Vck.z() = 0;
