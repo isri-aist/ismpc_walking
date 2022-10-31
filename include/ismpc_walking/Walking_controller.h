@@ -173,7 +173,10 @@ public :
             compute_trajectory_once.notify_all();
         }
     }
-
+    const MPC_state & MPCState()
+    {
+        return mpc_state_;
+    }
 
 
 protected:
