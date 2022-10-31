@@ -1,5 +1,12 @@
 #include "../include/ismpc_walking/ISMPC_Solver.h"
 
+// clang-format off
+#include <boost/geometry.hpp>
+#include <boost/geometry/geometries/polygon.hpp>
+#include <boost/geometry/geometries/adapted/boost_tuple.hpp>
+#include <boost/geometry/multi/geometries/register/multi_polygon.hpp>
+// clang-format on
+
 ISMPC_Solver::ISMPC_Solver() {}
 
 ISMPC_Solver::ISMPC_Solver(double delta_controller, double delta, double Tp, double Tc)

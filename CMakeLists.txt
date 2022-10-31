@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.1)
 
 set(CXX_DISABLE_WERROR 1)
 set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 set(PROJECT_NAME ismpc_walking)
 set(PROJECT_VERSION 0.1.0)

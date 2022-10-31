@@ -1,11 +1,6 @@
 #pragma once
 #include <mc_control/api.h>
 #include <mc_control/mc_controller.h>
-#include <boost/geometry/geometries/adapted/boost_tuple.hpp>
-#include <boost/geometry/geometries/multi_point.hpp>
-#include <boost/geometry/geometries/point_xy.hpp>
-#include <boost/geometry/geometries/polygon.hpp>
-#include <boost/geometry/geometry.hpp>
 #include "ControllerConfiguration.h"
 #include "MPC_state.h"
 #include "eigen-quadprog/QuadProg.h"
