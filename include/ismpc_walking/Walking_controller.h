@@ -267,12 +267,15 @@ protected:
     controller_config_.Stab_config_dbl_supp.comHeight = h;
     controller_config_.Stab_config_sg_supp.comHeight = h;
     controller_config_.Stab_config_standing.comHeight = h;
+    stabilizer_state_ = StabilizerState::None;
+
   }
   void torsoPitch(double p)
   {
     controller_config_.Stab_config_dbl_supp.torsoPitch = p;
     controller_config_.Stab_config_sg_supp.torsoPitch = p;
     controller_config_.Stab_config_standing.torsoPitch = p;
+    stabilizer_state_ = StabilizerState::None;
   }
 
   bool wait_for_mpc_thread();
@@ -350,6 +353,7 @@ private:
   double K_feedback = 1;
 
   StabilizerState stabilizer_state_ = StabilizerState::None;
+  
 
   double maxStiffTimeThreshold_ = 3; // Time after which hand task gain reach max [s]
   double linearStiffTimeThreshold_ = 1.5; // Time after which hand task gain switch from min to gradually reach max [s]
