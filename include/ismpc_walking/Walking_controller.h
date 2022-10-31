@@ -1,4 +1,5 @@
 #pragma once
+#include <mc_rtc/clock.h>
 #include <mc_observers/KinematicInertialObserver.h>
 #include <mc_observers/ObserverPipeline.h>
 #include <mc_rbdyn/RobotLoader.h>
@@ -35,12 +36,12 @@ enum class StabilizerState
 
 struct Walking_controller_DLLAPI Walking_controller : public mc_control::fsm::Controller
 {
-public : 
+public :
 
     Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, const mc_rtc::Configuration & config);
 
     ~Walking_controller() override;
-    
+
     bool run() override;
 
     void reset(const mc_control::ControllerResetData & reset_data) override;
@@ -49,7 +50,7 @@ public :
     mc_rtc::Configuration planner_config_;
 
     void Configure(const mc_rtc::Configuration & config){
-        
+
         controller_config_.Beta = config("ismpc")("beta");
         controller_config_.Beta_range = config("ismpc")("safety_thresholds")("beta_range");
         controller_config_.MPC_ZMP_Constraint_size = config("ismpc")("zmp_cstr_square");
@@ -77,7 +78,7 @@ public :
         controller_config_.impact_threshold = config("walking_controller")("impact_threshold");
 
 
-        
+
 
         controller_config_.SwingFootStiffness = config("tasks")("swingfoot_stiffness");
         controller_config_.SwingFootWeight = config("tasks")("swingfoot_weight");
@@ -91,7 +92,7 @@ public :
     void Configure(const ControllerConfiguration & config){
         controller_config_ = config;
         // controller_config_.update_config();
-         
+
         controller_config_.Beta = std::min(controller_config_.Beta_range(1),std::max(controller_config_.Beta_range(0),controller_config_.Beta));
         controller_config_.MPC_ZMP_Constraint_size.x() = std::min(controller_config_.MPC_ZMP_Constraint_max_size,
                                                                  std::max(controller_config_.MPC_ZMP_Constraint_min_size,
@@ -193,13 +194,13 @@ protected:
     void MoveCoM();
     /**
      * Handle the contact of the foot and the trajectory depending on the planned footsteps
-     */ 
+     */
     bool MoveFeet(double t);
     /**
      * Compute the planned footsteps/timings and the CoM/ZMP trajectory
-     * Footsteps coordinates are stored in XfCorr/YfCorr/ThetafCorr 
-     * CoM/ZMP trajectory is stored in X_MPC and Y_MPC vectors that contains for each timestep a 3d vector with in that order 
-     * the CoM, the CoMd, and the ZMP  
+     * Footsteps coordinates are stored in XfCorr/YfCorr/ThetafCorr
+     * CoM/ZMP trajectory is stored in X_MPC and Y_MPC vectors that contains for each timestep a 3d vector with in that order
+     * the CoM, the CoMd, and the ZMP
      */
     void ComputeWalkingTrajectory();
     void WalkingTrajectoryLoop();
@@ -267,14 +268,14 @@ protected:
     {
         controller_config_.Stab_config_dbl_supp.torsoPitch = p;
         controller_config_.Stab_config_sg_supp.torsoPitch = p;
-        controller_config_.Stab_config_standing.torsoPitch = p;        
+        controller_config_.Stab_config_standing.torsoPitch = p;
     }
-    
- 
+
+
     bool wait_for_mpc_thread();
 
 
-    std::shared_ptr<mc_tasks::lipm_stabilizer::StabilizerTask> StabTask;    
+    std::shared_ptr<mc_tasks::lipm_stabilizer::StabilizerTask> StabTask;
 
     std::shared_ptr<mc_tasks::OrientationTask> left_foot_ori;
     std::shared_ptr<mc_tasks::SurfaceTransformTask> SwingFootTask;
@@ -282,7 +283,7 @@ protected:
     std::shared_ptr<mc_tasks::SurfaceTransformTask>  leftSwingFootTask;
     std::shared_ptr<mc_tasks::SurfaceTransformTask>  rightSwingFootTask;
     std::shared_ptr<mc_tasks::PostureTask> armTask;
-    
+
 
 private:
 
@@ -290,12 +291,12 @@ private:
     std::mutex mutex_mpc_;
     MPC_state mpc_thread_state;
     MPC_state mpc_state_;
-    bool MPC_thread_on = false;
-    bool MPC_thread_ready = false;
-    bool NewThreadState = false;
+    std::atomic<bool> MPC_thread_on = false;
+    std::atomic<bool> MPC_thread_ready = false;
+    std::atomic<bool> NewThreadState = false;
     bool stabilizer_active_ = true;
     std::thread WalkingTrajectoryThread;
-    
+
     Eigen::Vector3d dcmTarget;
     Eigen::Vector3d dcmMeasured;
     Eigen::Vector3d zmpCorr;
@@ -316,12 +317,11 @@ private:
     }
 
 
-    std::chrono::high_resolution_clock::time_point t_clock;
-
-    std::chrono::high_resolution_clock::time_point t_test;
+    mc_rtc::clock::time_point t_clock;
+    mc_rtc::clock::time_point t_test;
 
     bool User_Foot_Contact = true; //Both user feets are on the ground
-    
+
     double x = 0.4 ; double y = 0.1 ; double z = 30; //Coordinate for a specified footstep position
 
     bool UseRealRobot = false; //To use the real robots data
@@ -330,13 +330,13 @@ private:
     bool Robot_Walking = false; //If false, the robot is not moving;
     std::mutex compute_trajectory_once_mtx;
     std::condition_variable compute_trajectory_once;
-    bool WalkingTrajectory_Computing = false;
+    std::atomic<bool> WalkingTrajectory_Computing = false;
     bool emergencyFlag = false; //Stop controller run loop
     bool AutoFootstepPlacement = true; //To enable the Autofootstep placement MPC
-    bool Tds_by_ratio = true;    
+    bool Tds_by_ratio = true;
     bool force_contact_safety_ = true;
 
-    
+
     double LeftFootRatio = 0.5; double PrevLeftFootRatio = 0.5;
     double Ratio_target = 0.5; //A left foot ratio that set a zmp target when Stop
     double t = 0; //General timing in a step
@@ -360,7 +360,7 @@ private:
     int N_Steps = 0 ;
     int N_Steps_Desired = -1;
 
-    double t_stop = 0;   
+    double t_stop = 0;
     int count_stop = 0;
     double vertical_force_offset_ = 0;
     std::vector<double> vertical_force_measure_; //measure the vertical force values during swing foot phase;
@@ -369,17 +369,17 @@ private:
     Eigen::Vector3d SwingFootVel;
     sva::PTransformd X_0_SwingFootInitial; //Swing Foot Pose Before Swinging
     sva::PTransformd X_0_SwingFootInitial_real;
-    
-    Eigen::Vector3d SwingFootInitialPose; //Previous Swing Foot pose at the time of the MPC computation 
+
+    Eigen::Vector3d SwingFootInitialPose; //Previous Swing Foot pose at the time of the MPC computation
 
     double SwingFootInitialAngle = 0.0;
     double input_tds = 0.25; //Double Step Time duration
     int count = 0; //Controller iterations
     double t_k = 0;
-    double controller_timestep; 
+    double controller_timestep;
     int countStart = 0; //Controller Itaration at the time Start;
-    int Index = 0; //Index of the target CoM CoMd ZMP in the vector returned by the MPC 
-    bool Swing_Foot_Contact = true ; 
+    int Index = 0; //Index of the target CoM CoMd ZMP in the vector returned by the MPC
+    bool Swing_Foot_Contact = true ;
     bool DoubleSupport_state = true;
 
     bool Use_w = false;
@@ -396,11 +396,11 @@ private:
     std::string supportFootName = "RightFootCenter";
     std::string swingFootName = "LeftFootCenter";
 
-    ISMPC_Solver MPCSolver; 
+    ISMPC_Solver MPCSolver;
     FootTrajectory SwingFootTrajectory;
 
     bool FeetUp = false;
-    
+
     mc_rtc::Configuration config_;
 
 
@@ -411,7 +411,7 @@ private:
     Eigen::Vector3d reference_velocity;
 
     Eigen::Vector3d StaticPose = Eigen::Vector3d::Zero();
-    
+
     sva::PTransformd ReferenceFrame_Origin_Offset = sva::PTransformd::Identity();
 
     sva::PTransformd leftFootTransformZero;
@@ -448,7 +448,7 @@ private:
     Eigen::Matrix3d floatingbaseWorldOri;
     Eigen::Vector3d floatingbaseWorldPos;
     sva::PTransformd X_world_floatingbase;
-    Eigen::Vector3d floatingbaseWorldRPY; 
+    Eigen::Vector3d floatingbaseWorldRPY;
 
     double currentLeftLeg = 0;
     double currentRightLeg = 0;
@@ -472,11 +472,11 @@ private:
     double PrevVrefX = 0 ;
     bool joystickConnected = true;
     //For Joystick }
-    
+
     std::vector<Eigen::Vector3d> SupPolygon;
 
 
-    
+
 
 };
 

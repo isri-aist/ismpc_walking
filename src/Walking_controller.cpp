@@ -153,11 +153,11 @@ bool Walking_controller::wait_for_mpc_thread()
 {
   if (!MPC_thread_ready)
   {
-    if(!datastore().has("footstep_planner::configure"))
-    {
-      mc_rtc::log::info("waiting for footsteps_planner plugin");
-      return false;
-    }
+    // if(!datastore().has("footstep_planner::configure"))
+    // {
+    //   mc_rtc::log::info("waiting for footsteps_planner plugin");
+    //   return false;
+    // }
     if(!MPC_thread_on)
     {
       mc_rtc::log::info("Start MPC thread");
@@ -215,7 +215,7 @@ void Walking_controller::WalkingTrajectoryLoop()
 
 void Walking_controller::ComputeWalkingTrajectory()
 {
-  std::chrono::high_resolution_clock::time_point t_clock = std::chrono::high_resolution_clock::now();
+   mc_rtc::clock::time_point  t_clock = mc_rtc::clock::now();
 
   {
     std::lock_guard<std::mutex> lk_copy_state(mutex_mpc_);
@@ -236,10 +236,7 @@ void Walking_controller::ComputeWalkingTrajectory()
   datastore().assign<std::string>("footsteps_planner::support_foot_name",mpc_thread_state.input_Support_FootName);
   datastore().assign<sva::PTransformd>("footsteps_planner::support_foot_pose",mpc_thread_state.X_0_SupportFoot);
   datastore().assign<std::vector<double>>("footsteps_planner::input_time_steps",mpc_thread_state.input_timesteps_);
-
-  mc_rtc::DataStore & data_s(datastore());
-  auto & lambda = datastore().get<std::function<void(mc_rtc::DataStore*)>>("footstep_planner::compute_plan");
-  lambda(&data_s);
+  datastore().call("footstep_planner::compute_plan");
 
   std::vector<sva::PTransformd> & planned_steps_ = datastore().get<std::vector<sva::PTransformd>>("footsteps_planner::output_steps");
   // for (int k = 0 ; k < planned_steps_.size() ; k++)
@@ -280,7 +277,7 @@ void Walking_controller::ComputeWalkingTrajectory()
 
   MPCSolver.GetWalkingParameters(mpc_thread_state.t_k, tds,mpc_thread_state.stop);
 
-  std::chrono::duration<double, std::milli> time_span = std::chrono::high_resolution_clock::now() - t_clock;
+  std::chrono::duration<double, std::milli> time_span = mc_rtc::clock::now() - t_clock;
   mpc_thread_process_time = time_span.count();
 
   if(MPCSolver.QPsucceeded())
@@ -359,9 +356,9 @@ bool Walking_controller::run()
     return mc_control::fsm::Controller::run();
   }
 
-  std::chrono::duration<double, std::milli> time_span = std::chrono::high_resolution_clock::now() - t_clock;
+  std::chrono::duration<double, std::milli> time_span = mc_rtc::clock::now() - t_clock;
   ControllerLoopTime = time_span.count();
-  t_clock = std::chrono::high_resolution_clock::now();
+  t_clock = mc_rtc::clock::now();
 
   if(emergencyFlag) return false;
 
@@ -549,6 +546,8 @@ void Walking_controller::UpdateInitialVectors()
 
 void Walking_controller::reset(const mc_control::ControllerResetData & reset_data)
 {
+  mc_control::fsm::Controller::reset(reset_data);
+
   StabTask->reset();
   StabTask->configure(controller_config_.Stab_config);
 
@@ -593,9 +592,4 @@ void Walking_controller::reset(const mc_control::ControllerResetData & reset_dat
     compute_trajectory_once.notify_all();
     WalkingTrajectoryThread.join();
   }
-
-  mc_control::fsm::Controller::reset(reset_data);
-
-
-};
-
+}
