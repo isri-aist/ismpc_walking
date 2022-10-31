@@ -107,6 +107,7 @@ walking_controller:
   min_dbl_suport_duration: 0.25
   max_step_duration: 2
   impact_threshold: 30
+  safety_foot_roll_error: 0.1
   wrench_filter_cutoff_T: 2
   gamma_filter_cutoff_T: 2
   robot:

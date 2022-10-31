@@ -76,6 +76,7 @@ public:
     controller_config_.T_ss_min = config("walking_controller")("min_sg_suport_duration");
     controller_config_.T_ds_min = config("walking_controller")("min_dbl_suport_duration");
     controller_config_.impact_threshold = config("walking_controller")("impact_threshold");
+    controller_config_.safety_roll_error_ = config("walking_controller")("safety_foot_roll_error");
     controller_config_.wrench_filter_cutoff = config("walking_controller")("wrench_filter_cutoff_T");
     controller_config_.gamma_filter_cutoff = config("walking_controller")("gamma_filter_cutoff_T");
 
@@ -379,6 +380,8 @@ private:
   int Index = 0; // Index of the target CoM CoMd ZMP in the vector returned by the MPC
   bool Swing_Foot_Contact = true;
   bool DoubleSupport_state = true;
+
+  
 
   bool Use_w = false;
   Eigen::Vector3d w_ = Eigen::Vector3d::Zero();

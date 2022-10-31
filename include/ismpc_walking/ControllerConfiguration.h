@@ -55,6 +55,7 @@ struct ControllerConfiguration
 
   double wrench_filter_cutoff;
   double gamma_filter_cutoff;
+  double safety_roll_error_ = 0.1;
 
   mc_rbdyn::lipm_stabilizer::StabilizerConfiguration Stab_config;
   mc_rbdyn::lipm_stabilizer::StabilizerConfiguration Stab_config_standing;

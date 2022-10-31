@@ -129,7 +129,7 @@ bool Walking_controller::MoveFeet(double t)
                       > controller_config_.impact_threshold);
     // TouchDown = false;
 
-    if(((Step_Time > SingleSupportDuration * 0.9 && TouchDown)
+    if( ((Step_Time > SingleSupportDuration * 0.9 && TouchDown)
         || Step_Time >= SingleSupportDuration - controller_config_.delta)
        && !DoubleSupport_state)
 
@@ -167,6 +167,12 @@ bool Walking_controller::MoveFeet(double t)
       mc_rtc::log::info("T_contact - T_steps : {}", t - NextTimeStep);
 
       mc_rtc::log::success("Locked " + swingFootName);
+
+      if( std::abs( mc_rbdyn::rpyFromMat(realRobot().surfacePose(swingFootName).rotation()).x() - mc_rbdyn::rpyFromMat(robot().surfacePose(swingFootName).rotation()).x() ) > controller_config_.safety_roll_error_ )
+      {
+        mc_rtc::log::error("Robot is about to fall, stoping");
+        Stop = true;
+      }
 
       // PrevStepTiming = NextTimeStep;
       // if(kfoot + 1 < mpc_state_.planned_steps().size())
