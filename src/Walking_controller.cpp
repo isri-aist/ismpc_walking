@@ -426,16 +426,19 @@ bool Walking_controller::run()
   {
     stabilizer_state_ = StabilizerState::SingleSupport;
     StabTask->configure(controller_config_.Stab_config_sg_supp);
+    mc_rtc::log::info("configure sg");
   }
-  else if(Robot_Walking && stabilizer_state_ != StabilizerState::DoubleSupport)
+  else if(Robot_Walking && Swing_Foot_Contact && stabilizer_state_ != StabilizerState::DoubleSupport)
   {
     stabilizer_state_ = StabilizerState::DoubleSupport;
     StabTask->configure(controller_config_.Stab_config_dbl_supp);
+    mc_rtc::log::info("configure dbl");
   }
-  else if(stabilizer_active_ && stabilizer_state_ != StabilizerState::Standing)
+  else if(!Robot_Walking && stabilizer_active_ && stabilizer_state_ != StabilizerState::Standing)
   {
     stabilizer_state_ = StabilizerState::Standing;
     StabTask->configure(controller_config_.Stab_config_standing);
+    mc_rtc::log::info("configure std");
   }
   controller_config_.Stab_config = StabTask->config();
   count += 1;

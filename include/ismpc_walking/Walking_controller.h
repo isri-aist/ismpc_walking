@@ -268,6 +268,7 @@ protected:
     controller_config_.Stab_config_sg_supp.comHeight = h;
     controller_config_.Stab_config_standing.comHeight = h;
     stabilizer_state_ = StabilizerState::None;
+    //mc_rtc::log::info("height t {}",h);
 
   }
   void torsoPitch(double p)
@@ -276,6 +277,7 @@ protected:
     controller_config_.Stab_config_sg_supp.torsoPitch = p;
     controller_config_.Stab_config_standing.torsoPitch = p;
     stabilizer_state_ = StabilizerState::None;
+    //mc_rtc::log::info("pitch t {}",p);;
   }
 
   bool wait_for_mpc_thread();
