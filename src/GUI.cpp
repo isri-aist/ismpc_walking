@@ -5,6 +5,143 @@ inline double floorn(double x, int n)
   return floor(pow(10, n) * x) / pow(10, n);
 }
 
+// FIXME This should be part of mc_rtc
+inline void AddStabilizerConfigToGUI(mc_rtc::gui::StateBuilder & gui,
+                                     std::vector<std::string> category,
+                                     mc_rbdyn::lipm_stabilizer::StabilizerConfiguration & c_)
+{
+  category.push_back("Main");
+  gui.addElement(
+      category,
+      mc_rtc::gui::ArrayInput(
+          "Foot admittance", {"CoPx", "CoPy"},
+          [&c_]() -> Eigen::Vector2d {
+            return {c_.copAdmittance.x(), c_.copAdmittance.y()};
+          },
+          [&c_](const Eigen::Vector2d & a) { c_.copAdmittance = a; }),
+      mc_rtc::gui::ArrayInput(
+          "Foot force difference", {"Admittance", "Damping"},
+          [&c_]() -> Eigen::Vector2d {
+            return {c_.dfzAdmittance, c_.dfzDamping};
+          },
+          [&c_](const Eigen::Vector2d & a) {
+            c_.dfzAdmittance = a(0);
+            c_.dfzDamping = a(1);
+          }),
+      mc_rtc::gui::ArrayInput(
+          "DCM P gains", {"x", "y"}, [&c_]() -> const Eigen::Vector2d & { return c_.dcmPropGain; },
+          [&c_](const Eigen::Vector2d & gains) { c_.dcmPropGain = gains; }),
+      mc_rtc::gui::ArrayInput(
+          "DCM I gains", {"x", "y"}, [&c_]() -> const Eigen::Vector2d & { return c_.dcmIntegralGain; },
+          [&c_](const Eigen::Vector2d & gains) { c_.dcmIntegralGain = gains; }),
+      mc_rtc::gui::ArrayInput(
+          "DCM D gains", {"x", "y"}, [&c_]() -> const Eigen::Vector2d & { return c_.dcmDerivGain; },
+          [&c_](const Eigen::Vector2d & gains) { c_.dcmDerivGain = gains; }),
+      mc_rtc::gui::NumberInput(
+          "CoMd Error gain", [&c_]() { return c_.comdErrorGain; }, [&c_](double a) { c_.comdErrorGain = a; }),
+      mc_rtc::gui::NumberInput(
+          "ZMPd gain", [&c_]() { return c_.zmpdGain; }, [&c_](double a) { c_.zmpdGain = a; }),
+      mc_rtc::gui::ArrayInput(
+          "DCM filters", {"Integrator T [s]", "Derivator T [s]"},
+          [&c_]() -> Eigen::Vector2d {
+            return {c_.dcmDerivatorTimeConstant, c_.dcmIntegratorTimeConstant};
+          },
+          [&c_](const Eigen::Vector2d & T) {
+            c_.dcmDerivatorTimeConstant = T(0);
+            c_.dcmIntegratorTimeConstant = T(1);
+          }));
+  category.pop_back();
+  category.push_back("Advanced");
+  gui.addElement(category,
+                 mc_rtc::gui::NumberInput(
+                     "Admittance Velocity Filter [0-1]", [&c_]() { return c_.copVelFilterGain; },
+                     [&c_](double gain) { c_.copVelFilterGain = gain; }),
+                 mc_rtc::gui::ArrayInput(
+                     "Vertical drift compensation", {"frequency", "stiffness"},
+                     [&c_]() -> Eigen::Vector2d {
+                       return {c_.vdcFrequency, c_.vdcStiffness};
+                     },
+                     [&c_](const Eigen::Vector2d & v) {
+                       c_.vdcFrequency = v(0);
+                       c_.vdcStiffness = v(1);
+                     }),
+                 mc_rtc::gui::NumberInput(
+                     "Torso pitch [rad]", [&c_]() { return c_.torsoPitch; },
+                     [&c_](double pitch) {
+                       c_.torsoPitch = pitch;
+                       ;
+                     }));
+  category.push_back("DCM Bias");
+  gui.addElement(category, mc_rtc::gui::ElementsStacking::Horizontal,
+                 mc_rtc::gui::Checkbox(
+                     "Enabled", [&c_]() { return c_.dcmBias.withDCMBias; },
+                     [&c_]() { c_.dcmBias.withDCMBias = !c_.dcmBias.withDCMBias; }),
+                 mc_rtc::gui::Checkbox(
+                     "Correct CoM Pos", [&c_]() { return c_.dcmBias.correctCoMPos; },
+                     [&c_]() { c_.dcmBias.correctCoMPos = !c_.dcmBias.correctCoMPos; }),
+                 mc_rtc::gui::Checkbox(
+                     "Use Filtered DCM", [&c_]() { return c_.dcmBias.withDCMFilter; },
+                     [&c_]() { c_.dcmBias.withDCMFilter = !c_.dcmBias.withDCMFilter; }));
+  gui.addElement(category,
+                 mc_rtc::gui::NumberInput(
+                     "dcmMeasureErrorStd", [&c_]() { return c_.dcmBias.dcmMeasureErrorStd; },
+                     [&c_](double v) { c_.dcmBias.dcmMeasureErrorStd = v; }),
+                 mc_rtc::gui::NumberInput(
+                     "zmpMeasureErrorStd", [&c_]() { return c_.dcmBias.zmpMeasureErrorStd; },
+                     [&c_](double v) { c_.dcmBias.zmpMeasureErrorStd = v; }),
+                 mc_rtc::gui::NumberInput(
+                     "driftPerSecondStd", [&c_]() { return c_.dcmBias.biasDriftPerSecondStd; },
+                     [&c_](double v) { c_.dcmBias.biasDriftPerSecondStd = v; }),
+                 mc_rtc::gui::ArrayInput(
+                     "Bias Limit [m]", {"sagital", "lateral"},
+                     [&c_]() -> const Eigen::Vector2d & { return c_.dcmBias.biasLimit; },
+                     [&c_](const Eigen::Vector2d & v) { c_.dcmBias.biasLimit = v; }),
+                 mc_rtc::gui::ArrayInput(
+                     "CoM bias Limit [m]", {"sagital", "lateral"},
+                     [&c_]() -> const Eigen::Vector2d & { return c_.dcmBias.comBiasLimit; },
+                     [&c_](const Eigen::Vector2d & v) { c_.dcmBias.comBiasLimit = v; }));
+  category.pop_back();
+  category.push_back("Ext Wrench");
+  gui.addElement(
+      category,
+      mc_rtc::gui::Checkbox(
+          "addExpectedCoMOffset", [&c_]() { return c_.extWrench.addExpectedCoMOffset; },
+          [&c_]() { c_.extWrench.addExpectedCoMOffset = !c_.extWrench.addExpectedCoMOffset; }),
+      mc_rtc::gui::Checkbox(
+          "subtractMeasuredValue", [&c_]() { return c_.extWrench.subtractMeasuredValue; },
+          [&c_]() { c_.extWrench.subtractMeasuredValue = !c_.extWrench.subtractMeasuredValue; }),
+      mc_rtc::gui::Checkbox(
+          "modifyCoMErr", [&c_]() { return c_.extWrench.modifyCoMErr; },
+          [&c_]() { c_.extWrench.modifyCoMErr = !c_.extWrench.modifyCoMErr; }),
+      mc_rtc::gui::Checkbox(
+          "modifyZMPErr", [&c_]() { return c_.extWrench.modifyZMPErr; },
+          [&c_]() { c_.extWrench.modifyZMPErr = !c_.extWrench.modifyZMPErr; }),
+      mc_rtc::gui::Checkbox(
+          "modifyZMPErrD", [&c_]() { return c_.extWrench.modifyZMPErrD; },
+          [&c_]() { c_.extWrench.modifyZMPErrD = !c_.extWrench.modifyZMPErrD; }),
+      mc_rtc::gui::Checkbox(
+          "excludeFromDCMBiasEst", [&c_]() { return c_.extWrench.excludeFromDCMBiasEst; },
+          [&c_]() { c_.extWrench.excludeFromDCMBiasEst = !c_.extWrench.excludeFromDCMBiasEst; }),
+      mc_rtc::gui::NumberInput(
+          "Limit of comOffsetErrCoM", [&c_]() { return c_.extWrench.comOffsetErrCoMLimit; },
+          [&c_](double a) { c_.extWrench.comOffsetErrCoMLimit = a; }),
+      mc_rtc::gui::NumberInput(
+          "Limit of comOffsetErrZMP", [&c_]() { return c_.extWrench.comOffsetErrZMPLimit; },
+          [&c_](double a) { c_.extWrench.comOffsetErrZMPLimit = a; }),
+      mc_rtc::gui::NumberInput(
+          "Cutoff period of extWrenchSumLowPass", [&c_]() { return c_.extWrench.extWrenchSumLowPassCutoffPeriod; },
+          [&c_](double a) { c_.extWrench.extWrenchSumLowPassCutoffPeriod = a; }),
+      mc_rtc::gui::NumberInput(
+          "Cutoff period of comOffsetLowPass", [&c_]() { return c_.extWrench.comOffsetLowPassCutoffPeriod; },
+          [&c_](double a) { c_.extWrench.comOffsetLowPassCutoffPeriod = a; }),
+      mc_rtc::gui::NumberInput(
+          "Cutoff period of comOffsetLowPassCoM", [&c_]() { return c_.extWrench.comOffsetLowPassCoMCutoffPeriod; },
+          [&c_](double a) { c_.extWrench.comOffsetLowPassCoMCutoffPeriod = a; }),
+      mc_rtc::gui::NumberInput(
+          "Time constant of comOffsetDerivator", [&c_]() { return c_.extWrench.comOffsetDerivatorTimeConstant; },
+          [&c_](double a) { c_.extWrench.comOffsetDerivatorTimeConstant = a; }));
+}
+
 void Walking_controller::addToGUI()
 {
 
@@ -294,37 +431,5 @@ void Walking_controller::Stabilizer_GUI(mc_rbdyn::lipm_stabilizer::StabilizerCon
                         }
                       }));
   }
-  gui()->addElement(
-      {"Walking", "Stabilizer", name},
-      mc_rtc::gui::ArrayInput(
-          "Admittance", {"x", "y"}, [this, &config]() -> Eigen::Vector2d { return config.copAdmittance; },
-          [this, &config](Eigen::Vector2d in) { return config.copAdmittance = in; }),
-      mc_rtc::gui::ArrayInput(
-          "Ffdc admittance",
-          [this, &config]() -> std::vector<double> { return std::vector<double>{config.dfzAdmittance}; },
-          [this, &config](std::vector<double> in) { return config.dfzAdmittance = in[0]; }),
-      mc_rtc::gui::ArrayInput(
-          "Ffdc damping", [this, &config]() -> std::vector<double> { return std::vector<double>{config.dfzDamping}; },
-          [this, &config](std::vector<double> in) { return config.dfzDamping = in[0]; }),
-
-      mc_rtc::gui::ArrayInput(
-          "P gain", {"x", "y"}, [this, &config]() -> Eigen::Vector2d { return config.dcmPropGain; },
-          [this, &config](Eigen::Vector2d in) { config.dcmPropGain = mc_rbdyn::Gains2d(in); }),
-      mc_rtc::gui::ArrayInput(
-          "D gain", {"x", "y"}, [this, &config]() -> Eigen::Vector2d { return config.dcmDerivGain; },
-          [this, &config](Eigen::Vector2d in) { config.dcmDerivGain = mc_rbdyn::Gains2d(in); }),
-      mc_rtc::gui::ArrayInput(
-          "I gain", {"x", "y"}, [this, &config]() -> Eigen::Vector2d { return config.dcmIntegralGain; },
-          [this, &config](Eigen::Vector2d in) { config.dcmIntegralGain = mc_rbdyn::Gains2d(in); }),
-
-      mc_rtc::gui::ArrayInput(
-          "Integrator constant",
-          [this, &config]() -> std::vector<double> { return std::vector<double>{config.dcmIntegratorTimeConstant}; },
-          [this, &config](std::vector<double> in) { return config.dcmIntegratorTimeConstant = in[0]; }),
-      mc_rtc::gui::ArrayInput(
-          "Derivator constant",
-          [this, &config]() -> std::vector<double> { return std::vector<double>{config.dcmDerivatorTimeConstant}; },
-          [this, &config](std::vector<double> in) { return config.dcmDerivatorTimeConstant = in[0]; })
-
-  );
+  AddStabilizerConfigToGUI(*gui(), {"Walking", "Stabilizer", name}, config);
 }
