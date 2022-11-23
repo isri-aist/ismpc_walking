@@ -69,7 +69,8 @@ public:
     controller_config_.use_stability_task = config("ismpc")("use_stability_task");
     controller_config_.Beta_stab = config("ismpc")("beta_stab");
     controller_config_.Beta_traj = config("ismpc")("beta_traj");
-    controller_config_.MPC_ZMP_cstr_square_offset_sg_supp = config("ismpc")("offset_sg_supp");
+    //controller_config_.MPC_ZMP_cstr_square_offset_sg_supp = config("ismpc")("offset_sg_supp");
+    controller_config_.MPC_ZMP_ref_offset_sg_supp = config("ismpc")("zmp_ref_offset");
     controller_config_.MPC_ZMP_Constraint_size_sg_supp = config("ismpc")("zmp_cstr_square_sg_supp");
 
     controller_config_.Ts_max = config("walking_controller")("max_step_duration");
@@ -312,6 +313,9 @@ private:
   std::string LeftFootLinkName_ = "";
   std::string RightFootLinkName_ = "";
 
+  std::string rightHandName_ = "";
+  std::string leftHandName_ = "";
+
   std::vector<mc_rbdyn::Plane> planes_;
 
   Eigen::VectorXd Traj_ant;
@@ -364,6 +368,7 @@ private:
 
   int N_Steps = 0;
   int N_Steps_Desired = -1;
+  sva::PTransformd target_pose_ = sva::PTransformd::Identity();
 
   double t_stop = 0;
   int count_stop = 0;

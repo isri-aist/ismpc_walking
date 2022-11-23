@@ -46,6 +46,7 @@ struct ControllerConfiguration
   bool MPC_allow_None = true;
   Eigen::Vector2d MPC_ZMP_cstr_square_offset = Eigen::Vector2d::Zero();
   Eigen::Vector2d MPC_ZMP_cstr_square_offset_sg_supp = Eigen::Vector2d::Zero();
+  Eigen::Vector2d MPC_ZMP_ref_offset_sg_supp = Eigen::Vector2d::Zero();
   Eigen::Vector2d MPC_Footsteps_Constraint_size{0.1, 0.1};
   Eigen::Vector2d MPC_Footsteps_kin_Constraint_size{0.1, 0.1};
 

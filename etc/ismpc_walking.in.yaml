@@ -56,24 +56,29 @@ controller:
       torsoBodyName: "CHEST_P_LINK"
       leftFootLink: "L_TOE_P_LINK"
       rightFootLink: "R_TOE_P_LINK"
+    hrp2_drc:
+      torsoBodyName: "CHEST_LINK0"
+      leftFootLink: "LLEG_LINK5"
+      rightFootLink: "RLEG_LINK5"
 ismpc:
   Tc: 1.5
   Tp: 4
-  delta: 5e-2
+  delta: 25e-3
   beta: 1e5
   beta_stab: 1e8
-  beta_traj : 1e1
+  beta_traj : 1e2
   zmp_cstr_square: [0.1,0.05]
   zmp_cstr_square_sg_supp: [0.07,0.06]
+  zmp_ref_offset_sg_support: [0.0,0.02]
   next_stp_cstr_ratio: 1
-  offset: [0.0,0.0]
+  offset: [0.0,0.02]
   offset_sg_supp: [0.00,0.0]
   allow_none_tail: true
   foosteps_kin_cstr: [0.4,0.05]
   footsteps_cstr_square: [0.15,0.05]
   double_support_ratio: 0.25
   sliding_zmp_cstr_region: false
-  use_stability_task: false
+  use_stability_task: true
   safety_thresholds:
     beta_range: [1e-9,1e9]
     zmp_cstr_square_min: 0.01
@@ -84,7 +89,7 @@ footsteps_planner:
   delta: 0.05
   Ts_limit: [1,2]
   kinematics_cstr: [0.4,0.08]
-  feet_distance: 0.15
+  feet_distance: 0.2
   mean_speed: 0.1
   robot_height: 150
   max_rotation: 0.17
@@ -115,14 +120,26 @@ walking_controller:
       torsoBodyName: "torso"
       leftFootLink: "l_ankle"
       rightFootLink: "r_ankle"
+      left_hand_surface: "LeftHand"
+      right_hand_surface: "RightHand"
       right_foot_surface: "RightFootCenter"
       left_foot_surface: "LeftFootCenter"
     hrp4cr:
       torsoBodyName: "CHEST_P_LINK"
       leftFootLink: "L_TOE_P_LINK"
       rightFootLink: "R_TOE_P_LINK"
+      left_hand_surface: "LeftHand"
+      right_hand_surface: "RightHand"
       right_foot_surface: "RightFootCenter"
       left_foot_surface: "LeftFootCenter"
+    hrp2_drc:
+      right_foot_surface: "RightFootCenter"
+      left_foot_surface: "LeftFootCenter"
+      left_hand_surface: "LeftFingers"
+      right_hand_surface: "RightFingers"
+      torsoBodyName: "CHEST_LINK0"
+      leftFootLink: "LLEG_LINK5"
+      rightFootLink: "RLEG_LINK5"
 
 stabilizer:
   robot:
@@ -200,8 +217,6 @@ stabilizer:
           maxVel:
             angular: [3., 3., 3.]
             linear: [1., 1., 1.]
-
-
     hrp4:
       stabilizer:
         dcm_tracking:
@@ -231,7 +246,120 @@ stabilizer:
           zmpMeasureErrorStd: 0.0005
           biasLimit: [0.05, 0.02]
           withDCMBias: true
-
+      stabilizer_sgsupp:
+        dcm_tracking:
+          gains:
+            prop: [4,4]
+            integral: [5,5]
+            deriv: [0.,0.]
+            comdError: 0.
+        admittance:
+          dfz: 0.0002
+          cop: [0.03, 0.04]
+          maxVel:
+            angular: [3., 3., 3.]
+            linear: [1., 1., 1.]
+      stabilizer_dblsupp:
+        dcm_tracking:
+          gains:
+            prop: [7,7]
+            integral: [5,5]
+            deriv: [0.3,0.3]
+            comdError: 0.
+        admittance:
+          dfz: 0.0002
+          cop: [0.03, 0.04]
+          maxVel:
+            angular: [3., 3., 3.]
+            linear: [1., 1., 1.]
+    hrp2_drc:
+      stabilizer:
+        dcm_tracking:
+          integrator_time_constant: 2
+          gains:
+            prop: [6,6]
+            integral: [4,6]
+            deriv: [0.3, 0.3]
+            comdError: 0.
+        admittance:
+          dfz: 0.0002
+          cop: [0.03, 0.03]
+          maxVel:
+            angular: [3., 3., 3.]
+            linear: [1., 1., 1.]
+        tasks:
+          contact:
+            damping: 300.
+          torso:
+            stiffness: 2
+            weight: 100
+          pelvis:
+            stiffness: 2
+            weight: 500
+          com:
+            stiffness: [1000.,1000.,100.]
+            dimWeight: [1 , 1 , 1]
+            weight: 1000.
+            height: 0.82
+        dcm_bias:
+          dcmMeasureErrorStd: 0.001
+          biasDriftPerSecondStd: 0.0001
+          zmpMeasureErrorStd: 0.0005
+          comBiasLimit: [0.1,0.1]
+          biasLimit: [0.05, 0.02]
+          withDCMBias: true
+          correctCoMPos: true
+        external_wrench:
+          ## general ##
+          add_expected_com_offset: false
+          subtract_measured_value: true
+          exclude_from_dcm_bias_est : true
+          ## com offset ##
+          modify_com_error: true
+          modify_zmp_error: true
+          modify_zmp_error_d: false
+          com_offset_err_com_limit: 0.05
+          com_offset_err_zmp_limit: 0.05
+          ## filter ##
+          ext_wrench_sum_cutoff: 0.05
+          com_offset_cutoff: 0.05
+          com_offset_com_cutoff: 10.0
+          derivator_time_constant: 1.0
+          ## gain (not loaded automatically) ##
+          ext_wrench_gain: [1, 1, 1]
+      stabilizer_sgsupp:
+        dcm_tracking:
+          gains:
+            prop: [3,3]
+            integral: [5,5]
+            deriv: [0.3,0.3]
+            comdError: 0.
+        admittance:
+          dfz: 0.0002
+          cop: [0.03, 0.03]
+        tasks:
+          torso:
+            weight: 500
+          pelvis:
+            weight: 500
+        admittance:
+          dfz: 0.0001
+          cop: [0.03, 0.03]
+      stabilizer_dblsupp:
+        dcm_tracking:
+          gains:
+            prop: [5,5]
+            integral: [5,5]
+            deriv: [0.3,0.3]
+            comdError: 0.
+        tasks:
+          torso:
+            weight: 500
+          pelvis:
+            weight: 500
+        admittance:
+          dfz: 0.0002
+          cop: [0.03, 0.03]
 
 transitions:
   - [Initial,Ok,Initial]

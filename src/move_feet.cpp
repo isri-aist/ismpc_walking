@@ -130,7 +130,7 @@ bool Walking_controller::MoveFeet(double t)
     // TouchDown = false;
 
     if( ((Step_Time > SingleSupportDuration * 0.9 && TouchDown)
-        || Step_Time >= SingleSupportDuration - controller_config_.delta)
+        || Step_Time >= SingleSupportDuration - 0*controller_config_.delta)
        && !DoubleSupport_state)
 
     {
@@ -150,14 +150,14 @@ bool Walking_controller::MoveFeet(double t)
       if(supportFootName == leftFootName_)
       {
         StabTask->setContacts(
-            {{mc_tasks::lipm_stabilizer::ContactState::Left, robot().surfacePose(supportFootName)},
+            {{mc_tasks::lipm_stabilizer::ContactState::Left, sva::PTransformd(sva::RotZ(supp_yaw), supp_pose)},
              {mc_tasks::lipm_stabilizer::ContactState::Right, sva::PTransformd(sva::RotZ(swing_yaw), swing_pose)}});
       }
       else
       {
         StabTask->setContacts(
             {{mc_tasks::lipm_stabilizer::ContactState::Left, sva::PTransformd(sva::RotZ(swing_yaw), swing_pose)},
-             {mc_tasks::lipm_stabilizer::ContactState::Right, robot().surfacePose(supportFootName)}});
+             {mc_tasks::lipm_stabilizer::ContactState::Right, sva::PTransformd(sva::RotZ(supp_yaw), supp_pose)}});
       }
 
       DoubleSupport_state = true;
@@ -215,6 +215,9 @@ bool Walking_controller::MoveFeet(double t)
 
     solver().removeTask(leftSwingFootTask);
     solver().removeTask(rightSwingFootTask);
+
+    leftSwingFootTask->jac();
+
   }
 
   return 0;

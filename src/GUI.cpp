@@ -222,10 +222,10 @@ void Walking_controller::addToGUI()
       mc_rtc::gui::NumberInput(
           "Steps", [this]() -> int { return N_Steps_Desired; }, [this](const double & n) { N_Steps_Desired = n; }),
 
-      mc_rtc::gui::Point3D("Steps desired pose", mc_rtc::gui::PointConfig(mc_rtc::gui::Color(1, 0, 1)),
+      mc_rtc::gui::Transform("Steps desired pose",
                            [this]() {
-                             return Eigen::Vector3d{x, y, 0};
-                           }),
+                             return target_pose_;
+                           }, [this](const sva::PTransformd & in){ target_pose_ = in;}),
       mc_rtc::gui::Button("Compute Trajectory", [this]() { compute_trajectory_once.notify_all(); }));
 
   gui()->addElement(
@@ -282,7 +282,7 @@ void Walking_controller::addToGUI()
       //       return mpc_state_.Pzk;
       //       ;
       //     }),
-      mc_rtc::gui::Trajectory("Predicted ZMP Trajectory", mc_rtc::gui::Color(0., 0., 1.),
+      mc_rtc::gui::Trajectory("Predicted ZMP Trajectory", mc_rtc::gui::LineConfig(mc_rtc::gui::Color(0., 0., 1.),0.02,mc_rtc::gui::LineStyle::Dotted) ,
                               [this]() -> std::vector<Eigen::Vector3d> {
                                 std::vector<Eigen::Vector3d> Output;
                                 for(int k = 0; k < mpc_state_.X_MPC.size(); k++)
@@ -290,6 +290,11 @@ void Walking_controller::addToGUI()
                                   Output.push_back(mpc_state_.Get_ZMP_planarTarget(k));
                                 }
                                 return Output;
+                              }),
+      mc_rtc::gui::Trajectory("ZMP Ref Trajectory", mc_rtc::gui::LineConfig(mc_rtc::gui::Color(0., 1., 1.),0.02,mc_rtc::gui::LineStyle::Dotted),
+                              [this]() -> std::vector<Eigen::Vector3d> {
+                                std::vector<Eigen::Vector3d> ref_traj = this->MPCSolver.zmp_ref_traj();                   
+                                return ref_traj;
                               }),
       mc_rtc::gui::Trajectory("Predicted CoM Trajectory", mc_rtc::gui::Color(1., 0., 0.),
                               [this]() -> std::vector<Eigen::Vector3d> {
@@ -302,21 +307,21 @@ void Walking_controller::addToGUI()
                                 return Output;
                               }),
 
-      // mc_rtc::gui::Trajectory("Anticipative Trajectory", mc_rtc::gui::Color(1., 0., 1.),
-      //                         [this]() -> std::vector<Eigen::Vector3d> {
-      //                           std::vector<Eigen::Vector3d> Output;
-      //                           Eigen::VectorXd Traj = MPCSolver.GetAfterTc_ZMP_trajectory();
-      //                           int n = (int)(Traj.size() / 2);
-      //                           for(int k = 0; k < n; k++)
-      //                           {
-      //                             Output.push_back(Eigen::Vector3d{Traj(k), Traj(k + n), 0});
-      //                           }
-      //                           return Output;
-      //                         }),
+      mc_rtc::gui::Trajectory("Anticipative Trajectory", mc_rtc::gui::Color(1., 0., 1.),
+                              [this]() -> std::vector<Eigen::Vector3d> {
+                                std::vector<Eigen::Vector3d> Output;
+                                Eigen::VectorXd Traj = MPCSolver.GetAfterTc_ZMP_trajectory();
+                                int n = (int)(Traj.size() / 2);
+                                for(int k = 0; k < n; k++)
+                                {
+                                  Output.push_back(Eigen::Vector3d{Traj(k), Traj(k + n), 0});
+                                }
+                                return Output;
+                              }),
 
-      // mc_rtc::gui::Polygon(
-      //     "AllPoly", mc_rtc::gui::Color(1., 0.3, 0.),
-      //     [this]() -> const std::vector<std::vector<Eigen::Vector3d>> & { return this->MPCSolver.get_allpolys(); }),
+      mc_rtc::gui::Polygon(
+          "AllPoly", mc_rtc::gui::Color(1., 0.3, 0.),
+          [this]() -> const std::vector<std::vector<Eigen::Vector3d>> & { return this->MPCSolver.get_allpolys(); }),
       mc_rtc::gui::Polygon("SupportPolygon", mc_rtc::gui::Color(1., 1., 0.),
                            [this]() -> const std::vector<Eigen::Vector3d> & { return mpc_state_.get_SupPolygon(); }));
 

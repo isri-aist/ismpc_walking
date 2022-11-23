@@ -548,7 +548,7 @@ private:
   double m_Tc;
   double m_Tp; // Control & Preview horizon time
   double m_Tds; // Double Support Duration
-  int Tds_offset = 2;
+  int Tds_offset = 0;
   double m_Dstep_ratio; // T_DoubleStep/T_Step
   double m_delta; // t_k - t_k-1
   double m_delta_control; // Controller timestep
@@ -560,6 +560,8 @@ private:
                                     // toward the other feet;
   Eigen::Vector2d rect_pose_offset_sg_supp; // ss cstr zone offset in the foot frame for y axis, positive offset is an
                                             // offset toward the other feet;
+  Eigen::Vector2d zmp_ref_offset;          
+  
   double zmp_cstr_next_stp_ratio = 2;
   double m_dx_f;
   double m_dy_f; // Step kinematic admissible Region

@@ -30,13 +30,11 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, c
     Stabiconfig_dbl_supp.load(s_config);
 
     if(config("stabilizer")("robot")(robot().name()).has("stabilizer_sgsupp"))
-      ;
     {
       const auto & s_config_sg = config("stabilizer")("robot")(robot().name())("stabilizer_sgsupp");
       Stabiconfig_sg_supp.load(s_config_sg);
     }
-    if(config("stabilizer")("robot")(robot().name()).has("stabilizer_dblsupp"))
-      ;
+    if(config("stabilizer")("robot")(robot().name()).has("stabilizer_dblsupp"))   
     {
       const auto & s_config_dbl = config("stabilizer")("robot")(robot().name())("stabilizer_dblsupp");
       Stabiconfig_dbl_supp.load(s_config_dbl);
@@ -65,6 +63,8 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, c
   rConfig("leftFootLink", LeftFootLinkName_);
   rConfig("left_foot_surface", leftFootName_);
   rConfig("right_foot_surface", rightFootName_);
+  rConfig("left_hand_surface", leftHandName_);
+  rConfig("right_hand_surface", rightHandName_);
 
   mc_rtc::log::info(robots().envIndex());
   controller_timestep = dt;
@@ -84,12 +84,6 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, c
   addContact({robot().name(), "ground", rightFootName_, "AllGround", 0.7, footcontact_dof});
   addContact({robot().name(), "ground", leftFootName_, "AllGround", 0.7, footcontact_dof});
 
-  rightShoulderIndex = robot().jointIndexByName("R_SHOULDER_P");
-  rightLegIndex = robot().jointIndexByName("R_HIP_P");
-
-  leftShoulderIndex = robot().jointIndexByName("L_SHOULDER_P");
-  leftLegIndex = robot().jointIndexByName("L_HIP_P");
-
   leftSwingFootTask =
       std::make_shared<mc_tasks::SurfaceTransformTask>(leftFootName_, robots(), robots().robotIndex(), 10.0, 10.);
 
@@ -104,10 +98,6 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, c
 
   mc_rtc::log::info("com stiff {}", controller_config_.Stab_config.comStiffness);
 
-  armTask = std::make_shared<mc_tasks::PostureTask>(solver(), robots().robotIndex(), 100, 10);
-  std::vector<std::string> armTask_Joints({"R_SHOULDER_P", "L_SHOULDER_P"});
-  armTask->selectActiveJoints(solver(), armTask_Joints);
-  armTask->name("ArmPosture");
 
   SupportFootPose = robot().surfacePose(supportFootName).translation();
   SupportFootPose.z() = 0;
@@ -219,9 +209,9 @@ void Walking_controller::ComputeWalkingTrajectory()
 
   {
     std::lock_guard<std::mutex> lk_copy_state(mutex_mpc_);
+    UpdateInitialVectors();
     mpc_thread_state = mpc_state_;
   }
-
   MPCSolver.AutoFootstepPlacement = AutoFootstepPlacement;
 
   if(mpc_thread_state.input_steps_.size() != 0)
@@ -326,16 +316,18 @@ void Walking_controller::UpdatePlanner_input()
   {
     reference_velocity.y() = mc_filter::utils::clamp(reference_velocity.y(), 0.0, 0.07);
   }
-  for(int k = 0; k < (int)2 * std::round(controller_config_.Tp / controller_config_.delta); k++)
+  for(int k = 0; k < (int) 1  * std::round(controller_config_.Tp / controller_config_.delta); k++)
   {
     mpc_state_.input_v_.push_back(sva::MotionVecd(Eigen::Vector3d{0, 0, reference_velocity.z()},
                                                   Eigen::Vector3d{reference_velocity.x(), reference_velocity.y(), 0}));
   }
 
   mpc_state_.input_timesteps_ = {T_Steps, 2 * T_Steps};
+  // mpc_state_.input_v_.clear();
+  //mpc_state_.input_timesteps_.clear();
   mpc_state_.set_input_tds(input_tds);
   mpc_state_.input_steps_.clear();
-  // mpc._state_.input_Pf.push_back(Step_Target);
+  // mpc_state_.input_steps_.push_back(target_pose_);
   mpc_state_.input_Support_FootName = "LeftFoot";
   if(supportFootName == rightFootName_)
   {
@@ -382,12 +374,13 @@ bool Walking_controller::run()
       mpc_state_ = mpc_thread_state;
       NewThreadState = false;
     }
+    MoveCoM();
     UpdateInitialVectors();
     UpdatePlanner_input();
     mpc_state_.Index += 1;
   }
 
-  MoveCoM();
+  
 
   if(!(Stop && Swing_Foot_Contact))
   {
@@ -493,28 +486,6 @@ void Walking_controller::UpdateInitialVectors()
     mpc_state_.Pu = mpc_state_.Pck + mpc_state_.Vck / eta();
     // std::cout << "using MPC" << std::endl;
   }
-  else if(UseRealRobot)
-  {
-    if(DoubleSupport_state && true)
-    {
-      double K = 0;
-      // Pck = Pck * (1 - K) + K * computeInSupportFootFlat(realRobot().com());
-      // Vck = Vck * (1 - K) + K * computeVelocityInSupportFoot(realRobot().comVelocity());
-      mpc_state_.Pzk =
-          mpc_state_.Get_ZMP_planarTarget(mpc_state_.Index) * (1 - K) + K * computeInSupportFootFlat(computeZMP());
-      K = K_feedback;
-      mpc_state_.Pck = robot().com() * (1 - K) + K * realRobot().com();
-      mpc_state_.Vck = robot().comVelocity() * (1 - K) + K * realRobot().comVelocity();
-
-      mpc_state_.Pu = StabTask->measuredDCM();
-    }
-    else
-    {
-      mpc_state_.Pck = mpc_state_.Get_CoM_planarTarget(mpc_state_.Index);
-      mpc_state_.Vck = mpc_state_.Get_CoMVel_planarTarget(mpc_state_.Index);
-      // mpc_state_.Pzk = mpc_state_.Get_ZMP_planarTarget(indx);
-    }
-  }
   else
   {
     mpc_state_.Pck = robot().com();
@@ -522,13 +493,37 @@ void Walking_controller::UpdateInitialVectors()
     // mpc_state_.Pzk = mpc_state_.Get_ZMP_planarTarget(indx);
     mpc_state_.Pu = mpc_state_.Pck + mpc_state_.Vck / eta();
   }
+  if(UseRealRobot)
+  {
+    
+    double K = 1;
+    // Pck = Pck * (1 - K) + K * computeInSupportFootFlat(realRobot().com());
+    // Vck = Vck * (1 - K) + K * computeVelocityInSupportFoot(realRobot().comVelocity());
+    K = K_feedback;
+    if(mpc_state_.X_MPC.size() != 0)
+    {
+      mpc_state_.Pzk = 
+          mpc_state_.Get_ZMP_planarTarget(mpc_state_.Index) * (1 - K) + K * StabTask->measuredZMP();
+    }
+    else
+    {
+      mpc_state_.Pzk = StabTask->measuredZMP();
+    }
+    
+    mpc_state_.Pck = robot().com() * (1 - K) + K * StabTask->measuredCoM();
+    mpc_state_.Vck = robot().comVelocity() * (1 - K) + K * StabTask->measuredCoMd();
 
-  if(mpc_state_.X_MPC.size() != 0)
+    mpc_state_.Pu = StabTask->measuredDCM();
+    
+
+  }
+
+  if(mpc_state_.X_MPC.size() != 0)// && !UseRealRobot)
   {
 
     mpc_state_.Pzk = mpc_state_.Get_ZMP_planarTarget(mpc_state_.Index);
   }
-  else
+  else // if(!UseRealRobot)
   {
     mpc_state_.Pzk = mpc_state_.Pck;
   }
@@ -549,12 +544,15 @@ void Walking_controller::reset(const mc_control::ControllerResetData & reset_dat
   StabTask->reset();
   StabTask->configure(controller_config_.Stab_config);
 
-  Eigen::Vector3d ext_wrench_gain_v =
-      config()("stabilizer")("robot")(robot().name())("stabilizer")("external_wrench")("ext_wrench_gain");
-  sva::MotionVecd ext_wrench_gain{ext_wrench_gain_v, ext_wrench_gain_v};
-  StabTask->setExternalWrenches({"LeftHand", "RightHand"}, {sva::ForceVecd::Zero(), sva::ForceVecd::Zero()},
-                                {ext_wrench_gain, ext_wrench_gain});
+  // if(config()("stabilizer")("robot")(robot().name())("stabilizer").has("external_wrench"))
+  // {
+  //     Eigen::Vector3d ext_wrench_gain_v = config()("stabilizer")("robot")(robot().name())("stabilizer")("external_wrench")("ext_wrench_gain");
+  //     sva::MotionVecd ext_wrench_gain{ext_wrench_gain_v, ext_wrench_gain_v};
+  //     StabTask->setExternalWrenches({leftHandName_, rightHandName_}, {sva::ForceVecd::Zero(), sva::ForceVecd::Zero()},
+  //                                   {ext_wrench_gain, ext_wrench_gain});
+  // }
 
+  
   SwingFootTask.reset();
   SupportFootTask.reset();
   supportFootName = rightFootName_;

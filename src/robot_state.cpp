@@ -71,7 +71,7 @@ void Walking_controller::getTransformations()
 
   LeftFootRatio = mc_filter::utils::clamp(StabTask->leftFootRatio(), LeftFootRatio - 0.019, LeftFootRatio + 0.019);
 
-  sva::ForceVecd left_wrench = robot().frame("LeftHand").wrench();
+  sva::ForceVecd left_wrench = robot().frame(leftHandName_).wrench();
   filter_left_hand_wrench_.update(left_wrench);
   Eigen::Vector3d left_pos;
   Eigen::Vector3d left_force;
@@ -79,18 +79,22 @@ void Walking_controller::getTransformations()
   // computeExternalContact("LeftHand",filter_left_hand_wrench_.eval(),left_pos,left_force,left_moment);
 
 
-  sva::ForceVecd right_wrench = robot().frame("RightHand").wrench();
+  sva::ForceVecd right_wrench = robot().frame(rightHandName_).wrench();
   filter_right_hand_wrench_.update(right_wrench);
   Eigen::Vector3d right_pos;
   Eigen::Vector3d right_force;
   Eigen::Vector3d right_moment;
   // computeExternalContact("RightHand",filter_right_hand_wrench_.eval(),right_pos,right_force,right_moment);
 
-  Eigen::Vector3d ext_wrench_gain_v =
-      config()("stabilizer")("robot")(robot().name())("stabilizer")("external_wrench")("ext_wrench_gain");
-  sva::MotionVecd ext_wrench_gain{ext_wrench_gain_v, ext_wrench_gain_v};
-  StabTask->setExternalWrenches({"LeftHand", "RightHand"}, {filter_left_hand_wrench_.eval(), filter_right_hand_wrench_.eval()},
-                                {ext_wrench_gain, ext_wrench_gain});
+  // if(config()("stabilizer")("robot")(robot().name())("stabilizer").has("external_wrench"))
+  // {
+  //     Eigen::Vector3d ext_wrench_gain_v = config()("stabilizer")("robot")(robot().name())("stabilizer")("external_wrench")("ext_wrench_gain");
+  //     sva::MotionVecd ext_wrench_gain{ext_wrench_gain_v, ext_wrench_gain_v};
+  //     StabTask->setExternalWrenches({leftHandName_, rightHandName_}, {filter_left_hand_wrench_.eval(), filter_right_hand_wrench_.eval()},
+  //                                   {ext_wrench_gain, ext_wrench_gain});
+  // }
+
+
 
 
 }

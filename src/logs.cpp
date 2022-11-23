@@ -7,6 +7,7 @@ void Walking_controller::AddToLog()
     return compute_momentum_contact_point().couple() / (robot().mass() * controller_config_.Stab_config.comHeight);
   });
   logger().addLogEntry("Kinematic LeftFoot ratio", [this]() -> double { return LeftFootRatio; });
+  logger().addLogEntry("RealRobotCoM", [this]() -> Eigen::Vector3d { return StabTask->measuredCoM(); });
   logger().addLogEntry("SwingFoot Vel", [this]() -> const Eigen::Vector3d & { return SwingFootVel; });
   logger().addLogEntry("SwingFoot Accel", [this]() -> const Eigen::Vector3d & { return SwingFootAcc; });
   logger().addLogEntry("foot_wrench_LeftFoot",
@@ -44,21 +45,21 @@ void Walking_controller::AddToLog()
   logger().addLogEntry("ISMPC_State_CoM", [this]() -> const Eigen::Vector3d {
     if(MPC_thread_on)
     {
-      return mpc_state_.Get_PlannedFootstep(0).rotation() * mpc_state_.getPck();
+      return mpc_state_.getPck();
     }
     return Eigen::Vector3d::Zero();
   });
   logger().addLogEntry("ISMPC_State_CoMd", [this]() -> const Eigen::Vector3d {
     if(MPC_thread_on)
     {
-      return mpc_state_.Get_PlannedFootstep(0).rotation() * mpc_state_.getVck();
+      return mpc_state_.getVck();
     }
     return Eigen::Vector3d::Zero();
   });
   logger().addLogEntry("ISMPC_State_ZMP", [this]() -> const Eigen::Vector3d {
     if(MPC_thread_on)
     {
-      return mpc_state_.Get_PlannedFootstep(0).rotation() * mpc_state_.getPzk();
+      return mpc_state_.getPzk();
     }
     return Eigen::Vector3d::Zero();
   });
@@ -71,7 +72,7 @@ void Walking_controller::AddToLog()
   logger().addLogEntry("ISMPC_State_DCM", [this]() -> Eigen::Vector3d {
     if(MPC_thread_on)
     {
-      return mpc_state_.Get_PlannedFootstep(0).rotation() * (mpc_state_.Pck + mpc_state_.getVck() / eta());
+      return  (mpc_state_.Pck + mpc_state_.getVck() / eta());
     }
     return Eigen::Vector3d::Zero();
   });
