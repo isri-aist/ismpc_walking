@@ -54,6 +54,8 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, c
 
   MPCSolver = ISMPC_Solver(dt, controller_config_.delta, controller_config_.Tp, controller_config_.Tc);
 
+  StepRecoveryCheck = ISMPC_Solver(dt, controller_config_.delta, controller_config_.Tp, controller_config_.Tc);
+
   Configure(controller_config_);
   Configure(config);
 
@@ -292,6 +294,9 @@ void Walking_controller::ComputeWalkingTrajectory()
     mpc_thread_state.stab_error = MPCSolver.stability_error();
     mpc_thread_state.Pu_max = MPCSolver.Puk_max().segment(0, 2);
     mpc_thread_state.Pu_min = MPCSolver.Puk_min().segment(0, 2);
+    mpc_thread_state.mpc_u_ = MPCSolver.ZMP_vel();
+    mpc_thread_state.initial_zmp_ = MPCSolver.Initial_ZMP();
+    mpc_thread_state.stop = MPCSolver.stop();
 
     kfoot = 0;
     NewThreadState = true;
@@ -346,6 +351,25 @@ void Walking_controller::UpdatePlanner_input()
   Pf_m1.z() = SupportFootPose.z();
   mpc_state_.input_P_fm1 = Pf_m1;
   mpc_state_.stop = !Robot_Walking;
+}
+
+void Walking_controller::CheckStepRecovery()
+{
+  if(MPC_thread_ready)
+  {
+
+    if(StabTask->measuredDCM().x() > MPCSolver.Puk_max().x() || StabTask->measuredDCM().x() < MPCSolver.Puk_min().x() ||
+       StabTask->measuredDCM().y() > MPCSolver.Puk_max().y() || StabTask->measuredDCM().y() < MPCSolver.Puk_min().y()) 
+    {
+      mc_rtc::log::warning("Can't Stop, stepping");
+      mc_rtc::log::info("Pu {} ; Pu max {}",StabTask->measuredDCM(),MPCSolver.Puk_max());
+      mc_rtc::log::info("Pu {} ; Pu min {}",StabTask->measuredDCM(),MPCSolver.Puk_min());      
+      
+      N_Steps_Desired = 1;
+      T_Steps = 0.8;
+      Stop = false;
+    }
+  }
 }
 
 bool Walking_controller::run()
@@ -403,6 +427,10 @@ bool Walking_controller::run()
     t_stop = (count - count_stop) * controller_timestep;
     if(t_stop > 1 * controller_config_.delta)
     {
+      if(UseRealRobot)
+      {
+        CheckStepRecovery();
+      }
       compute_trajectory_once.notify_all();
       count_stop = count - 1;
     }
@@ -454,6 +482,8 @@ void Walking_controller::MoveCoM()
   Eigen::Vector3d Pcom(mpc_state_.Get_CoM_planarTarget(mpc_state_.Index));
   Pcom.z() = controller_config_.Stab_config.comHeight + 0 * X_0_support.translation().z();
   zmpTarget = mpc_state_.Get_ZMP_planarTarget(mpc_state_.Index);
+  zmpTarget = mpc_state_.get_u(0) + mpc_state_.initial_zmp_;
+  zmpTarget.z() = 0;
 
   Eigen::Vector3d Vc(mpc_state_.Get_CoMVel_planarTarget(mpc_state_.Index));
 
@@ -463,6 +493,7 @@ void Walking_controller::MoveCoM()
   double diffV_in = std::abs((Vc - robot_vc).y());
 
   Eigen::Vector3d Ac = std::pow(eta(), 2) * (Pcom - zmpTarget);
+  target_force_ = robot().mass() * (Ac - mc_rtc::constants::gravity);
 
   Ac.z() = 0;
   dcmTarget = Pcom + Vc / eta();
@@ -518,12 +549,12 @@ void Walking_controller::UpdateInitialVectors()
 
   }
 
-  if(mpc_state_.X_MPC.size() != 0)// && !UseRealRobot)
+  if(mpc_state_.X_MPC.size() != 0 && !UseRealRobot)
   {
 
     mpc_state_.Pzk = mpc_state_.Get_ZMP_planarTarget(mpc_state_.Index);
   }
-  else // if(!UseRealRobot)
+  else if(!UseRealRobot)
   {
     mpc_state_.Pzk = mpc_state_.Pck;
   }

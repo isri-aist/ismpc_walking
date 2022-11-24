@@ -42,6 +42,12 @@ void Walking_controller::AddToLog()
   logger().addLogEntry("ISMPC_t", [this]() -> const double & { return t; });
   logger().addLogEntry("ISMPC_stab-error", [this]() -> const double { return this->mpc_state_.stab_error; });
   logger().addLogEntry("ISMPC_process-time", [this]() -> const double { return this->mpc_thread_process_time; });
+
+  logger().addLogEntry("ISMPC_TargetForce", [this]() -> const Eigen::Vector3d {
+
+    return target_force_;
+  });
+
   logger().addLogEntry("ISMPC_State_CoM", [this]() -> const Eigen::Vector3d {
     if(MPC_thread_on)
     {
@@ -63,6 +69,12 @@ void Walking_controller::AddToLog()
     }
     return Eigen::Vector3d::Zero();
   });
+  logger().addLogEntry("ISMPC_Target_ZMP", [this]() -> const Eigen::Vector3d {
+    if(MPC_thread_on)
+    {
+      return mpc_state_.Get_ZMP_planarTarget(mpc_state_.Index);
+    }
+  });
   // logger().addLogEntry("ISMPC_State_ZMP_kinmes", [this]() -> const Eigen::Vector3d {
 
   //   return Eigen::Vector3d{0,0,1}.cross( robot().com().cross(robot().mass()*mc_rtc::constants::gravity) ) /
@@ -75,6 +87,13 @@ void Walking_controller::AddToLog()
       return  (mpc_state_.Pck + mpc_state_.getVck() / eta());
     }
     return Eigen::Vector3d::Zero();
+  });
+  logger().addLogEntry("ISMPC_lambda", [this]() -> double {
+    if(MPC_thread_on)
+    {
+      return  MPCSolver.get_lambda();
+    }
+    return 0;
   });
   logger().addLogEntry("ISMPC_Feasibility_min", [this]() -> const Eigen::Vector2d & { return mpc_state_.Pu_min; });
   logger().addLogEntry("ISMPC_Feasibility_max", [this]() -> const Eigen::Vector2d & { return mpc_state_.Pu_max; });

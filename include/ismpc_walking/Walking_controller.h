@@ -69,6 +69,7 @@ public:
     controller_config_.use_stability_task = config("ismpc")("use_stability_task");
     controller_config_.Beta_stab = config("ismpc")("beta_stab");
     controller_config_.Beta_traj = config("ismpc")("beta_traj");
+    controller_config_.lambda_ = config("ismpc")("lambda");
     //controller_config_.MPC_ZMP_cstr_square_offset_sg_supp = config("ismpc")("offset_sg_supp");
     controller_config_.MPC_ZMP_ref_offset_sg_supp = config("ismpc")("zmp_ref_offset");
     controller_config_.MPC_ZMP_Constraint_size_sg_supp = config("ismpc")("zmp_cstr_square_sg_supp");
@@ -85,6 +86,7 @@ public:
     controller_config_.SwingFootWeight = config("tasks")("swingfoot_weight");
     controller_config_.SwingFootStiffness_Dim = config("tasks")("swingfoot_dimstiffness");
     controller_config_.SwingFootWeight_Dim = config("tasks")("swingfoot_dimweight");
+
 
     
 
@@ -217,6 +219,8 @@ protected:
    */
 
   void UpdatePlanner_input();
+
+  void CheckStepRecovery();
 
   void updateTasks();
 
@@ -359,6 +363,8 @@ private:
   double K_feedback = 1;
 
   StabilizerState stabilizer_state_ = StabilizerState::None;
+
+  Eigen::Vector3d target_force_ = Eigen::Vector3d::Zero();
   
 
   double maxStiffTimeThreshold_ = 3; // Time after which hand task gain reach max [s]
@@ -409,6 +415,7 @@ private:
   std::string swingFootName = "LeftFootCenter";
 
   ISMPC_Solver MPCSolver;
+  ISMPC_Solver StepRecoveryCheck;
   FootTrajectory SwingFootTrajectory;
 
   mc_filter::LowPass<sva::ForceVecd> filter_left_hand_wrench_;

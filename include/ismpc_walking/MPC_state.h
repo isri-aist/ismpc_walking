@@ -103,6 +103,13 @@ struct MPC_state
     return Vck;
   }
 
+
+  Eigen::Vector3d get_u(int indx)
+  {
+    double horizon_size = static_cast<double>(mpc_u_.size()) / 2;
+    return Eigen::Vector3d{mpc_u_[indx] , mpc_u_[indx + static_cast<int>(horizon_size)],0.};
+  }
+
   std::vector<Eigen::Vector3d>
       X_MPC; // Contain 3d vectors that represents in that order the CoM the CoMd and the ZMP for each timestep
   std::vector<Eigen::Vector3d>
@@ -120,12 +127,15 @@ struct MPC_state
   Eigen::Vector2d Pu_max;
   int Index = 0;
 
+  Eigen::Vector3d initial_zmp_ = Eigen::Vector3d::Zero();
+
   double t_k = 0;
   Eigen::Vector3d Pck;
   Eigen::Vector3d Vck;
   Eigen::Vector3d Pzk;
   Eigen::Vector3d Pu;
   Eigen::Vector3d w; // Perturbation
+  Eigen::VectorXd mpc_u_;
   std::vector<sva::MotionVecd> input_v_;
   std::vector<sva::PTransformd> input_steps_;
   std::vector<sva::PTransformd> planned_steps_;

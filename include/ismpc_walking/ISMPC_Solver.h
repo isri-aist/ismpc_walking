@@ -271,7 +271,7 @@ public:
    * @tparam t_k, time of the computation
    * @tparam Tds,  double support duration
    */
-  void GetWalkingParameters(double t_k, double Tds, bool stop);
+  bool GetWalkingParameters(double t_k, double Tds, bool stop);
 
   /**
    * @brief Set The constraints region for the ZMP (during each delta time) and the footsteps in the robot frame
@@ -413,7 +413,22 @@ public:
 
   const Eigen::VectorXd & ZMP_vel() const noexcept
   {
-    return m_ZMP_vel;
+    return m_ZMP_u;
+  }
+
+  const Eigen::Vector3d & Initial_ZMP() const noexcept
+  {
+    return P_z_k;
+  }
+
+  const double get_lambda()
+  {
+    return m_lambda;
+  }
+
+  void set_lambda(const double in)
+  {
+    m_lambda = in;
   }
 
   const std::vector<Eigen::Vector3d> & get_polynome_support()
@@ -461,6 +476,16 @@ public:
     return All_poly;
   }
 
+  void Static_ZMP_Constraints();
+
+  void Compute_Stability_Range();
+
+  bool stop()
+  {
+    return m_stop;
+  }
+  bool ComputeTrajectory = true;
+
 private:
   /**
    * ZMP Trajectory constraints :
@@ -472,7 +497,7 @@ private:
    */
   void ZMP_Constraints();
 
-  void Static_ZMP_Constraints();
+  
 
   void FootSteps_Constraints();
 
@@ -481,12 +506,14 @@ private:
    */
   void Stability_Constraints();
 
-  void Compute_Stability_Range();
+  
 
   /**
    * Integrate The ZMP velocity to compute the CoM, CoMd and ZMP trajectory
    */
-  void IntegrateZMPVel();
+  void Integrate();
+
+  void Compute_Integration_Vector(int i);
 
   /**
    * Generate a ZMP trajectory that is the middle point of the zmp square constraints between the preview and control
@@ -507,7 +534,7 @@ private:
 
   Eigen::Matrix3d R_support_0 = Eigen::Matrix3d::Identity();
   Eigen::Matrix3d R_0_support = Eigen::Matrix3d::Identity();
-  Eigen::VectorXd m_ZMP_vel; // Computed ZMP velocity in world frame
+  Eigen::VectorXd m_ZMP_u; // Computed ZMP velocity in world frame
   std::vector<double> m_timestamp; // Step TimesStamp Computed at the footStep Generation
 
   sva::PTransformd X_0_support_foot;
@@ -534,6 +561,7 @@ private:
   bool Use_Stability_Task = false;
   bool Allow_None = true;
   bool InStabilityRange = false;
+  bool m_stop = true;
 
   /**
    *Only during the first double support phase : If enabled, the admissible region is a sliding square,
@@ -570,6 +598,7 @@ private:
   double m_Beta = 1e1;
   double m_Beta_stab = 1e5;
   double m_Beta_traj = 0.;
+  double m_lambda = 100;
   int j_Max_C = 0; // Number of footsteps in the Control Horizon
   int j_f; // Index of the actual support foot
   int j_fm1; // Index of the previous support foot

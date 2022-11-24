@@ -26,6 +26,7 @@ struct ControllerConfiguration
   double Beta = 1e4; // 1e4;
   double Beta_stab = 1e7;
   double Beta_traj = 0.;
+  double lambda_ = 100.;
   Eigen::Vector2d Beta_range{1e10, 1e2};
   bool sliding_zmp_cstr_region = false;
   bool use_stability_task = false;

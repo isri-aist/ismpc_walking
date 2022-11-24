@@ -189,6 +189,8 @@ void Walking_controller::addToGUI()
           }),
       mc_rtc::gui::NumberInput(
           "K feedback", [this]() -> double { return K_feedback; }, [this](const double & n) { K_feedback = n; }),
+      mc_rtc::gui::NumberInput(
+          "lambda", [this]() -> double { return MPCSolver.get_lambda(); }, [this](const double n) { MPCSolver.set_lambda(n); }),
       mc_rtc::gui::Checkbox(
           "MPC state feedback", [this]() { return UseMPCState; },
           [this]() {
