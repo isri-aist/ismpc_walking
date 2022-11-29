@@ -115,6 +115,7 @@ struct SupportPolygon
 {
 
 public:
+  SupportPolygon() = default;
   SupportPolygon(const Rectangle Rect1, const Rectangle Rect2)
   {
     _Rectangles = {Rect1, Rect2};
@@ -124,6 +125,12 @@ public:
   {
     _Rectangles = {Rect1};
     Compute_polygone();
+  }
+  SupportPolygon(const Eigen::MatrixX2d normals, Eigen::VectorXd offsets)
+  {
+    SupportPolygone_Normals = normals;
+    Offset = offsets;
+    cstr_to_polygone();
   }
 
   ~SupportPolygon()
@@ -151,6 +158,17 @@ public:
     return Offset;
   }
 
+  Eigen::Vector3d get_center()
+  {
+    Eigen::Vector3d center = Eigen::Vector3d::Zero();
+    double n = static_cast<double>(_Rectangles.size());
+    for (auto & r : _Rectangles)
+    {
+      center += (1/n) * r.get_center();
+    }
+    return center;
+  }
+
   Rectangle & get_Rectangle(int indx)
   {
     if(indx < _Rectangles.size() - 1)
@@ -166,7 +184,6 @@ public:
 private:
   void Compute_polygone()
   {
-
     if(_Rectangles.size() > 1)
     {
       // for (int r = 0 ; r < _Rectangles.size() ; r++)
@@ -206,6 +223,49 @@ private:
       Offset(c) = (R_Vertices_0.transpose() * SupportPolygone_Edges_Center.block(c, 0, 1, 2).transpose())(0);
     }
   }
+  
+  void cstr_to_polygone()
+  {
+
+    std::vector<int> vertices_indx;
+    for(int i = 0 ; i < SupportPolygone_Normals.rows() ; i++)
+    {
+      int end_indx = (i + 1) % SupportPolygone_Normals.rows();
+      Eigen::Vector2d ni = SupportPolygone_Normals.block(i,0,1,2).normalized();
+      Eigen::Vector2d nip1 = SupportPolygone_Normals.block(end_indx,0,1,2).normalized();
+      // mc_rtc::log::info("normal {}\n{}\nnext_normal{}\ndot prod {}",i,ni,nip1,ni.transpose() * nip1);
+      if( std::abs( ni.transpose() * nip1 - 1) > 1e-4  )
+      {
+
+        vertices_indx.push_back(i);
+        // mc_rtc::log::info("selected");
+      }
+    }
+    // mc_rtc::log::info("corner {} selected {}",SupportPolygone_Normals.rows(),normals.size());
+    for(int i = 0 ; i < vertices_indx.size() ; i++)
+    {
+      int start_indx = vertices_indx[i];
+      int end_indx = vertices_indx[(i + 1) % vertices_indx.size()];
+      Eigen::Matrix2d R = Eigen::Matrix2d::Zero();
+      Eigen::Vector2d o = Eigen::Vector2d::Zero(); 
+      R.block(0,0,1,2) = SupportPolygone_Normals.block(start_indx,0,1,2);
+      R.block(1,0,1,2) = SupportPolygone_Normals.block(end_indx,0,1,2);
+      o.x() = Offset[start_indx];
+      o.y() = Offset[end_indx];
+      if(R.determinant() != 0)
+      {
+        Eigen::Vector2d p = R.inverse() * o;
+        // mc_rtc::log::info("start {} ; end {} point {}",i,end_indx,p);
+        // mc_rtc::log::info("R {}\no {}",R,o);
+  
+        SupportPolygone_Corners.push_back(Eigen::Vector3d{p.x(),p.y(),0});
+      }
+      
+      
+    
+    }
+  }
+
   Eigen::Vector3d vertical_vec = Eigen::Vector3d{0, 0, 1};
   std::vector<Rectangle> _Rectangles;
   std::vector<Eigen::Vector3d> _corners;
