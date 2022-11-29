@@ -93,6 +93,15 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, c
   swingFootName = leftFootName_;
   supportFootName = rightFootName_;
 
+  MomentumTask =
+      std::make_shared<mc_tasks::MomentumTask>(robots(),robot().robotIndex(),10,10);
+   
+  
+  if(rConfig.has("momemtum_task_joints"))
+  {
+    MomentumTask->selectActiveJoints(solver(),rConfig("momemtum_task_joints"));
+  }
+
   StabTask = std::make_shared<mc_tasks::lipm_stabilizer::StabilizerTask>(solver().robots(), solver().realRobots(),
                                                                          solver().robots().robotIndex(), solver().dt());
 
@@ -134,6 +143,7 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, c
   solver().addTask(StabTask);
   solver().addTask(leftSwingFootTask);
   solver().addTask(rightSwingFootTask);
+  // solver().addTask(MomentumTask);
   updateTasks();
 
   mc_rtc::log::success("ismpc_walking controller init done ");
@@ -540,6 +550,17 @@ void Walking_controller::MoveCoM()
   dcmTarget = Pcom + Vc / eta();
 
   StabTask->target(Pcom, Vc, Ac, zmpTarget);
+  sva::ForceVecd RealRobot_mom = rbd::computeCentroidalMomentum(realRobot().mb(), realRobot().mbc(), realRobot().com());
+  if(Robot_Walking)
+  {
+    MomentumTask->momentum(sva::ForceVecd(Eigen::Vector3d::Zero(),robot().mass() * Vc));
+  }
+  else
+  {
+    MomentumTask->momentum(sva::ForceVecd::Zero());
+  }
+  
+
 }
 
 void Walking_controller::UpdateInitialVectors()
