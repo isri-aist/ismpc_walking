@@ -1026,6 +1026,24 @@ bool ISMPC_Solver::GetWalkingParameters(double t_k, double Tds, bool stop)
 
   // mc_rtc::log::info("Pu min\n{}", P_u_k_min);
   // mc_rtc::log::info("Pu max\n{}", P_u_k_max);
+  int N = static_cast<int>(m_delta/m_delta_control);
+  Eigen::Vector3d X_0 = Eigen::Vector3d{P_c_k.x(), V_c_k.x(), P_z_k.x() - w_k.x()};
+  Eigen::Vector3d Y_0 = Eigen::Vector3d{P_c_k.y(), V_c_k.y(), P_z_k.y() - w_k.y()};
+  Eigen::MatrixXd M_comVel = Eigen::MatrixXd::Zero(2 * N , N_variable);
+  Eigen::MatrixXd M_comPos = Eigen::MatrixXd::Zero(2 * N , N_variable);
+  Eigen::VectorXd b_comVel = Eigen::VectorXd::Zero(M_comVel.rows());
+  Eigen::VectorXd b_comPos = Eigen::VectorXd::Zero(M_comPos.rows());
+
+  for (int i = 0 ; i < N ; i++)
+  {
+
+    Compute_Integration_Vector(i);
+    M_comPos(2 * i ,2 * i) = Integration_Vec(i) ;
+    M_comPos(2*i + 1,2*i + 1) = M_comPos(2 * i ,2 * i);
+    // b_comPos(2 * i) = b_zmp_traj(0) - (IntMatPow[i]* X_0)(0);
+    // b_comPos(2 * i + 1) = b_zmp_traj(1) - (IntMatPow[i]* Y_0)(0);
+  }
+
 
   Eigen::MatrixXd M_zmp = Eigen::MatrixXd::Zero(2*m_C, N_variable);
   Eigen::MatrixXd M_steps = Eigen::MatrixXd::Zero(2*j_Max_C, N_variable);
