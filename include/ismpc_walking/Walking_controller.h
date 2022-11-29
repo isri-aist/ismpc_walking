@@ -340,8 +340,9 @@ private:
   double y = 0.1;
   double z = 30; // Coordinate for a specified footstep position
 
-  bool UseRealRobot = false; // To use the real robots data
-  bool UseMPCState = true;
+  bool UseRealRobot = true; // To use the real robots data
+  bool UseMPCState = false;
+  bool UseStepRecovery = false;
   bool Stop = true; // If true, the robot is at stop or the robot is about to stop at next step;
   bool Robot_Walking = false; // If false, the robot is not moving;
   std::mutex compute_trajectory_once_mtx;
@@ -399,6 +400,7 @@ private:
   int Index = 0; // Index of the target CoM CoMd ZMP in the vector returned by the MPC
   bool Swing_Foot_Contact = true;
   bool DoubleSupport_state = true;
+  bool StepRecoveryState = false;
 
   
 
@@ -417,7 +419,6 @@ private:
   std::string swingFootName = "LeftFootCenter";
 
   ISMPC_Solver MPCSolver;
-  ISMPC_Solver StepRecoveryCheck;
   FootTrajectory SwingFootTrajectory;
 
   mc_filter::LowPass<sva::ForceVecd> filter_left_hand_wrench_;
