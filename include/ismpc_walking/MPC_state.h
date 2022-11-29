@@ -115,6 +115,7 @@ struct MPC_state
   std::vector<Eigen::Vector3d>
       Y_MPC; // Contain 3d vectors that represents in that order the CoM the CoMd and the ZMP for each timestep
   std::vector<Eigen::Vector3d> SupPolygon;
+  std::vector<Eigen::Vector3d> FeasibilityPolygon;
   Eigen::VectorXd Traj_ant;
   std::vector<Eigen::Vector3d> P_traj; // Vector containing the reference trajectory
   std::vector<int> TimeStampsIndex; // Index of the timing of each step
@@ -146,6 +147,7 @@ struct MPC_state
   Eigen::Vector3d SupportFootPose;
   sva::PTransformd X_0_SupportFoot;
   sva::PTransformd X_0_Initial_SwingFoot;
+  
   double tds = 0.25;
   double input_tds = 0.25;
   bool stop = true;

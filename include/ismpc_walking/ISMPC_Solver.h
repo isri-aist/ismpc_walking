@@ -490,6 +490,28 @@ public:
   {
     m_lambda = in;
   }
+  std::vector<Eigen::Vector3d> feasibility_region()
+  {
+    if(m_stop)
+    {
+      return m_feasibility_standing_region.Get_Polygone_Corners();
+    }
+    else
+    {
+      Eigen::Vector3d p0 = R_support_0 * Puk_min();
+      Eigen::Vector3d p2 = R_support_0 * Puk_max();
+      Eigen::Vector3d p1 =
+          p0 + R_support_0 * Eigen::Vector3d{Puk_max().x() - Puk_min().x(), 0, 0};
+      Eigen::Vector3d p3 =
+          p0 + R_support_0 * Eigen::Vector3d{0, Puk_max().y() - Puk_min().y(), 0};
+      return {p0, p1, p2, p3};
+    }
+  } 
+
+  SupportPolygon & standing_feasibility_polygone()
+  {
+    return m_feasibility_standing_region;
+  }
 
   const std::vector<Eigen::Vector3d> & get_polynome_support()
   {
@@ -536,9 +558,7 @@ public:
     return All_poly;
   }
 
-  void Static_ZMP_Constraints();
 
-  void Compute_Stability_Range();
 
   bool stop()
   {
@@ -557,7 +577,11 @@ private:
    */
   void ZMP_Constraints();
 
-  
+  void Static_ZMP_Constraints();
+
+  void Compute_Stability_Range();
+
+  void Compute_Standing_Stability_Range();
 
   void FootSteps_Constraints();
 
@@ -691,6 +715,9 @@ private:
   int count_Dstep; // Number bounded between 1 and m_D describing the position of the zone during the doubleStep timing
 
   std::vector<SupportPolygon> zmp_cstr_polygons;
+
+  SupportPolygon m_double_support_polygon;
+  SupportPolygon m_feasibility_standing_region;
 
   std::vector<Eigen::Vector3d> SuppPolyCorners;
 
