@@ -187,8 +187,11 @@ void Walking_controller::addToGUI()
             if(UseMPCState) UseMPCState = false;
             compute_trajectory_once.notify_all();
           }),
-      mc_rtc::gui::NumberInput(
-          "K feedback", [this]() -> double { return K_feedback; }, [this](const double & n) { K_feedback = n; }),
+      mc_rtc::gui::Checkbox(
+          "Robot Step Recovery", [this]() { return UseStepRecovery; },
+          [this]() {
+            UseStepRecovery = !UseStepRecovery;
+          }),
       mc_rtc::gui::NumberInput(
           "lambda", [this]() -> double { return MPCSolver.get_lambda(); }, [this](const double n) { MPCSolver.set_lambda(n); }),
       mc_rtc::gui::Checkbox(
@@ -201,7 +204,7 @@ void Walking_controller::addToGUI()
       mc_rtc::gui::Checkbox(
           "Distrubance", [this]() { return Use_w; }, [this]() { Use_w = !Use_w; }),
       mc_rtc::gui::ArrayInput(
-          "Input Disturbance", [this]() { return mpc_state_.w; }, [this](const Eigen::Vector3d & in) { w_ = in; }),
+          "Input Disturbance", [this]() { return w_; }, [this](const Eigen::Vector3d & in) { w_ = in; }),
       mc_rtc::gui::Checkbox(
           "Force Contact Safety", [this]() { return force_contact_safety_; },
           [this]() { force_contact_safety_ = !force_contact_safety_; }),
@@ -220,7 +223,7 @@ void Walking_controller::addToGUI()
           "Reference velocity", {"x", "y", "omega"}, [this]() -> const Eigen::Vector3d & { return reference_velocity; },
           [this](const Eigen::Vector3d & vel) { reference_velocity = vel; }),
       mc_rtc::gui::NumberInput(
-          "Ts", [this]() -> double { return ts(); }, [this](const double & t) { ts(t); }),
+          "Ts", [this]() -> double { return ts(); }, [this](const double & t) { T_Steps = t; }),
       mc_rtc::gui::NumberInput(
           "Steps", [this]() -> int { return N_Steps_Desired; }, [this](const double & n) { N_Steps_Desired = n; }),
 

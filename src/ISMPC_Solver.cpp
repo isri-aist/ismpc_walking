@@ -159,13 +159,14 @@ void ISMPC_Solver::Static_ZMP_Constraints()
   Rectangle Rect_j = Rectangle(X_0_support_foot, Eigen::Vector2d{m_dx, m_dy}, rect_offset_support);
 
   SupportPolygon SuppPoly = SupportPolygon(Rect_jm1, Rect_j);
+  m_double_support_polygon = SuppPoly;
 
   ZMP_ref_traj.clear();
   ZMP_max_ref_traj.clear();
   ZMP_min_ref_traj.clear();
   All_poly.clear();
 
-  Eigen::MatrixXd Delta; // Matrix to derive the ZMP position to ZMP velocity
+  Eigen::MatrixXd Delta; // Matrix to derive the ZMP position from u
   Delta = Eigen::MatrixXd::Identity(N_variable, N_variable);
 
   P_u_k_max = m_eta * m_delta * R_0_support * P_z_k;
@@ -196,8 +197,8 @@ void ISMPC_Solver::Static_ZMP_Constraints()
 
     zmp_cstr_polygons.push_back(SuppPoly);
 
-    ZMP_max_ref_traj.push_back(R_0_support * ZMP_rect.get_center() + Eigen::Vector3d{m_dx / 2, m_dy / 2, 0});
-    ZMP_min_ref_traj.push_back(R_0_support * ZMP_rect.get_center() - Eigen::Vector3d{m_dx / 2, m_dy / 2, 0});
+    ZMP_max_ref_traj.push_back(R_0_support * SuppPoly.get_center() + Eigen::Vector3d{m_dx / 2, m_dy / 2, 0});
+    ZMP_min_ref_traj.push_back(R_0_support * SuppPoly.get_center() - Eigen::Vector3d{m_dx / 2, m_dy / 2, 0});
 
     if(i == 0)
     {
@@ -347,8 +348,6 @@ void ISMPC_Solver::ZMP_Constraints()
       X_0_step_jm1 = X_0_step_j;
       X_0_step_j = input_steps_[j_f - 1];
 
-    
-      
       rect_offset_swing.y() *= -1;
       rect_offset_support.y() *= -1;
       zmp_ref_offset_sg.y() *= -1;
@@ -597,7 +596,7 @@ void ISMPC_Solver::ZMP_Constraints()
 
   b_zmp_traj = Eigen::Map<Eigen::VectorXd, Eigen::Unaligned>(ZMP_ref_traj.data(), ZMP_ref_traj.size());
   M_zmp_traj = Eigen::MatrixXd::Zero(b_zmp_traj.rows(), N_variable);
-  M_zmp_traj.block(0, 0, b_zmp_traj.rows(), b_zmp_traj.rows()) = Delta.block(0, 0, b_zmp_traj.rows(), b_zmp_traj.rows());
+  M_zmp_traj.block(0, 0, b_zmp_traj.rows(), N_variable) = Delta.block(0, 0, b_zmp_traj.rows(), N_variable);
 
   // time_span = std::chrono::high_resolution_clock::now() - t_clock;
   // mc_rtc::log::info("[ZMP cstr] matrix gen time {} ms", time_span.count());

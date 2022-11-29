@@ -252,6 +252,7 @@ void Walking_controller::ComputeWalkingTrajectory()
   }
   int Steps = N_Steps;
   int Steps_Desired = N_Steps_Desired;
+
   if(Stop && !Swing_Foot_Contact)
   {
     Steps_Desired = Steps + 1;
@@ -273,7 +274,7 @@ void Walking_controller::ComputeWalkingTrajectory()
     // MPCSolver.Disturbance( w_.norm()*(
     // (robot().forceSensor("LeftHandForceSensor").worldWrench(robot()).force()/robot().mass())/std::pow(eta(),2) ) );
     // mc_rtc::log::info("Disturbance {}",Eigen::Vector3d{0,15.,0}/robot().mass());
-    MPCSolver.Disturbance(mpc_state_.w);
+    MPCSolver.Disturbance(w_);
   }
   else
   {
@@ -493,6 +494,7 @@ bool Walking_controller::run()
 
     Robot_Walking = false;
   }
+ 
 
   if(!Swing_Foot_Contact && stabilizer_state_ != StabilizerState::SingleSupport)
   {
@@ -513,6 +515,7 @@ bool Walking_controller::run()
     mc_rtc::log::info("configure std");
   }
   controller_config_.Stab_config = StabTask->config();
+  
   count += 1;
 
   bool ret = mc_control::fsm::Controller::run();
@@ -592,19 +595,17 @@ void Walking_controller::UpdateInitialVectors()
     double K = 1;
     // Pck = Pck * (1 - K) + K * computeInSupportFootFlat(realRobot().com());
     // Vck = Vck * (1 - K) + K * computeVelocityInSupportFoot(realRobot().comVelocity());
-    K = K_feedback;
     if(mpc_state_.X_MPC.size() != 0)
     {
-      mpc_state_.Pzk = 
-          mpc_state_.Get_ZMP_planarTarget(mpc_state_.Index) * (1 - K) + K * StabTask->measuredZMP();
+      mpc_state_.Pzk = StabTask->measuredZMP();
     }
     else
     {
       mpc_state_.Pzk = StabTask->measuredZMP();
     }
     
-    mpc_state_.Pck = robot().com() * (1 - K) + K * StabTask->measuredCoM();
-    mpc_state_.Vck = robot().comVelocity() * (1 - K) + K * StabTask->measuredCoMd();
+    mpc_state_.Pck = StabTask->measuredCoM();
+    mpc_state_.Vck = realRobot().comVelocity();
 
     mpc_state_.Pu = StabTask->measuredDCM();
     
@@ -623,7 +624,8 @@ void Walking_controller::UpdateInitialVectors()
 
   // mpc_state_.w = - (StabTask->measuredDCM() - mpc_state_.Pu) + - (StabTask->measuredZMP() - mpc_state_.Pzk);
   filter_gamma_.update(StabTask->comOffsetMeasured());
-  mpc_state_.w = filter_gamma_.eval();
+  w_ = filter_gamma_.eval();
+  // mpc_state_.w = filter_gamma_.eval();
 
   mpc_state_.Pck.z() = controller_config_.Stab_config.comHeight;
   mpc_state_.Vck.z() = 0;
