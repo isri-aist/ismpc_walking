@@ -238,13 +238,9 @@ void Walking_controller::addToGUI()
       mc_rtc::gui::Polygon(
           "Feasibility Region", mc_rtc::gui::Color(1., 0., 1.),
           [this]() -> std::vector<Eigen::Vector3d> {
-            Eigen::Vector3d p0 = R_support_0 * this->MPCSolver.Puk_min();
-            Eigen::Vector3d p2 = R_support_0 * this->MPCSolver.Puk_max();
-            Eigen::Vector3d p1 =
-                p0 + R_support_0 * Eigen::Vector3d{this->MPCSolver.Puk_max().x() - this->MPCSolver.Puk_min().x(), 0, 0};
-            Eigen::Vector3d p3 =
-                p0 + R_support_0 * Eigen::Vector3d{0, this->MPCSolver.Puk_max().y() - this->MPCSolver.Puk_min().y(), 0};
-            return {p0, p1, p2, p3};
+
+              return mpc_state_.FeasibilityPolygon;
+            
           })
       // mc_rtc::gui::Point3D("Pu", mc_rtc::gui::PointConfig(mc_rtc::gui::Color(1, 0.5, 0.25)),
       //                      [this]() {
