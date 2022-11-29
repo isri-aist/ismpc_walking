@@ -54,8 +54,6 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, c
 
   MPCSolver = ISMPC_Solver(dt, controller_config_.delta, controller_config_.Tp, controller_config_.Tc);
 
-  StepRecoveryCheck = ISMPC_Solver(dt, controller_config_.delta, controller_config_.Tp, controller_config_.Tc);
-
   Configure(controller_config_);
   Configure(config);
 
@@ -297,9 +295,10 @@ void Walking_controller::ComputeWalkingTrajectory()
     mpc_thread_state.mpc_u_ = MPCSolver.ZMP_vel();
     mpc_thread_state.initial_zmp_ = MPCSolver.Initial_ZMP();
     mpc_thread_state.stop = MPCSolver.stop();
-
+    mpc_thread_state.FeasibilityPolygon = MPCSolver.feasibility_region();
     kfoot = 0;
     NewThreadState = true;
+    
   }
   else
   {
@@ -313,21 +312,30 @@ void Walking_controller::ComputeWalkingTrajectory()
 void Walking_controller::UpdatePlanner_input()
 {
   mpc_state_.input_v_.clear();
+  Eigen::Vector3d step_velocity = reference_velocity;
+  double step_time = T_Steps;
+     
+  if(StepRecoveryState)
+  {
+    step_velocity = Eigen::Vector3d{0,0,0};
+    step_time = 0.6;
+    
+  }
   if(supportFootName == leftFootName_)
   {
-    reference_velocity.y() = mc_filter::utils::clamp(reference_velocity.y(), -0.07, 0.0);
+    step_velocity.y() = mc_filter::utils::clamp(step_velocity.y(), -0.07, 0.0);
   }
   else
   {
-    reference_velocity.y() = mc_filter::utils::clamp(reference_velocity.y(), 0.0, 0.07);
+    step_velocity.y() = mc_filter::utils::clamp(step_velocity.y(), 0.0, 0.07);
   }
   for(int k = 0; k < (int) 1  * std::round(controller_config_.Tp / controller_config_.delta); k++)
   {
-    mpc_state_.input_v_.push_back(sva::MotionVecd(Eigen::Vector3d{0, 0, reference_velocity.z()},
-                                                  Eigen::Vector3d{reference_velocity.x(), reference_velocity.y(), 0}));
+    mpc_state_.input_v_.push_back(sva::MotionVecd(Eigen::Vector3d{0, 0, step_velocity.z()},
+                                                  Eigen::Vector3d{step_velocity.x(), step_velocity.y(), 0}));
   }
 
-  mpc_state_.input_timesteps_ = {T_Steps, 2 * T_Steps};
+  mpc_state_.input_timesteps_ = {step_time, 2 * step_time};
   // mpc_state_.input_v_.clear();
   //mpc_state_.input_timesteps_.clear();
   mpc_state_.set_input_tds(input_tds);
@@ -357,17 +365,49 @@ void Walking_controller::CheckStepRecovery()
 {
   if(MPC_thread_ready)
   {
-
-    if(StabTask->measuredDCM().x() > MPCSolver.Puk_max().x() || StabTask->measuredDCM().x() < MPCSolver.Puk_min().x() ||
-       StabTask->measuredDCM().y() > MPCSolver.Puk_max().y() || StabTask->measuredDCM().y() < MPCSolver.Puk_min().y()) 
+    Eigen::MatrixX2d normals = MPCSolver.standing_feasibility_polygone().normals();
+    Eigen::VectorXd offset = MPCSolver.standing_feasibility_polygone().offsets();
+    Eigen::VectorXd stability_check = normals * StabTask->measuredDCM().segment(0,2) - offset;
+    bool ok = true;
+    for (int i = 0 ; i < stability_check.rows() ; i++ )
+    {
+      if(stability_check[i] > 1e-3)
+      {
+        ok = false;
+        mc_rtc::log::info("break on cstr {}\nstabi check\n{}",i,stability_check);
+        break;
+      }
+    }
+    if(!ok)
     {
       mc_rtc::log::warning("Can't Stop, stepping");
-      mc_rtc::log::info("Pu {} ; Pu max {}",StabTask->measuredDCM(),MPCSolver.Puk_max());
-      mc_rtc::log::info("Pu {} ; Pu min {}",StabTask->measuredDCM(),MPCSolver.Puk_min());      
-      
-      N_Steps_Desired = 1;
-      T_Steps = 0.8;
+      // mc_rtc::log::info("Pu {} ; Pu max {}",StabTask->measuredDCM(),MPCSolver.Puk_max());
+      // mc_rtc::log::info("Pu {} ; Pu min {}",StabTask->measuredDCM(),MPCSolver.Puk_min());      
+      N_Steps_Desired = 1;   
+   
+      sva::PTransformd ff = robot().posW();
+      if( (ff.rotation() * StabTask->measuredCoMd()).x() < 0 && !StepRecoveryState)
+      {
+        if( (ff.rotation() * (robot().frame(supportFootName).position().translation() - robot().frame(swingFootName).position().translation())).x() > 0)
+        {
+          SwitchFootSupport_manual();
+        }
+
+      }
+      if( (ff.rotation() * StabTask->measuredCoMd()).x() > 0 && !StepRecoveryState)
+      {
+        if( (ff.rotation() * (robot().frame(supportFootName).position().translation() - robot().frame(swingFootName).position().translation())).x() < 0)
+        {
+          SwitchFootSupport_manual();
+        }
+
+      }
+      StepRecoveryState = true;
       Stop = false;
+    }
+    else
+    {
+      StepRecoveryState = false;
     }
   }
 }
@@ -411,9 +451,10 @@ bool Walking_controller::run()
 
     if(t - t_k >= 1 * controller_config_.delta)
     {
-      t_k += controller_config_.delta;
+      t_k += controller_config_.delta; 
       compute_trajectory_once.notify_all();
     }
+    
     MoveFeet(t);
 
     Robot_Walking = true;
@@ -427,9 +468,9 @@ bool Walking_controller::run()
     t_stop = (count - count_stop) * controller_timestep;
     if(t_stop > 1 * controller_config_.delta)
     {
-      if(UseRealRobot)
+      if(UseRealRobot && MPCSolver.stop())
       {
-        CheckStepRecovery();
+        if(UseStepRecovery){CheckStepRecovery();}
       }
       compute_trajectory_once.notify_all();
       count_stop = count - 1;
