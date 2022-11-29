@@ -1,23 +1,6 @@
-#include "../include/FootTrajectory.h"
+#include "../include/ismpc_walking/FootTrajectory.h"
 
 FootTrajectory::FootTrajectory(){};
-
-void FootTrajectory::Init(double t,
-                          double t0,
-                          double tf,
-                          Eigen::Vector3d p0,
-                          Eigen::Vector3d pf,
-                          Eigen::Vector3d pt,
-                          Eigen::Vector3d v,
-                          Eigen::Vector3d a)
-{
-  m_t = t;
-  m_t0 = t0;
-  m_tf = tf;
-  m_p0 = p0;
-  m_pt = pt;
-  m_pf = pf;
-}
 
 // std::vector<Eigen::Vector3d> FootTrajectory::TrajGUI(){
 //   int N = 100;
@@ -44,30 +27,11 @@ void FootTrajectory::Init(double t,
 
 Eigen::VectorXd FootTrajectory::GetCoeffs(double t, double dur, Eigen::VectorXd boundaryConditions, bool IneqCstr_On)
 {
-  QPsuccess = false;
   Eigen::VectorXd Output(3);
 
-  int N = 10;
   int poly_dim = 6;
 
   Aeq = Eigen::MatrixXd::Zero(6, poly_dim);
-  m_Q = Eigen::MatrixXd::Identity(poly_dim, poly_dim);
-  m_p = Eigen::VectorXd::Zero(poly_dim);
-  Aineq = Eigen::MatrixXd::Zero(N, poly_dim);
-  bineq = Eigen::VectorXd::Zero(N);
-
-  if(IneqCstr_On)
-  {
-    for(int i = 0; i < N; i++)
-    {
-      for(int j = 0; j < poly_dim; j++)
-      {
-
-        double t0 = (t * (N - i) + i * dur) / N;
-        Aineq(i, j) = -pow(t0, poly_dim - 1 - j);
-      }
-    }
-  }
 
   // Aeq << 0, 0, 0, 0, 0, 0, 1,
   //        pow(dur, 6), pow(dur, 5), pow(dur, 4), pow(dur, 3), pow(dur, 2), pow(dur, 1), 1,
@@ -81,17 +45,6 @@ Eigen::VectorXd FootTrajectory::GetCoeffs(double t, double dur, Eigen::VectorXd 
       4 * 3 * pow(dur, 2), 3 * 2 * pow(dur, 1), 2, 0, 0;
 
   coeffs = Aeq.inverse() * boundaryConditions;
-
-  // beq = boundaryConditions;
-
-  // coeffs = solveQP();
-  QPsuccess = true;
-  if(!QPsuccess)
-  {
-    // mc_rtc::log::error("Swing traj failed");
-    // coeffs = PrevCoeffs;
-    QPsuccess = true;
-  }
 
   double polyInT(0);
   double polyDotInT(0);
@@ -122,8 +75,7 @@ std::vector<Eigen::Vector3d> FootTrajectory::getSwingFootTrajectory(const sva::P
 {
 
   t -= (t0);
-  // double zi = 0;
-  // double zf = stepHeight;
+
   double tinit = 0;
 
   std::vector<Eigen::Vector3d> Output;
@@ -131,10 +83,11 @@ std::vector<Eigen::Vector3d> FootTrajectory::getSwingFootTrajectory(const sva::P
   if(t < 0)
   {
     duration = dur;
+    prev_dur = dur;
     m_t = t;
     duration_Z = dur * 0.5;
-    zi = 0;
-    zf = stepHeight;
+
+    zf = stepHeight + X_0_StartPose.translation().z();
     Z_up = false;
 
     Eigen::MatrixXd R_0_swingFootStartPos = X_0_StartPose.rotation();
@@ -144,7 +97,7 @@ std::vector<Eigen::Vector3d> FootTrajectory::getSwingFootTrajectory(const sva::P
 
     swingFootPosition(0) = X_0_StartPose.translation().x();
     swingFootPosition(1) = X_0_StartPose.translation().y();
-    swingFootPosition(2) = 0;
+    swingFootPosition(2) = X_0_StartPose.translation().z();
     swingFootVelocity.setZero();
     swingFootAcc.setZero();
 
@@ -201,7 +154,8 @@ std::vector<Eigen::Vector3d> FootTrajectory::getSwingFootTrajectory(const sva::P
                                         (X_0_StepTarget.translation() - swingFootPosition_1)(1)}
                             .norm();
 
-    if((d_footpose > 1e-2 || std::abs(prev_dur - dur) > 0.1))
+    // std::cout << "ss d_dur" << std::abs(prev_dur - dur) << std::endl;
+    if((d_footpose > 1e-2 || std::abs(prev_dur - dur) > 0.05) && (dur > 0.2 && dur - t > 0.2))
     {
       New_traj = true;
     }
@@ -216,13 +170,13 @@ std::vector<Eigen::Vector3d> FootTrajectory::getSwingFootTrajectory(const sva::P
     {
 
       duration = dur - t;
-
+      prev_dur = dur;
       m_t = delta;
 
       if(!Z_up && dur * 0.5 - t > 0.1)
       {
         duration_Z = dur * 0.5 - t;
-        zf = stepHeight;
+        zf = stepHeight + X_0_StartPose.translation().z();
 
         pitch_f = 0;
       }
@@ -233,7 +187,7 @@ std::vector<Eigen::Vector3d> FootTrajectory::getSwingFootTrajectory(const sva::P
       if(Z_up || duration_Z <= 0.05)
       {
         duration_Z = dur - t;
-        zf = Z_contact_offset;
+        zf = z_offset;
         Z_up = true;
 
         pitch_f = 0;
@@ -256,6 +210,7 @@ std::vector<Eigen::Vector3d> FootTrajectory::getSwingFootTrajectory(const sva::P
 
       New_traj = false;
     }
+
     else
     {
       m_t += delta;
@@ -274,37 +229,21 @@ std::vector<Eigen::Vector3d> FootTrajectory::getSwingFootTrajectory(const sva::P
         swingFootOrientationAcc_0(2), 0;
 
     poly_X = GetCoeffs(m_t, duration, boundaryConditions_X, false);
-    if(!QPsuccess)
-    {
-      poly_X = prev_poly_X;
-      // m_Polynome_X = coeffs;
-    }
+
     prev_poly_X = poly_X;
 
     poly_Y = GetCoeffs(m_t, duration, boundaryConditions_Y, false);
-    if(!QPsuccess)
-    {
-      poly_Y = prev_poly_Y;
-      // m_Polynome_Y = coeffs;
-    }
+
     prev_poly_Y = poly_Y;
 
     poly_w = GetCoeffs(m_t, duration, boundaryConditions_w, false);
-    if(!QPsuccess)
-    {
-      poly_w = prev_poly_w;
-      // m_Polynome_W = coeffs;
-    }
+
     prev_poly_w = poly_w;
 
     boundaryConditions_Z << swingFootPosition_0(2), zf, swingFootVelocity_0(2), 0, swingFootAcc_0(2), 0;
 
     poly_Z = GetCoeffs(m_t, duration_Z, boundaryConditions_Z, true);
-    if(!QPsuccess)
-    {
-      poly_Z = prev_poly_Z;
-      // m_Polynome_Z = coeffs;
-    }
+
     prev_poly_Z = poly_Z;
 
     // boundaryConditions_pitch << swingFootOrientation_0(1) , pitch_f ,
@@ -343,6 +282,19 @@ std::vector<Eigen::Vector3d> FootTrajectory::getSwingFootTrajectory(const sva::P
     swingFootAcc(2) = poly_Z(2);
   }
 
+  if(std::abs((X_0_StartPose.translation() - X_0_StepTarget.translation()).x()) < 1e-2)
+  {
+    swingFootPosition.x() = X_0_StartPose.translation().x();
+    swingFootVelocity.x() = 0;
+    swingFootAcc.x() = 0;
+  }
+  if(std::abs((X_0_StartPose.translation() - X_0_StepTarget.translation()).y()) < 1e-2)
+  {
+    swingFootPosition.y() = X_0_StartPose.translation().y();
+    swingFootVelocity.y() = 0;
+    swingFootAcc.y() = 0;
+  }
+
   Output.push_back(swingFootPosition);
   Output.push_back(swingFootOrientation);
   Output.push_back(swingFootVelocity);
@@ -350,22 +302,5 @@ std::vector<Eigen::Vector3d> FootTrajectory::getSwingFootTrajectory(const sva::P
   Output.push_back(swingFootAcc);
   Output.push_back(swingFootOrientationAcc);
 
-  prev_dur = dur;
-
   return Output;
-}
-
-Eigen::VectorXd FootTrajectory::solveQP()
-{
-
-  Eigen::QuadProgDense QP;
-
-  int Nvar = m_Q.rows();
-  int NIneqConstr = Aineq.rows();
-  int NEqConstr = Aeq.rows();
-  QP.tolerance(1e-3);
-  QP.problem(Nvar, NEqConstr, NIneqConstr);
-  QPsuccess = QP.solve(m_Q, m_p, Aeq, beq, Aineq, bineq);
-
-  return QP.result();
 }

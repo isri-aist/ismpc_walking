@@ -1,33 +1,41 @@
 set(controller_SRC
   Walking_controller.cpp
-  FootStepGenerator.cpp
+  move_feet.cpp
+  robot_state.cpp
   FootTrajectory.cpp
   ISMPC_Solver.cpp
   GUI.cpp
-  joystick/joystick.cc
+  logs.cpp
+  
 )
 
 set(controller_HDR
-  ../include/Walking_controller.h
-  ../include/FootStepGenerator.h
-  ../include/FootTrajectory.h  
-  ../include/ISMPC_Solver.h
-  joystick/joystick.hh
-  ../include/ControllerConfiguration.h
-  ../include/MPC_state.h
+  ../include/ismpc_walking/Walking_controller.h
+  ../include/ismpc_walking/FootTrajectory.h  
+  ../include/ismpc_walking/ISMPC_Solver.h
+  ../include/ismpc_walking/ControllerConfiguration.h
+  ../include/ismpc_walking/MPC_state.h
 )
 
 set(CONTROLLER_NAME ismpc_walking)
 add_library(${CONTROLLER_NAME} SHARED ${controller_SRC} ${controller_HDR})
 
-target_include_directories(${CONTROLLER_NAME} PUBLIC ${PROJECT_SOURCE_DIR}/include)
-target_include_directories(${CONTROLLER_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(${CONTROLLER_NAME} PUBLIC mc_rtc::mc_control mc_rtc::mc_rtc_ros)
+target_include_directories(${CONTROLLER_NAME} PUBLIC $<INSTALL_INTERFACE:include> $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>)
+target_link_libraries(${CONTROLLER_NAME} PUBLIC mc_rtc::mc_control_fsm mc_rtc::mc_rtc_ros)
 
 install(TARGETS ${CONTROLLER_NAME} DESTINATION ${MC_RTC_LIBDIR})
 
-add_controller(Controller${CONTROLLER_NAME} lib.cpp "")
-set_target_properties(Controller${CONTROLLER_NAME} PROPERTIES COMPILE_FLAGS "-DWalking_controller_EXPORTS")
-target_link_libraries(Controller${CONTROLLER_NAME} PUBLIC ${CONTROLLER_NAME})
+add_controller(${CONTROLLER_NAME}_controller lib.cpp "")
+set_target_properties(${CONTROLLER_NAME}_controller PROPERTIES OUTPUT_NAME "${CONTROLLER_NAME}")
+target_link_libraries(${CONTROLLER_NAME}_controller PUBLIC ${CONTROLLER_NAME})
 
+install(TARGETS ${CONTROLLER_NAME}
+  EXPORT "${TARGETS_EXPORT_NAME}"
+  RUNTIME DESTINATION bin
+  LIBRARY DESTINATION lib
+  ARCHIVE DESTINATION lib)
 
+install(
+  DIRECTORY ${CMAKE_SOURCE_DIR}/include/ DESTINATION include)
+
+add_subdirectory(states)
