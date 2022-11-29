@@ -12,6 +12,7 @@
 #include <mc_solver/ConstraintSetLoader.h>
 #include <mc_tasks/AddRemoveContactTask.h>
 #include <mc_tasks/SurfaceTransformTask.h>
+#include <mc_tasks/MomentumTask.h>
 #include <mc_tasks/lipm_stabilizer/StabilizerTask.h>
 #include <Tasks/QPContactConstr.h>
 #include "ControllerConfiguration.h"
@@ -295,6 +296,7 @@ protected:
   std::shared_ptr<mc_tasks::SurfaceTransformTask> leftSwingFootTask;
   std::shared_ptr<mc_tasks::SurfaceTransformTask> rightSwingFootTask;
   std::shared_ptr<mc_tasks::PostureTask> armTask;
+  std::shared_ptr<mc_tasks::MomentumTask> MomentumTask;
 
 private:
   std::mutex mutex_mpc_;
