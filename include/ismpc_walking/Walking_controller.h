@@ -340,8 +340,8 @@ private:
   double y = 0.1;
   double z = 30; // Coordinate for a specified footstep position
 
-  bool UseRealRobot = true; // To use the real robots data
-  bool UseMPCState = false;
+  bool UseRealRobot = false; // To use the real robots data
+  bool UseMPCState = true;
   bool UseStepRecovery = false;
   bool Stop = true; // If true, the robot is at stop or the robot is about to stop at next step;
   bool Robot_Walking = false; // If false, the robot is not moving;
