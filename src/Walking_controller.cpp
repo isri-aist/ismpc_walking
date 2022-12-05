@@ -592,22 +592,25 @@ void Walking_controller::UpdateInitialVectors()
   if(UseRealRobot)
   {
     
-    double K = 1;
+    // double K = 1;
     // Pck = Pck * (1 - K) + K * computeInSupportFootFlat(realRobot().com());
     // Vck = Vck * (1 - K) + K * computeVelocityInSupportFoot(realRobot().comVelocity());
-    if(mpc_state_.X_MPC.size() != 0)
+    sva::PTransformd zmpFrame = robot().surfacePose(supportFootName);
+    sva::ForceVecd measuredNetWrench_ = robot().netWrench({"LeftFootForceSensor"});
+    if(supportFootName == "RightFootCenter")
     {
-      mpc_state_.Pzk = StabTask->measuredZMP();
+      measuredNetWrench_ = robot().netWrench({"RightFootForceSensor"});
     }
-    else
+    if(DoubleSupport_state)
     {
-      mpc_state_.Pzk = StabTask->measuredZMP();
+      measuredNetWrench_ = robot().netWrench({"RightFootForceSensor","LeftFootForceSensor"});
+      zmpFrame = sva::interpolate(robot().surfacePose(supportFootName),robot().surfacePose(swingFootName), 0.5);
     }
-    
-    mpc_state_.Pck = StabTask->measuredCoM();
+    robot().zmp(mpc_state_.Pzk,measuredNetWrench_,zmpFrame);    
+    mpc_state_.Pck = realRobot().com();
     mpc_state_.Vck = realRobot().comVelocity();
 
-    mpc_state_.Pu = StabTask->measuredDCM();
+    mpc_state_.Pu = mpc_state_.Pck + mpc_state_.Vck/eta();
     
 
   }
