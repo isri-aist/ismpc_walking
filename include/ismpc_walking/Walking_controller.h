@@ -186,6 +186,24 @@ public:
     return mpc_state_;
   }
 
+  /**
+   * @brief Compute lambda such as zmp is under the model
+   * v_z = -lambda(z - z_0 - u_0\lambda )
+   * 
+   * @return double 
+   */
+  Eigen::Vector2d estimated_lambda()
+  {
+    if(mpc_state_.mpc_u_.size() != 0)
+    {
+      double lambda_x = -zmp_vel_.eval().x() / (mpc_state_.Pzk.x() - mpc_state_.initial_zmp_.x() - mpc_state_.get_u(0).x());
+      double lambda_y = -zmp_vel_.eval().y() / (mpc_state_.Pzk.y() - mpc_state_.initial_zmp_.y() - mpc_state_.get_u(0).y());
+
+      return Eigen::Vector2d{lambda_x,lambda_y};
+    }
+    return Eigen::Vector2d::Zero();
+  }
+
 protected:
   void getTransformations();
   sva::ForceVecd compute_momentum_contact_point();
@@ -424,6 +442,7 @@ private:
   mc_filter::LowPass<sva::ForceVecd> filter_left_hand_wrench_;
   mc_filter::LowPass<sva::ForceVecd> filter_right_hand_wrench_;
   mc_filter::LowPass<Eigen::Vector3d> filter_gamma_;
+  mc_filter::ExponentialMovingAverage<Eigen::Vector3d> zmp_vel_;
 
   bool FeetUp = false;
 

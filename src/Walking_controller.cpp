@@ -11,7 +11,7 @@ Walking_controller::~Walking_controller()
 }
 
 Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, const mc_rtc::Configuration & config)
-: mc_control::fsm::Controller(rm, dt, config), filter_left_hand_wrench_(0.005, 0), filter_right_hand_wrench_(0.005, 0), filter_gamma_(0.005, 0)
+: mc_control::fsm::Controller(rm, dt, config), filter_left_hand_wrench_(0.005, 0), filter_right_hand_wrench_(0.005, 0), filter_gamma_(0.005, 0), zmp_vel_(0.005,0.05,{0.,0.,0.})
 {
 
   mc_rbdyn::lipm_stabilizer::StabilizerConfiguration Stabiconfig(robot().module().defaultLIPMStabilizerConfiguration());
@@ -124,6 +124,8 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, c
   filter_left_hand_wrench_ = mc_filter::LowPass<sva::ForceVecd>(solver().dt(),controller_config_.wrench_filter_cutoff);
   filter_right_hand_wrench_ = mc_filter::LowPass<sva::ForceVecd>(solver().dt(),controller_config_.wrench_filter_cutoff);
   filter_gamma_ = mc_filter::LowPass<Eigen::Vector3d>(solver().dt(),controller_config_.gamma_filter_cutoff);
+
+  zmp_vel_ = mc_filter::ExponentialMovingAverage<Eigen::Vector3d>(solver().dt(),controller_config_.delta,Eigen::Vector3d::Zero());
 
   create_datastore();
   getTransformations();
@@ -606,7 +608,11 @@ void Walking_controller::UpdateInitialVectors()
       measuredNetWrench_ = robot().netWrench({"RightFootForceSensor","LeftFootForceSensor"});
       zmpFrame = sva::interpolate(robot().surfacePose(supportFootName),robot().surfacePose(swingFootName), 0.5);
     }
-    robot().zmp(mpc_state_.Pzk,measuredNetWrench_,zmpFrame);    
+    Eigen::Vector3d zmp_vel = mpc_state_.Pzk;
+    robot().zmp(mpc_state_.Pzk,measuredNetWrench_,zmpFrame);
+    zmp_vel = (mpc_state_.Pzk - zmp_vel) / controller_timestep;
+    zmp_vel_.append(zmp_vel);
+
     mpc_state_.Pck = realRobot().com();
     mpc_state_.Vck = realRobot().comVelocity();
 

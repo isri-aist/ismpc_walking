@@ -29,6 +29,8 @@ void Walking_controller::AddToLog()
     }
     return 0.;
   });
+  logger().addLogEntry("ISMPC_measured_lambda",[this] () -> Eigen::Vector2d {return estimated_lambda();} );
+  logger().addLogEntry("ISMPC_measured_zmpvel",[this] () -> Eigen::Vector2d {return zmp_vel_.eval().segment(0,2);} );
   logger().addLogEntry("ISMPC_NextTds", [this]() -> double { return mpc_state_.get_tds(); });
   logger().addLogEntry("ISMPC_input_tds", [this]() -> double { return mpc_state_.input_tds; });
   logger().addLogEntry("ISMPC_input_ts", [this]() -> double {
@@ -74,6 +76,7 @@ void Walking_controller::AddToLog()
     {
       return mpc_state_.Get_ZMP_planarTarget(mpc_state_.Index);
     }
+    return Eigen::Vector3d::Zero();
   });
   // logger().addLogEntry("ISMPC_State_ZMP_kinmes", [this]() -> const Eigen::Vector3d {
 
