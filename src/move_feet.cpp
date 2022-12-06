@@ -58,12 +58,12 @@ bool Walking_controller::MoveFeet(double t)
       supp_yaw = mc_rbdyn::rpyFromMat(robot().surfacePose(supportFootName).rotation()).z();
       if(supportFootName == leftFootName_)
       {
-        StabTask->setContacts(
+        stabTask->setContacts(
             {{mc_tasks::lipm_stabilizer::ContactState::Left, sva::PTransformd(sva::RotZ(supp_yaw), supp_pose)}});
       }
       else
       {
-        StabTask->setContacts(
+        stabTask->setContacts(
             {{mc_tasks::lipm_stabilizer::ContactState::Right, sva::PTransformd(sva::RotZ(supp_yaw), supp_pose)}});
       }
 
@@ -149,13 +149,13 @@ bool Walking_controller::MoveFeet(double t)
       swing_yaw = mc_rbdyn::rpyFromMat(robot().surfacePose(swingFootName).rotation()).z();
       if(supportFootName == leftFootName_)
       {
-        StabTask->setContacts(
+        stabTask->setContacts(
             {{mc_tasks::lipm_stabilizer::ContactState::Left, sva::PTransformd(sva::RotZ(supp_yaw), supp_pose)},
              {mc_tasks::lipm_stabilizer::ContactState::Right, sva::PTransformd(sva::RotZ(swing_yaw), swing_pose)}});
       }
       else
       {
-        StabTask->setContacts(
+        stabTask->setContacts(
             {{mc_tasks::lipm_stabilizer::ContactState::Left, sva::PTransformd(sva::RotZ(swing_yaw), swing_pose)},
              {mc_tasks::lipm_stabilizer::ContactState::Right, sva::PTransformd(sva::RotZ(supp_yaw), supp_pose)}});
       }

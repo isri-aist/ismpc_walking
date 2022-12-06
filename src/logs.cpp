@@ -7,7 +7,7 @@ void Walking_controller::AddToLog()
     return compute_momentum_contact_point().couple() / (robot().mass() * controller_config_.Stab_config.comHeight);
   });
   logger().addLogEntry("Kinematic LeftFoot ratio", [this]() -> double { return LeftFootRatio; });
-  logger().addLogEntry("RealRobotCoM", [this]() -> Eigen::Vector3d { return StabTask->measuredCoM(); });
+  logger().addLogEntry("RealRobotCoM", [this]() -> Eigen::Vector3d { return stabTask->measuredCoM(); });
   logger().addLogEntry("SwingFoot Vel", [this]() -> const Eigen::Vector3d & { return SwingFootVel; });
   logger().addLogEntry("SwingFoot Accel", [this]() -> const Eigen::Vector3d & { return SwingFootAcc; });
   logger().addLogEntry("foot_wrench_LeftFoot",
@@ -100,7 +100,7 @@ void Walking_controller::AddToLog()
   });
   logger().addLogEntry("ISMPC_Feasibility_min", [this]() -> const Eigen::Vector2d & { return mpc_state_.Pu_min; });
   logger().addLogEntry("ISMPC_Feasibility_max", [this]() -> const Eigen::Vector2d & { return mpc_state_.Pu_max; });
-  logger().addLogEntry("ISMPC_StopPhase", [this]() -> const double {
+  logger().addLogEntry("ISMPC_StopPhase", [this]() -> double {
     if(Stop)
     {
       return 1.0;
@@ -110,7 +110,7 @@ void Walking_controller::AddToLog()
       return 0.;
     }
   });
-  logger().addLogEntry("ISMPC_Tail-used", [this]() -> const double {
+  logger().addLogEntry("ISMPC_Tail-used", [this]() -> double {
     if(mpc_state_.Tail)
     {
       return 1.;
@@ -120,7 +120,7 @@ void Walking_controller::AddToLog()
       return 0.;
     }
   });
-  logger().addLogEntry("ISMPC_QPSuccess", [this]() -> const double {
+  logger().addLogEntry("ISMPC_QPSuccess", [this]() -> double {
     if(mpc_state_.QPSuccess)
     {
       return 1.;

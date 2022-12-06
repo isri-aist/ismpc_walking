@@ -69,7 +69,7 @@ void Walking_controller::getTransformations()
   const auto & X_0_torso_link = robot().bodyPosW(torsoBodyName_);
   const auto & X_0_torso_reference = ReferenceFrame_Origin_Offset * X_0_torso_link;
 
-  LeftFootRatio = mc_filter::utils::clamp(StabTask->leftFootRatio(), LeftFootRatio - 0.019, LeftFootRatio + 0.019);
+  LeftFootRatio = mc_filter::utils::clamp(stabTask->leftFootRatio(), LeftFootRatio - 0.019, LeftFootRatio + 0.019);
 
   sva::ForceVecd left_wrench = robot().frame(leftHandName_).wrench();
   filter_left_hand_wrench_.update(left_wrench);
@@ -90,7 +90,7 @@ void Walking_controller::getTransformations()
   // {
   //     Eigen::Vector3d ext_wrench_gain_v = config()("stabilizer")("robot")(robot().name())("stabilizer")("external_wrench")("ext_wrench_gain");
   //     sva::MotionVecd ext_wrench_gain{ext_wrench_gain_v, ext_wrench_gain_v};
-  //     StabTask->setExternalWrenches({leftHandName_, rightHandName_}, {filter_left_hand_wrench_.eval(), filter_right_hand_wrench_.eval()},
+  //     stabTask->setExternalWrenches({leftHandName_, rightHandName_}, {filter_left_hand_wrench_.eval(), filter_right_hand_wrench_.eval()},
   //                                   {ext_wrench_gain, ext_wrench_gain});
   // }
 

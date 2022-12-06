@@ -250,7 +250,7 @@ void Walking_controller::addToGUI()
       //                        return vec;
       //                      }),
       // mc_rtc::gui::Point3D("DCM", mc_rtc::gui::PointConfig(mc_rtc::gui::Color(1, 0.75, 0.25)), [this]() {
-      //   Eigen::Vector3d vec(StabTask->measuredDCM());
+      //   Eigen::Vector3d vec(stabTask->measuredDCM());
       //   vec.z() = 0;
       //   return vec;
       // })
@@ -277,7 +277,7 @@ void Walking_controller::addToGUI()
       //     [this]() { return robot().surfacePose(swingFootName).translation(); }),
       // mc_rtc::gui::Trajectory(
       //     "ZMPMeasured", mc_rtc::gui::LineConfig(mc_rtc::gui::Color(0.5, 1., 0.), 0.01,
-      //     mc_rtc::gui::LineStyle::Solid), [this]() { return StabTask->measuredZMP(); }),
+      //     mc_rtc::gui::LineStyle::Solid), [this]() { return stabTask->measuredZMP(); }),
       // mc_rtc::gui::Trajectory(
       //     "Pzk", mc_rtc::gui::LineConfig(mc_rtc::gui::Color(0., 1., 0.), 0.01, mc_rtc::gui::LineStyle::Solid),
       //     [this]() {
@@ -427,13 +427,13 @@ void Walking_controller::Stabilizer_GUI(mc_rbdyn::lipm_stabilizer::StabilizerCon
     gui()->addElement({"Walking", "Stabilizer"},
                       mc_rtc::gui::Button("Activate",
                                           [this]() {
-                                            StabTask->enable();
+                                            stabTask->enable();
                                             stabilizer_active_ = true;
                                           }),
                       mc_rtc::gui::Button("Deactivate", [this]() {
                         if(!robot_walking())
                         {
-                          StabTask->disable();
+                          stabTask->disable();
                           stabilizer_active_ = false;
                         }
                       }));

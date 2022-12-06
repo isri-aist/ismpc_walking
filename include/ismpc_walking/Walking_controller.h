@@ -266,8 +266,8 @@ protected:
     datastore().make_call("ismpc_walking::set_torso_pitch", [this](const double & h) { torsoPitch(h); });
     datastore().make_call("ismpc_walking::zmp_target", [this]() -> Eigen::Vector3d { return zmpTarget; });
     datastore().make_call("ismpc_walking::dcm_target", [this]() -> Eigen::Vector3d { return dcmTarget; });
-    datastore().make_call("ismpc_walking::zmp", [this]() -> Eigen::Vector3d { return StabTask->measuredDCM(); });
-    datastore().make_call("ismpc_walking::dcm", [this]() -> Eigen::Vector3d { return StabTask->measuredZMP(); });
+    datastore().make_call("ismpc_walking::zmp", [this]() -> Eigen::Vector3d { return stabTask->measuredDCM(); });
+    datastore().make_call("ismpc_walking::dcm", [this]() -> Eigen::Vector3d { return stabTask->measuredZMP(); });
     datastore().make_call("ismpc_walking::support_foot_name", [this]() -> std::string { return supportFootName; });
     datastore().make_call("ismpc_walking::swing_foot_name", [this]() -> std::string { return swingFootName; });
     datastore().make_call("ismpc_walking::t", [this]() -> double { return t; });
@@ -306,7 +306,7 @@ protected:
 
   bool wait_for_mpc_thread();
 
-  std::shared_ptr<mc_tasks::lipm_stabilizer::StabilizerTask> StabTask;
+  std::shared_ptr<mc_tasks::lipm_stabilizer::StabilizerTask> stabTask;
 
   std::shared_ptr<mc_tasks::OrientationTask> left_foot_ori;
   std::shared_ptr<mc_tasks::SurfaceTransformTask> SwingFootTask;
@@ -315,6 +315,7 @@ protected:
   std::shared_ptr<mc_tasks::SurfaceTransformTask> rightSwingFootTask;
   std::shared_ptr<mc_tasks::PostureTask> armTask;
   std::shared_ptr<mc_tasks::MomentumTask> MomentumTask;
+  std::shared_ptr<mc_tasks::CoMTask> comTask;
 
 private:
   std::mutex mutex_mpc_;
