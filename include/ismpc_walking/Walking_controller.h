@@ -111,26 +111,26 @@ public:
     MPCSolver.configure(controller_config_);
   }
 
-  const bool double_support_state() noexcept
+  bool double_support_state() noexcept
   {
     return DoubleSupport_state;
   }
-  const bool stop_phase() noexcept
+  bool stop_phase() noexcept
   {
     return Stop;
   }
-  const bool robot_walking() noexcept
+  bool robot_walking() noexcept
   {
     return Robot_Walking;
   }
-  const void start_stop() noexcept
+  void start_stop() noexcept
   {
     if(!(Stop && !stabilizer_active_))
     {
       Stop = !Stop;
     }
   }
-  const double get_t() noexcept
+  double get_t() noexcept
   {
     return t;
   }
@@ -142,7 +142,7 @@ public:
     }
     return 0.;
   }
-  const double tds() noexcept
+  double tds() noexcept
   {
     return mpc_state_.get_tds();
   }
@@ -152,7 +152,7 @@ public:
         mc_filter::utils::clampAndWarn(t_ds, controller_config_.T_ds_min,
                                        controller_config_.Ts_max / controller_config_.Double_Step_Ratio, "Tds capped");
   }
-  const double ts() noexcept
+  double ts() noexcept
   {
     return T_Steps;
   }
@@ -161,11 +161,11 @@ public:
     T_Steps = mc_filter::utils::clampAndWarn(ts, controller_config_.T_ds_min + controller_config_.T_ss_min,
                                              controller_config_.Ts_max, "Ts capped");
   }
-  const int n_steps() noexcept
+  int n_steps() noexcept
   {
     return N_Steps_Desired;
   }
-  const void n_steps(int steps) noexcept
+  void n_steps(int steps) noexcept
   {
     N_Steps_Desired = steps;
   }
