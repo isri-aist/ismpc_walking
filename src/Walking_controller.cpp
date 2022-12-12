@@ -80,7 +80,7 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, c
   // solver().addConstraintSet(kinematicsConstraint);
   // solver().addConstraintSet(dynamicsConstraint);
 
-  footcontact_dof << 0, 0, 1, 1, 1, 0;
+  footcontact_dof << 0, 0, 1, 0, 0, 0;
   addContact({robot().name(), "ground", rightFootName_, "AllGround", 0.7, footcontact_dof});
   addContact({robot().name(), "ground", leftFootName_, "AllGround", 0.7, footcontact_dof});
 
@@ -149,7 +149,7 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, c
   solver().addTask(comTask);
   solver().addTask(leftSwingFootTask);
   solver().addTask(rightSwingFootTask);
-  // solver().addTask(MomentumTask);
+  //solver().addTask(MomentumTask);
   updateTasks();
 
   mc_rtc::log::success("ismpc_walking controller init done ");
@@ -225,7 +225,7 @@ void Walking_controller::ComputeWalkingTrajectory()
 
   {
     std::lock_guard<std::mutex> lk_copy_state(mutex_mpc_);
-    UpdateInitialVectors();
+    //UpdateInitialVectors();
     mpc_thread_state = mpc_state_;
   }
   MPCSolver.AutoFootstepPlacement = AutoFootstepPlacement;
@@ -456,17 +456,17 @@ bool Walking_controller::run()
       NewThreadState = false;
     }
     MoveCoM();
+    // mc_rtc::log::info("indx {} for N {}",mpc_state_.Index,static_cast<int>(controller_config_.delta/controller_timestep));
     UpdateInitialVectors();
     UpdatePlanner_input();
     mpc_state_.Index += 1;
   }
 
-  
 
   if(!(Stop && Swing_Foot_Contact))
   {
 
-    if(t - t_k >= 1 * controller_config_.delta)
+    if(t - t_k >= controller_config_.delta)
     {
       t_k += controller_config_.delta; 
       compute_trajectory_once.notify_all();
@@ -557,23 +557,20 @@ void Walking_controller::MoveCoM()
 
   Eigen::Vector3d Pcom(mpc_state_.Get_CoM_planarTarget(mpc_state_.Index));
   Pcom.z() = controller_config_.Stab_config.comHeight + 0 * X_0_support.translation().z();
+  Eigen::Vector3d Vc(mpc_state_.Get_CoMVel_planarTarget(mpc_state_.Index));
+  Vc.z() = 0;
   zmpTarget = mpc_state_.Get_ZMP_planarTarget(mpc_state_.Index);
   
 
   Eigen::Vector3d Ac_com = std::pow(eta(), 2) * (Pcom - zmpTarget);
+
   Ac_com.z() = 0;
   zmpTarget = mpc_state_.get_u(0) + mpc_state_.initial_zmp_;
   zmpTarget.z() = 0;
 
-  Eigen::Vector3d Vc(mpc_state_.Get_CoMVel_planarTarget(mpc_state_.Index));
-  Vc.z() = 0;
-
-  const Eigen::Vector3d & robot_vc = robot().comVelocity();
-  const Eigen::Vector3d & realrobot_vc = realRobot().comVelocity();
-
-  double diffV_in = std::abs((Vc - robot_vc).y());
-
   Eigen::Vector3d Ac_wrench = std::pow(eta(), 2) * (Pcom - zmpTarget);
+
+
   target_force_ = robot().mass() * (Ac_wrench - mc_rtc::constants::gravity);
 
   Ac_wrench.z() = 0;
@@ -641,8 +638,11 @@ void Walking_controller::UpdateInitialVectors()
     zmp_vel = (mpc_state_.Pzk - zmp_vel) / controller_timestep;
     zmp_vel_.append(zmp_vel);
 
-    mpc_state_.Pck = realRobot().com();
+    // mpc_state_.ComBias 
+    
     mpc_state_.Vck = realRobot().comVelocity();
+    mpc_state_.ComBias.segment(0,2) = stabTask->biasDCM();
+    mpc_state_.Pck = realRobot().com() + mpc_state_.ComBias;
 
     mpc_state_.Pu = mpc_state_.Pck + mpc_state_.Vck/eta();
     
