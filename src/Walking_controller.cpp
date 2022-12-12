@@ -483,18 +483,19 @@ bool Walking_controller::run()
     updateTasks();
 
     t_stop = (count - count_stop) * controller_timestep;
-    if(t_stop > 1 * controller_config_.delta)
+    if(t_stop >= 1 * controller_config_.delta)
     {
       if(UseRealRobot && MPCSolver.stop())
       {
         if(UseStepRecovery){CheckStepRecovery();}
       }
-      count_stop = count - 1;
+      count_stop = count;
     
       compute_trajectory_once.notify_all();
     }
+    compute_trajectory_once.notify_all();
 
-    t_k = 0;
+    t_k = 0.;
     kfoot = 0;
     N_Steps = 0;
     countStart = count - 1;
