@@ -287,7 +287,7 @@ void Walking_controller::ComputeWalkingTrajectory()
     MPCSolver.Disturbance(Eigen::Vector3d::Zero());
   }
 
-  MPCSolver.GetWalkingParameters(mpc_thread_state.t_k, tds, mpc_thread_state.stop);
+  MPCSolver.GetWalkingParameters(tds, mpc_thread_state.stop);
 
   std::chrono::duration<double, std::milli> time_span = mc_rtc::clock::now() - t_clock;
   mpc_thread_process_time = time_span.count();

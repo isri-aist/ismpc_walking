@@ -331,7 +331,7 @@ public:
    * @tparam t_k, time of the computation
    * @tparam Tds,  double support duration
    */
-  bool GetWalkingParameters(double t_k, double Tds, bool stop);
+  bool GetWalkingParameters(double t_k, bool stop);
 
   /**
    * @brief Set The constraints region for the ZMP (during each delta time) and the footsteps in the robot frame
@@ -532,7 +532,7 @@ public:
   std::vector<Eigen::Vector3d> zmp_ref_traj()
   {
     std::vector<Eigen::Vector3d> Output;
-    int n = (int)(b_zmp_traj.size() / 2);
+    int n = static_cast<int>(b_zmp_traj.size() / 2);
     for(int i = 0; i < n; i++)
     {
       Output.push_back(Eigen::Vector3d{b_zmp_traj(2 * i), b_zmp_traj(2 * i + 1), 0} + P_z_k + Offset);
