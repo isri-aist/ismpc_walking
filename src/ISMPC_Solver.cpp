@@ -214,7 +214,7 @@ void ISMPC_Solver::Static_ZMP_Constraints()
   }
 
   int N_zmp_cstr = 0;
-  for(int k = 0; k < zmp_cstr_polygons.size(); k++)
+  for(size_t k = 0; k < zmp_cstr_polygons.size(); k++)
   {
     N_zmp_cstr += static_cast<int>(zmp_cstr_polygons[k].normals().rows());
   }
@@ -226,7 +226,7 @@ void ISMPC_Solver::Static_ZMP_Constraints()
 
   int zk = 0;
   int cstr_index = 0;
-  for(int i_ineq = 0; i_ineq < zmp_cstr_polygons.size(); i_ineq++)
+  for(size_t i_ineq = 0; i_ineq < zmp_cstr_polygons.size(); i_ineq++)
   {
     // std::cout << "i ineq " << i_ineq << std::endl;
     // std::cout << "n cols" << zmp_cstr_polygons[i_ineq].normals().cols() << std::endl;
@@ -572,7 +572,7 @@ void ISMPC_Solver::ZMP_Constraints()
   // t_clock = std::chrono::high_resolution_clock::now();
 
   int N_zmp_cstr = 0;
-  for(int k = 0; k < zmp_cstr_polygons.size(); k++)
+  for(size_t k = 0; k < zmp_cstr_polygons.size(); k++)
   {
     N_zmp_cstr += static_cast<int>(zmp_cstr_polygons[k].normals().rows());
   }
@@ -584,7 +584,7 @@ void ISMPC_Solver::ZMP_Constraints()
 
   int zk = 0;
   int cstr_index = 0;
-  for(int i_ineq = 0; i_ineq < zmp_cstr_polygons.size(); i_ineq++)
+  for(size_t i_ineq = 0; i_ineq < zmp_cstr_polygons.size(); i_ineq++)
   {
     // std::cout << "i ineq " << i_ineq << std::endl;
     // std::cout << "n cols" << zmp_cstr_polygons[i_ineq].normals().cols() << std::endl;
@@ -681,7 +681,7 @@ void ISMPC_Solver::FootSteps_Constraints()
   int step = 0;
   int cstr_index = 0;
 
-  for(int i_ineq = 0; i_ineq < kin_cstr_normals_vec.size(); i_ineq++)
+  for(size_t i_ineq = 0; i_ineq < kin_cstr_normals_vec.size(); i_ineq++)
   {
 
     Eigen::MatrixX2d ineq = kin_cstr_normals_vec[i_ineq];
@@ -872,7 +872,7 @@ void ISMPC_Solver::Compute_Stability_Range()
     }
   }
   //mc_rtc::log::info("ZMP boundrie size {}\nControl size {}",ZMP_max_ref_traj.size(),m_C);
-  for(int k = 1; k < ZMP_max_ref_traj.size(); k++)
+  for(size_t k = 1; k < ZMP_max_ref_traj.size(); k++)
   {
     Pzm.segment(2*k,2) = ZMP_min_ref_traj[k];
     PzM.segment(2*k,2) = ZMP_max_ref_traj[k];
@@ -1237,7 +1237,7 @@ void SupportPolygon::convex_hull()
   typedef bg::model::polygon<point> polygon;
 
   points p;
-  for(int r = 0; r < _Rectangles.size(); r++)
+  for(size_t r = 0; r < _Rectangles.size(); r++)
   {
     std::vector<Eigen::Vector3d> rect_corners = _Rectangles[r].Get_corners();
     for(size_t i = 0; i < rect_corners.size(); i++)
@@ -1263,12 +1263,12 @@ void SupportPolygon::jarvis_march()
 
   SupportPolygone_Corners.push_back(_corners[index]);
 
-  int l = index;
-  int q = 0;
+  size_t l = index;
+  size_t q = 0;
   while(true)
   {
     q = (l + 1) % _corners.size();
-    for(int i = 0; i < _corners.size(); i++)
+    for(size_t i = 0; i < _corners.size(); i++)
     {
       if(i == l)
       {

@@ -204,7 +204,7 @@ private:
     Offset.resize(SupportPolygone_Corners.size());
     Eigen::Matrix2d R_Vertices_0;
 
-    for(int c = 0; c < SupportPolygone_Corners.size(); c++)
+    for(size_t c = 0; c < SupportPolygone_Corners.size(); c++)
     {
       const Eigen::Vector3d & point_1 = SupportPolygone_Corners[c];
       const Eigen::Vector3d & point_2 = SupportPolygone_Corners[(c + 1) % SupportPolygone_Corners.size()];
@@ -228,7 +228,7 @@ private:
   {
 
     std::vector<int> vertices_indx;
-    for(int i = 0 ; i < SupportPolygone_Normals.rows() ; i++)
+    for(size_t i = 0 ; i < SupportPolygone_Normals.rows() ; i++)
     {
       int end_indx = (i + 1) % SupportPolygone_Normals.rows();
       Eigen::Vector2d ni = SupportPolygone_Normals.block(i,0,1,2).normalized();
@@ -242,7 +242,7 @@ private:
       }
     }
     // mc_rtc::log::info("corner {} selected {}",SupportPolygone_Normals.rows(),normals.size());
-    for(int i = 0 ; i < vertices_indx.size() ; i++)
+    for(size_t i = 0 ; i < vertices_indx.size() ; i++)
     {
       int start_indx = vertices_indx[i];
       int end_indx = vertices_indx[(i + 1) % vertices_indx.size()];

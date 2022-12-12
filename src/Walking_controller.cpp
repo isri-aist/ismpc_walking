@@ -346,7 +346,7 @@ void Walking_controller::UpdatePlanner_input()
   {
     step_velocity.y() = mc_filter::utils::clamp(step_velocity.y(), 0.0, 0.07);
   }
-  for(int k = 0; k < (int) 1  * std::round(controller_config_.Tp / controller_config_.delta); k++)
+  for(int k = 0; k < static_cast<int>(std::round(controller_config_.Tp / controller_config_.delta)); k++)
   {
     mpc_state_.input_v_.push_back(sva::MotionVecd(Eigen::Vector3d{0, 0, step_velocity.z()},
                                                   Eigen::Vector3d{step_velocity.x(), step_velocity.y(), 0}));
