@@ -71,11 +71,6 @@ bool Walking_controller::MoveFeet(double t)
 
       t_lift = t;
 
-      std::string swingFootLinkName = LeftFootLinkName_;
-      if(swingFootName == rightFootName_)
-      {
-        swingFootLinkName = RightFootLinkName_;
-      }
       DoubleSupport_state = false;
       Swing_Foot_Contact = false;
     }

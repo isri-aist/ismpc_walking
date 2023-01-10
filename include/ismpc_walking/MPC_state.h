@@ -134,6 +134,7 @@ struct MPC_state
   Eigen::Vector3d Pck;
   Eigen::Vector3d Vck;
   Eigen::Vector3d Pzk;
+  Eigen::Vector3d Uk;
   Eigen::Vector3d ComBias = Eigen::Vector3d::Zero();
   Eigen::Vector3d Pu;
   Eigen::Vector3d w; // Perturbation
