@@ -490,6 +490,17 @@ public:
   {
     m_lambda = in;
   }
+
+  double zmp_delay()
+  {
+    return m_delay;
+  }
+
+  void zmp_delay(const double t)
+  {
+    m_delay = std::max(0.,std::min(m_delta,t));
+  }
+
   std::vector<Eigen::Vector3d> feasibility_region()
   {
     if(m_stop)
@@ -611,6 +622,7 @@ private:
   Eigen::Vector3d P_c_k; // Initial CoM Position
   Eigen::Vector3d V_c_k; // Initial CoM Velocity
   Eigen::Vector3d P_u_k; // Initial Unstable Component/DCM
+  Eigen::Vector3d U_k; //Current input acting on the pendulum
   Eigen::Vector3d m_Pfm1; // Swing Foot Pose Before Swinging orientation in z
   Eigen::Vector3d w_k; // Perturbance
 
@@ -683,6 +695,7 @@ private:
   double m_Beta_stab = 1e5;
   double m_Beta_traj = 0.;
   double m_lambda = 100;
+  double m_delay = 0; //delay ( < m_delta ) during which zmp is constant
   int j_Max_C = 0; // Number of footsteps in the Control Horizon
   int j_f; // Index of the actual support foot
   int j_fm1; // Index of the previous support foot

@@ -54,6 +54,7 @@ void ISMPC_Solver::configure(const ControllerConfiguration & config)
   m_Beta_stab = config.Beta_stab;
   m_Beta_traj = config.Beta_traj;
   m_lambda = config.lambda_;
+  zmp_delay(config.zmp_delay);
   Slide_ZMP_region = config.sliding_zmp_cstr_region;
   zmp_cstr_next_stp_ratio = config.MPC_ZMP_next_stp_cstr_ratio;
   rect_pose_offset = config.MPC_ZMP_cstr_square_offset;
@@ -113,6 +114,7 @@ void ISMPC_Solver::init_MPC(const MPC_state & mpc_state,
   P_c_k = mpc_state.Pck;
   V_c_k = mpc_state.Vck;
   P_z_k = mpc_state.Pzk;
+  U_k = mpc_state.Uk;
   m_Tail = Tail;
   m_tk = mpc_state.t_k;
   // m_eta = sqrt(g / P_c_k.z());
@@ -181,8 +183,10 @@ void ISMPC_Solver::Static_ZMP_Constraints()
 
     for(int k = 0; k <= i; k++)
     {
-      Delta(2 * i, 2 * k) = (1-exp( - m_lambda * (1 + i - k) * m_delta));
-      Delta(2 * i + 1, 2 * k + 1) = (1-exp( - m_lambda * (1 + i - k) * m_delta));
+      double t_m_tk = (1 + i - k) * m_delta;
+      if(k == 0){t_m_tk -= m_delay;}
+      Delta(2 * i, 2 * k) = (1-exp( - m_lambda * t_m_tk));
+      Delta(2 * i + 1, 2 * k + 1) = (1-exp( - m_lambda * t_m_tk));
     }
 
     sva::PTransformd X_0_step_stop =
@@ -364,8 +368,10 @@ void ISMPC_Solver::ZMP_Constraints()
 
     for(int k = 0; k <= i; k++)
     {
-      Delta(2 * i, 2 * k) = (1-exp( - m_lambda * (1 + i - k) * m_delta));
-      Delta(2 * i + 1, 2 * k + 1) = (1-exp( - m_lambda * (1 + i - k) * m_delta));
+      double t_m_tk = (1 + i - k) * m_delta;
+      if(k == 0){t_m_tk -= m_delay;}
+      Delta(2 * i, 2 * k) = (1-exp( - m_lambda * t_m_tk));
+      Delta(2 * i + 1, 2 * k + 1) = (1-exp( - m_lambda * t_m_tk));
     }
 
     int n = std::max(0, std::min(m_D + 1, count_Dstep));
@@ -804,21 +810,21 @@ void ISMPC_Solver::Stability_Constraints()
   for(int j = 0; j < m_C; j++)
   {
   
-    A_stab(0, 2 * j) = (m_lambda/(m_lambda + m_eta)) * exp(-j * m_eta * m_delta);
-    A_stab(1, 2 * j + 1) = (m_lambda/(m_lambda + m_eta)) * exp(-j * m_eta * m_delta);
+    A_stab(0, 2 * j) = (m_lambda/(m_lambda + m_eta)) * exp(-j * m_eta * m_delta) * exp(-m_eta * m_delay);
+    A_stab(1, 2 * j + 1) = (m_lambda/(m_lambda + m_eta)) * exp(-j * m_eta * m_delta)* exp(-m_eta * m_delay);
   
   }
   if(m_Tail == "Periodic")
   {
     b_stab(0) =
-        m_eta * ((1 - exp(-m_eta * m_delta * m_C)) / (1 - exp(-m_eta * m_delta))) * (P_u_k.x() - P_z_k.x() + w_k.x());
+        m_eta * ((1 - exp(-m_eta * m_delta * m_C)) / (1 - exp(-m_eta * m_delta))) * (P_u_k.x() - (P_z_k.x() - w_k.x())*exp(-m_eta * m_delay));
     b_stab(1) =
-        m_eta * ((1 - exp(-m_eta * m_delta * m_C)) / (1 - exp(-m_eta * m_delta))) * (P_u_k.y() - P_z_k.y() + w_k.y());
+        m_eta * ((1 - exp(-m_eta * m_delta * m_C)) / (1 - exp(-m_eta * m_delta))) * (P_u_k.y() - (P_z_k.y() - w_k.y())*exp(-m_eta * m_delay));
   }
   else if(m_Tail == "Truncated")
   {
-    b_stab(0) = P_u_k.x() - P_z_k.x();
-    b_stab(1) = P_u_k.y() - P_z_k.y();
+    b_stab(0) = P_u_k.x() - P_z_k.x()*exp(-m_eta * m_delay);
+    b_stab(1) = P_u_k.y() - P_z_k.y()*exp(-m_eta * m_delay);
   }
   else
   {
@@ -865,8 +871,10 @@ void ISMPC_Solver::Compute_Stability_Range()
 
     for(int k = 0; k <= i; k++)
     {
-      Delta(2 * i, 2 * k) = (1-exp( - m_lambda * (1 + i - k) * m_delta));
-      Delta(2 * i + 1, 2 * k + 1) = (1-exp( - m_lambda * (1 + i - k) * m_delta));
+      double t_m_tk = (1 + i - k) * m_delta;
+      if(k == 0){t_m_tk -= m_delay;}
+      Delta(2 * i, 2 * k) = (1-exp( - m_lambda * t_m_tk));
+      Delta(2 * i + 1, 2 * k + 1) = (1-exp( - m_lambda * t_m_tk));
     }
   }
   //mc_rtc::log::info("ZMP boundrie size {}\nControl size {}",ZMP_max_ref_traj.size(),m_C);
@@ -885,8 +893,8 @@ void ISMPC_Solver::Compute_Stability_Range()
 
 void ISMPC_Solver::Compute_Standing_Stability_Range()
 {
-  Eigen::VectorXd offset = m_double_support_polygon.normals() * P_z_k.segment(0,2) * (1 - exp(-m_eta * m_delta)) + 
-                           m_double_support_polygon.offsets() * exp(-m_eta * m_delta);
+  Eigen::VectorXd offset = m_double_support_polygon.normals() * P_z_k.segment(0,2) * (1 - exp(-m_eta * 3 * m_delta)) + 
+                           m_double_support_polygon.offsets() * exp(-m_eta * 3 * m_delta);
   m_feasibility_standing_region = SupportPolygon(m_double_support_polygon.normals(),offset);
   // for(auto & p : m_feasibility_standing_region.Get_Polygone_Corners())
   // {
@@ -911,10 +919,14 @@ void ISMPC_Solver::Compute_Integration_Vector(int i)
 
 void ISMPC_Solver::Integrate()
 {
-
-  Eigen::Vector3d u_i = Eigen::Vector3d{m_ZMP_u[0], m_ZMP_u[m_C], 0};
+  
+  Eigen::Vector3d u_0 = Eigen::Vector3d{m_ZMP_u[0], m_ZMP_u[m_C], 0};
+  Eigen::Vector3d u_i = u_0;
 
   int N = (int)(m_delta / m_delta_control);
+  int N_delay = static_cast<int>(m_delay/m_delta_control);
+
+  if(N_delay != 0){u_i = Eigen::Vector3d::Zero();}
 
   Compute_Integration_Vector(1);
 
@@ -925,16 +937,25 @@ void ISMPC_Solver::Integrate()
   m_Y_MPC.push_back(Integration_Mat * (Eigen::Vector3d{P_c_k.y(), V_c_k.y(), P_z_k.y() - w_k.y()})
                     + Integration_Vec * u_i.y());
 
-  for(int k = 2; k < N  + 1; k++)
+  Eigen::Vector2d Pz = P_z_k.segment(0,2);
+  for(int k = 0; k < N_delay; k++)
   {
-    Compute_Integration_Vector(k);
     Eigen::Vector3d X_vec = Eigen::Vector3d{m_X_MPC.back()[0],m_X_MPC.back()[1],P_z_k.x()- w_k.x()};
     Eigen::Vector3d Y_vec = Eigen::Vector3d{m_Y_MPC.back()[0],m_Y_MPC.back()[1],P_z_k.y()- w_k.y()};
-    m_X_MPC.push_back(Integration_Mat * X_vec + Integration_Vec * u_i.x());
-
-    m_Y_MPC.push_back(Integration_Mat * Y_vec + Integration_Vec * u_i.y());
+    m_X_MPC.push_back(Integration_Mat * X_vec);
+    m_Y_MPC.push_back(Integration_Mat * Y_vec);
   }
-  Eigen::Vector2d Pz;
+  // mc_rtc::log::info("N_delay {} size {}",N_delay,m_Y_MPC.size());
+  for(int k = 0; k < N  - N_delay - 1; k++)
+  {
+    if(N_delay == 0){ Compute_Integration_Vector(k + 2);}
+    else{ Compute_Integration_Vector(k +1);}
+    Eigen::Vector3d X_vec = Eigen::Vector3d{m_X_MPC.back()[0],m_X_MPC.back()[1],P_z_k.x()- w_k.x()};
+    Eigen::Vector3d Y_vec = Eigen::Vector3d{m_Y_MPC.back()[0],m_Y_MPC.back()[1],P_z_k.y()- w_k.y()};
+    m_X_MPC.push_back(Integration_Mat * X_vec + Integration_Vec * u_0.x());
+    m_Y_MPC.push_back(Integration_Mat * Y_vec + Integration_Vec * u_0.y());
+  }
+
   for(int i = 1; i < m_C; i++)
   {
 
@@ -949,7 +970,9 @@ void ISMPC_Solver::Integrate()
 
       m_Y_MPC.push_back(Integration_Mat * Y_vec + Integration_Vec * u_i.y());
     }
+  
   }
+
   for(size_t i = 0; i < m_Y_MPC.size(); i++)
   {
     m_X_MPC[i].z() += w_k.x();
@@ -1173,18 +1196,18 @@ bool ISMPC_Solver::GetWalkingParameters(double Tds, bool stop)
 
     if(m_Tail == "None" || Use_Stability_Task)
     {
-      Eigen::Vector3d P_u_k_2 = P_z_k - w_k;
+      Eigen::Vector3d P_u_k_2 = (P_z_k - w_k);
       if(m_Tail_save == "Periodic")
         for(int k = 0; k < m_C; k++)
         {
-          P_u_k_2 += ((1 - exp(-m_eta * m_delta)) / (m_eta * (1 - exp(-m_eta * m_Tc)))) * exp(-k * m_eta * m_delta)
+          P_u_k_2 += ((1 - exp(-m_eta * m_delta)) / (m_eta * (1 - exp(-m_eta * m_Tc)))) * exp(-k * m_eta * m_delta) * exp(-m_eta * m_delay)
                      * Eigen::Vector3d{m_ZMP_u[k], m_ZMP_u[k + m_C], 0};
         }
       else if(m_Tail_save == "Truncated")
       {
         for(int k = 0; k < m_C; k++)
         {
-          P_u_k_2 += (m_lambda/(m_lambda + m_eta)) * exp(-k * m_eta * m_delta)
+          P_u_k_2 += (m_lambda/(m_lambda + m_eta)) * exp(-k * m_eta * m_delta) * exp(-m_eta * m_delay)
                      * Eigen::Vector3d{m_ZMP_u[k], m_ZMP_u[k + m_C], 0};
         }
       }
@@ -1193,7 +1216,7 @@ bool ISMPC_Solver::GetWalkingParameters(double Tds, bool stop)
 
         for(int k = 0; k < m_C; k++)
         {
-          P_u_k_2 += (m_lambda/(m_lambda + m_eta)) * exp(-k * m_eta * m_delta)
+          P_u_k_2 += (m_lambda/(m_lambda + m_eta)) * exp(-k * m_eta * m_delta) * exp(-m_eta * m_delay)
                      * Eigen::Vector3d{m_ZMP_u[k], m_ZMP_u[k + m_C], 0};
         }
         //P_u_k_2 += ((1 - exp(-m_eta * m_delta)) / (m_eta)) * Eigen::Vector3d{Ant_Tail_X, Ant_Tail_Y, 0};

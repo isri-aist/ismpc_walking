@@ -98,6 +98,13 @@ void Walking_controller::AddToLog()
     }
     return 0;
   });
+  logger().addLogEntry("ISMPC_zmp_delay", [this]() -> double {
+    if(MPC_thread_on)
+    {
+      return  MPCSolver.zmp_delay();
+    }
+    return 0;
+  });
   logger().addLogEntry("ISMPC_Feasibility_min", [this]() -> const Eigen::Vector2d & { return mpc_state_.Pu_min; });
   logger().addLogEntry("ISMPC_Feasibility_max", [this]() -> const Eigen::Vector2d & { return mpc_state_.Pu_max; });
   logger().addLogEntry("ISMPC_StopPhase", [this]() -> double {

@@ -203,6 +203,8 @@ void Walking_controller::addToGUI()
       mc_rtc::gui::NumberInput(
           "lambda", [this]() -> double { return MPCSolver.get_lambda(); }, [this](const double n) { MPCSolver.set_lambda(n); }),
       mc_rtc::gui::Label("Measured Lambda", [this]() { return estimated_lambda(); }),
+      mc_rtc::gui::NumberInput(
+          "zmp delay", [this]() -> double { return MPCSolver.zmp_delay(); }, [this](const double n) { MPCSolver.zmp_delay(n); }),
       mc_rtc::gui::Checkbox(
           "MPC state feedback", [this]() { return UseMPCState; },
           [this]() {
