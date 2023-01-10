@@ -165,6 +165,10 @@ void Walking_controller::addToGUI()
                             }
                           }),
       mc_rtc::gui::Button("Stop", [this]() { Stop = true; }),
+      mc_rtc::gui::Checkbox(
+          "Active", [this]() { return active; },
+          [this]() { if (active){deactivate();}
+          else{activate();} }),
       mc_rtc::gui::ComboInput(
           "Velocity Tail", {"Periodic", "Truncated", "Anticipative", "None"}, [this]() { return Tail; },
           [this](const std::string str) {

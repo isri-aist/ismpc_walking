@@ -71,6 +71,7 @@ public:
     controller_config_.Beta_stab = config("ismpc")("beta_stab");
     controller_config_.Beta_traj = config("ismpc")("beta_traj");
     controller_config_.lambda_ = config("ismpc")("lambda");
+    controller_config_.zmp_delay = config("ismpc")("zmp_delay");
     //controller_config_.MPC_ZMP_cstr_square_offset_sg_supp = config("ismpc")("offset_sg_supp");
     controller_config_.MPC_ZMP_ref_offset_sg_supp = config("ismpc")("zmp_ref_offset");
     controller_config_.MPC_ZMP_Constraint_size_sg_supp = config("ismpc")("zmp_cstr_square_sg_supp");
@@ -304,6 +305,25 @@ protected:
     //mc_rtc::log::info("pitch t {}",p);;
   }
 
+  void activate()
+  {
+    if(!Robot_Walking)
+    {
+      stabTask->enable();
+      stabilizer_state_ = StabilizerState::None;
+      active = true;
+    }
+  }
+  void deactivate()
+  {
+    if (!Robot_Walking)
+    {
+      stabTask->disable();
+      // comTask->weight(0);
+      active = false;
+    }
+  }
+
   bool wait_for_mpc_thread();
 
   std::shared_ptr<mc_tasks::lipm_stabilizer::StabilizerTask> stabTask;
@@ -331,6 +351,7 @@ private:
   Eigen::Vector3d dcmMeasured;
   Eigen::Vector3d zmpCorr;
   Eigen::Vector3d zmpTarget;
+  Eigen::Vector3d admittanceTarget;
   Eigen::Vector3d zmpMeasured;
   Eigen::Vector2d supportMin;
   Eigen::Vector2d supportMax;
@@ -359,8 +380,9 @@ private:
   double y = 0.1;
   double z = 30; // Coordinate for a specified footstep position
 
-  bool UseRealRobot = false; // To use the real robots data
-  bool UseMPCState = true;
+  bool active = false; //MPC stabilization on or not
+  bool UseRealRobot = true; // To use the real robots data
+  bool UseMPCState = false;
   bool UseStepRecovery = false;
   bool Stop = true; // If true, the robot is at stop or the robot is about to stop at next step;
   bool Robot_Walking = false; // If false, the robot is not moving;

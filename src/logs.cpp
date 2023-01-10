@@ -72,11 +72,17 @@ void Walking_controller::AddToLog()
     return Eigen::Vector3d::Zero();
   });
   logger().addLogEntry("ISMPC_Target_ZMP", [this]() -> const Eigen::Vector3d {
+    return zmpTarget;
+  });
+  logger().addLogEntry("ISMPC_Target_u", [this]() -> const Eigen::Vector3d {
+    return admittanceTarget;
+  });
+  logger().addLogEntry("ISMPC_Target_Index", [this]() -> const double {
     if(MPC_thread_on)
     {
-      return mpc_state_.Get_ZMP_planarTarget(mpc_state_.Index);
+      return mpc_state_.Index - 1;
     }
-    return Eigen::Vector3d::Zero();
+    return 0;
   });
   // logger().addLogEntry("ISMPC_State_ZMP_kinmes", [this]() -> const Eigen::Vector3d {
 
@@ -131,6 +137,16 @@ void Walking_controller::AddToLog()
     if(mpc_state_.QPSuccess)
     {
       return 1.;
+    }
+    else
+    {
+      return 0.;
+    }
+  });
+  logger().addLogEntry("ISMPC_active", [this]() -> double {
+    if(active)
+    {
+      return 1.0;
     }
     else
     {
