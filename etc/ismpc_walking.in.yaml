@@ -25,7 +25,6 @@ ObserverPipelines:
       config:
         anchorFrame:
           maxAnchorFrameDiscontinuity: 0.02
-   
 
 constraints:
   - type: contact
@@ -50,25 +49,26 @@ ismpc:
   beta_stab: 1e8
   beta_traj : 1e2
   lambda: 30
+  zmp_delay: 1e-2
   # hrp4
-  # zmp_cstr_square: [0.1,0.1]
-  # zmp_cstr_square_sg_supp: [0.07,0.05]
-  # zmp_ref_offset: [0.0,0.02]
-  # offset: [0.00,0.02]
-  # next_stp_cstr_ratio: 1
-  # next_stp_cstr_ratio: 0.1
-  #hrp2
-  zmp_cstr_square: [0.25,0.1]
-  zmp_cstr_square_sg_supp: [0.15,0.1]
-  zmp_ref_offset: [0.0,0.04]
+  zmp_cstr_square: [0.12,0.1]
+  zmp_cstr_square_sg_supp: [0.12,0.05]
+  zmp_ref_offset: [0.0,0.01]
+  offset: [0.0,0.01]
+  next_stp_cstr_ratio: 1
   next_stp_cstr_ratio: 0.1
-  offset: [0.00,0.02]
+  #hrp2
+  # zmp_cstr_square: [0.25,0.1]
+  # zmp_cstr_square_sg_supp: [0.15,0.1]
+  # zmp_ref_offset: [0.0,0.04]
+  # next_stp_cstr_ratio: 0.1
+  # offset: [0.00,0.02]
   allow_none_tail: true
   foosteps_kin_cstr: [0.5,0.1]
   footsteps_cstr_square: [0.4,0.1]
   double_support_ratio: 0.25
   sliding_zmp_cstr_region: false
-  use_stability_task: false
+  use_stability_task: true
   safety_thresholds:
     beta_range: [1e-9,1e9]
     zmp_cstr_square_min: 0.01
@@ -76,10 +76,10 @@ ismpc:
 
 footsteps_planner:
   Tp: 6
-  delta: 0.05
+  delta: 0.1
   Ts_limit: [0.6,2]
   kinematics_cstr: [0.4,0.08]
-  feet_distance: 0.2
+  feet_distance: 0.14
   mean_speed: 0.1
   robot_height: 150
   max_rotation: 0.17
@@ -129,23 +129,23 @@ walking_controller:
       torsoBodyName: "CHEST_LINK0"
       leftFootLink: "LLEG_LINK5"
       rightFootLink: "RLEG_LINK5"
-      # momemtum_task_joints: ["CHEST_JOINT0","CHEST_JOINT1","LARM_JOINT0",
-      #                           "RARM_JOINT0"]
+      momemtum_task_joints: ["LARM_JOINT0",
+                                "RARM_JOINT0","RARM_JOINT3","LARM_JOINT3"]
 
 stabilizer:
   robot:
     hrp4cr:
       stabilizer:
         dcm_tracking:
-          integrator_time_constant: 0.04
+          integrator_time_constant: 2
           gains:
-            prop: [6,6]
-            integral: [4,6]
-            deriv: [0.3, 0.3]
+            prop: [0,0]
+            integral: [0,0]
+            deriv: [0., 0.]
             comdError: 0.
         admittance:
-          dfz: 0.0002
-          cop: [0.03, 0.03]
+          df: [0.002,0.001,0.0001]
+          cop: [0.01, 0.02]
           maxVel:
             angular: [3., 3., 3.]
             linear: [1., 1., 1.]
@@ -162,7 +162,7 @@ stabilizer:
             stiffness: [1000.,1000.,100.]
             dimWeight: [1 , 1 , 1]
             weight: 1000.
-            height: 0.82
+            height: 0.835
         dcm_bias:
           dcmMeasureErrorStd: 0.001
           biasDriftPerSecondStd: 0.0001
@@ -174,11 +174,11 @@ stabilizer:
         external_wrench:
           ## general ##
           add_expected_com_offset: false
-          subtract_measured_value: true
+          subtract_measured_value: false
           exclude_from_dcm_bias_est : true
           ## com offset ##
           modify_com_error: true
-          modify_zmp_error: true
+          modify_zmp_error: false
           modify_zmp_error_d: false
           com_offset_err_com_limit: 0.05
           com_offset_err_zmp_limit: 0.05
@@ -198,7 +198,7 @@ stabilizer:
             comdError: 0.
         admittance:
           dfz: 0.0002
-          cop: [0.03, 0.03]
+          cop: [0.02, 0.02]
         tasks:
           torso:
             weight: 500
@@ -227,12 +227,12 @@ stabilizer:
         dcm_tracking:
           integrator_time_constant: 2
           gains:
-            prop: [5,5]
-            integral: [5,5]
+            prop: [0,0]
+            integral: [0,0]
             deriv: [0., 0.]
             comdError: 0.
         admittance:
-          dfz: 0.0002
+          df: [0.002,0.001,0.0001]
           cop: [0.01, 0.02]
           maxVel:
             angular: [3., 3., 3.]
@@ -320,7 +320,7 @@ stabilizer:
             deriv: [0., 0.]
             comdError: 0.
         admittance:
-          dfz: 0.0002
+          df: [0.002,0.001,0.0001]
           cop: [0.01, 0.02]
           maxVel:
             angular: [3., 3., 3.]
@@ -336,10 +336,10 @@ stabilizer:
             weight: 500
           com:
             stiffness: [1000.,1000.,100.]
-            active_joints: ["Root", "RLEG_JOINT0", "RLEG_JOINT1", "RLEG_JOINT2", "RLEG_JOINT3", "RLEG_JOINT4", "RLEG_JOINT5",
-                            "LLEG_JOINT0", "LLEG_JOINT1", "LLEG_JOINT2", "LLEG_JOINT3", "LLEG_JOINT4", "LLEG_JOINT5",
-                            "LARM_JOINT0", "LARM_JOINT1", "LARM_JOINT2", "LARM_JOINT3", "LARM_JOINT4", "LARM_JOINT5",
-                            "RARM_JOINT0", "RARM_JOINT1", "RARM_JOINT2", "RARM_JOINT3", "RARM_JOINT4", "RARM_JOINT5"]
+            # active_joints: ["Root", "RLEG_JOINT0", "RLEG_JOINT1", "RLEG_JOINT2", "RLEG_JOINT3", "RLEG_JOINT4", "RLEG_JOINT5",
+            #                 "LLEG_JOINT0", "LLEG_JOINT1", "LLEG_JOINT2", "LLEG_JOINT3", "LLEG_JOINT4", "LLEG_JOINT5",
+            #                 "LARM_JOINT0", "LARM_JOINT1", "LARM_JOINT2", "LARM_JOINT3", "LARM_JOINT4", "LARM_JOINT5",
+            #                 "RARM_JOINT0", "RARM_JOINT1", "RARM_JOINT2", "RARM_JOINT3", "RARM_JOINT4", "RARM_JOINT5"]
             dimWeight: [1 , 1 , 1]
             weight: 1000.
             height: 0.85
