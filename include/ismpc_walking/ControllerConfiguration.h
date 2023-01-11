@@ -44,6 +44,8 @@ struct ControllerConfiguration
   double MPC_ZMP_Constraint_min_size = 0.01;
   Eigen::Vector2d MPC_ZMP_Constraint_size{0.1, 0.08};
   Eigen::Vector2d MPC_ZMP_Constraint_size_sg_supp{0.1, 0.08};
+  Eigen::Vector2d MPC_ZMP_cstr_square_static = {0.1,0.1};
+
   double MPC_ZMP_next_stp_cstr_ratio = 2;
   bool MPC_allow_None = true;
   Eigen::Vector2d MPC_ZMP_cstr_square_offset = Eigen::Vector2d::Zero();

@@ -48,6 +48,8 @@ void ISMPC_Solver::configure(const ControllerConfiguration & config)
   m_dy_f_rect = config.MPC_Footsteps_Constraint_size.y();
   m_dx = config.MPC_ZMP_Constraint_size.x();
   m_dy = config.MPC_ZMP_Constraint_size.y();
+  m_dx_static = config.MPC_ZMP_cstr_square_static.x();
+  m_dy_static = config.MPC_ZMP_cstr_square_static.y();
   m_dx_sg_s = config.MPC_ZMP_Constraint_size_sg_supp.x();
   m_dy_sg_s = config.MPC_ZMP_Constraint_size_sg_supp.y();
   m_Beta = config.Beta;
@@ -58,6 +60,7 @@ void ISMPC_Solver::configure(const ControllerConfiguration & config)
   Slide_ZMP_region = config.sliding_zmp_cstr_region;
   zmp_cstr_next_stp_ratio = config.MPC_ZMP_next_stp_cstr_ratio;
   rect_pose_offset = config.MPC_ZMP_cstr_square_offset;
+  rect_pose_offset_sg_supp = config.MPC_ZMP_cstr_square_offset_sg_supp;
   Allow_None = config.MPC_allow_None;
   m_Tc = config.Tc;
   m_Tp = config.Tp;
@@ -68,7 +71,6 @@ void ISMPC_Solver::configure(const ControllerConfiguration & config)
   CoM_height = config.Stab_config.comHeight;
   m_eta = sqrt(mc_rtc::constants::GRAVITY / CoM_height);
   Use_Stability_Task = config.use_stability_task;
-  rect_pose_offset_sg_supp = config.MPC_ZMP_cstr_square_offset_sg_supp;
   zmp_ref_offset = config.MPC_ZMP_ref_offset_sg_supp;
 
   Integration_Mat.setZero();
@@ -158,8 +160,8 @@ void ISMPC_Solver::Static_ZMP_Constraints()
   const Eigen::Vector3d rect_offset_swing =
       X_0_support_foot.rotation().transpose() * Eigen::Vector3d{rect_pose_offset.x(), -sgn * rect_pose_offset.y(), 0};
 
-  Rectangle Rect_jm1 = Rectangle(X_0_swing_foot_initial, Eigen::Vector2d{m_dx, m_dy}, rect_offset_swing);
-  Rectangle Rect_j = Rectangle(X_0_support_foot, Eigen::Vector2d{m_dx, m_dy}, rect_offset_support);
+  Rectangle Rect_jm1 = Rectangle(X_0_swing_foot_initial, Eigen::Vector2d{m_dx_static, m_dy_static}, 0*rect_offset_swing);
+  Rectangle Rect_j = Rectangle(X_0_support_foot, Eigen::Vector2d{m_dx_static, m_dy_static}, 0*rect_offset_support);
 
   SupportPolygon SuppPoly = SupportPolygon(Rect_jm1, Rect_j);
   m_double_support_polygon = SuppPoly;
@@ -267,6 +269,9 @@ void ISMPC_Solver::ZMP_Constraints()
   Eigen::Vector3d rect_offset_support =
       X_0_support_foot.rotation().transpose() * Eigen::Vector3d{rect_pose_offset.x(), sgn * rect_pose_offset.y(), 0};
 
+  Eigen::Vector3d rect_offset_sg_support =
+      X_0_support_foot.rotation().transpose() * Eigen::Vector3d{rect_pose_offset_sg_supp.x(), sgn * rect_pose_offset_sg_supp.y(), 0};
+
   Eigen::Vector3d rect_offset_swing =
       X_0_support_foot.rotation().transpose() * Eigen::Vector3d{rect_pose_offset.x(), -sgn * rect_pose_offset.y(), 0};
 
@@ -288,7 +293,7 @@ void ISMPC_Solver::ZMP_Constraints()
 
   Rectangle Rect_jm1 = Rectangle(X_0_swing_foot_initial, Eigen::Vector2d{m_dx, m_dy}, rect_offset_swing);
   Rectangle Rect_j = Rectangle(X_0_support_foot, Eigen::Vector2d{m_dx, m_dy}, rect_offset_support);
-  Rectangle Rect_sg_supp = Rectangle(X_0_support_foot, Eigen::Vector2d{m_dx_sg_s, m_dy_sg_s}, rect_offset_support);
+  Rectangle Rect_sg_supp = Rectangle(X_0_support_foot, Eigen::Vector2d{m_dx_sg_s, m_dy_sg_s}, rect_offset_sg_support);
 
   // time_span_0 = std::chrono::high_resolution_clock::now() - t_clock_0;
   // mc_rtc::log::info("[ZMP cstr init] Rect time {} ms", time_span_0.count());
@@ -352,6 +357,7 @@ void ISMPC_Solver::ZMP_Constraints()
 
       rect_offset_swing.y() *= -1;
       rect_offset_support.y() *= -1;
+      rect_offset_sg_support.y() *= -1;
       zmp_ref_offset_sg.y() *= -1;
       zmp_ref_offset_swing.y() *=-1;
       
@@ -360,7 +366,7 @@ void ISMPC_Solver::ZMP_Constraints()
                                Eigen::Vector2d{m_dx, m_dy} * zmp_cstr_next_stp_ratio);
 
       Sliding_rect_sg_supp = Rectangle(mc_rbdyn::rpyFromMat(X_0_step_j.rotation()).z(),
-                                       Eigen::Vector2d{m_dx_sg_s, m_dy_sg_s} * zmp_cstr_next_stp_ratio , rect_offset_support);
+                                       Eigen::Vector2d{m_dx_sg_s, m_dy_sg_s} * zmp_cstr_next_stp_ratio , rect_offset_sg_support);
 
       Poly_Rect = SupportPolygon(Sliding_rect);
       Poly_Rect_sg_supp = SupportPolygon(Sliding_rect_sg_supp);
@@ -395,7 +401,7 @@ void ISMPC_Solver::ZMP_Constraints()
           Rect_j = Rectangle(X_0_step_j, Eigen::Vector2d{m_dx, m_dy});
           SuppPoly = SupportPolygon(Rect_jm1, Rect_j);
         }
-        Rect_sg_supp = Rectangle(X_0_step_j, Eigen::Vector2d{m_dx_sg_s, m_dy_sg_s}, rect_offset_support);
+        Rect_sg_supp = Rectangle(X_0_step_j, Eigen::Vector2d{m_dx_sg_s, m_dy_sg_s}, rect_offset_sg_support);
         S_Support_Poly = SupportPolygon(Rect_sg_supp);
       }
       if(N_Steps == N_Steps_Desired && i == 0)

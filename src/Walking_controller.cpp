@@ -385,7 +385,8 @@ void Walking_controller::CheckStepRecovery()
   {
     Eigen::MatrixX2d normals = MPCSolver.standing_feasibility_polygone().normals();
     Eigen::VectorXd offset = MPCSolver.standing_feasibility_polygone().offsets();
-    Eigen::VectorXd stability_check = normals * stabTask->measuredDCM().segment(0,2) - offset;
+    Eigen::Vector2d dcm = (realRobot().com() + (realRobot().comVelocity()/eta())).segment(0,2) + stabTask->biasDCM();
+    Eigen::VectorXd stability_check = normals * dcm - offset;
     bool ok = true;
     for (int i = 0 ; i < stability_check.rows() ; i++ )
     {
