@@ -48,24 +48,28 @@ ismpc:
   beta: 1e6
   beta_stab: 1e8
   beta_traj : 1e2
-  lambda: 30
-  zmp_delay: 1e-2
+  lambda: 15
+  zmp_delay: 0
   # hrp4
-  zmp_cstr_square: [0.12,0.1]
+  zmp_cstr_square: [0.12,0.08]
   zmp_cstr_square_sg_supp: [0.12,0.05]
-  zmp_ref_offset: [0.0,0.01]
-  offset: [0.0,0.01]
+  zmp_cstr_square_static: [0.16,0.08]
+  zmp_ref_offset: [0.0,0.0]
+  offset: [0.0,0.02]
+  offset_sg: [0.,0.01]
   next_stp_cstr_ratio: 1
   next_stp_cstr_ratio: 0.1
   #hrp2
   # zmp_cstr_square: [0.25,0.1]
   # zmp_cstr_square_sg_supp: [0.15,0.1]
+  # zmp_cstr_square_static: [0.16,0.12]
   # zmp_ref_offset: [0.0,0.04]
-  # next_stp_cstr_ratio: 0.1
   # offset: [0.00,0.02]
+  # offset_sg: [0.,0.02]
+  # next_stp_cstr_ratio: 0.1
   allow_none_tail: true
-  foosteps_kin_cstr: [0.5,0.1]
-  footsteps_cstr_square: [0.4,0.1]
+  foosteps_kin_cstr: [1,1]
+  footsteps_cstr_square: [0.5,0.5]
   double_support_ratio: 0.25
   sliding_zmp_cstr_region: false
   use_stability_task: true
@@ -79,7 +83,7 @@ footsteps_planner:
   delta: 0.1
   Ts_limit: [0.6,2]
   kinematics_cstr: [0.4,0.08]
-  feet_distance: 0.14
+  feet_distance: 0.15
   mean_speed: 0.1
   robot_height: 150
   max_rotation: 0.17
@@ -144,8 +148,8 @@ stabilizer:
             deriv: [0., 0.]
             comdError: 0.
         admittance:
-          df: [0.002,0.001,0.0001]
-          cop: [0.01, 0.02]
+          df: [0.001,0.001,0.0001]
+          cop: [0.03, 0.03]
           maxVel:
             angular: [3., 3., 3.]
             linear: [1., 1., 1.]
@@ -169,7 +173,7 @@ stabilizer:
           zmpMeasureErrorStd: 0.0005
           comBiasLimit: [0.1,0.1]
           biasLimit: [0.05, 0.02]
-          withDCMBias: false
+          withDCMBias: true
           correctCoMPos: true
         external_wrench:
           ## general ##
