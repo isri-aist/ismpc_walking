@@ -160,8 +160,8 @@ void ISMPC_Solver::Static_ZMP_Constraints()
   const Eigen::Vector3d rect_offset_swing =
       X_0_support_foot.rotation().transpose() * Eigen::Vector3d{rect_pose_offset.x(), -sgn * rect_pose_offset.y(), 0};
 
-  Rectangle Rect_jm1 = Rectangle(X_0_swing_foot_initial, Eigen::Vector2d{m_dx_static, m_dy_static}, 0*rect_offset_swing);
-  Rectangle Rect_j = Rectangle(X_0_support_foot, Eigen::Vector2d{m_dx_static, m_dy_static}, 0*rect_offset_support);
+  Rectangle Rect_jm1 = Rectangle(X_0_swing_foot_initial, Eigen::Vector2d{m_dx_static, m_dy_static}, rect_offset_swing);
+  Rectangle Rect_j = Rectangle(X_0_support_foot, Eigen::Vector2d{m_dx_static, m_dy_static}, rect_offset_support);
 
   SupportPolygon SuppPoly = SupportPolygon(Rect_jm1, Rect_j);
   m_double_support_polygon = SuppPoly;
@@ -530,10 +530,10 @@ void ISMPC_Solver::ZMP_Constraints()
       Delta(2 * i, 2 * m_C + 2 * (j_f - 1)) = -Dstep_state.x();
       Delta(2 * i + 1, 2 * m_C + 2 * (j_f - 1) + 1) = -Dstep_state.y();
 
-      All_poly.push_back(zmp_cstr_polygons[i].Get_Polygone_Corners());
+      All_poly.push_back(zmp_cstr_polygons.back().Get_Polygone_Corners());
       if(i == 0)
       {
-        SuppPolyCorners = zmp_cstr_polygons[i].Get_Polygone_Corners();
+        SuppPolyCorners = zmp_cstr_polygons.back().Get_Polygone_Corners();
       }
     }
 
@@ -556,8 +556,8 @@ void ISMPC_Solver::ZMP_Constraints()
         zmp_cstr_polygons.push_back(Poly_Rect);
       }
 
-      Eigen::MatrixX2d normals(zmp_cstr_polygons[i].normals());
-      Eigen::VectorXd offsets(zmp_cstr_polygons[i].offsets());
+      Eigen::MatrixX2d normals(zmp_cstr_polygons.back().normals());
+      Eigen::VectorXd offsets(zmp_cstr_polygons.back().offsets());
 
       b_zmp_ineq.push_back(offsets - normals * P_z_k.segment(0, 2) + 
                                      normals * ((rect_offset_support).segment(0,2)) * alpha + 
@@ -1203,36 +1203,37 @@ bool ISMPC_Solver::GetWalkingParameters(double Tds, bool stop)
     if(m_Tail == "None" || Use_Stability_Task)
     {
       Eigen::Vector3d P_u_k_2 = (P_z_k - w_k);
-      if(m_Tail_save == "Periodic")
-        for(int k = 0; k < m_C; k++)
-        {
-          P_u_k_2 += ((1 - exp(-m_eta * m_delta)) / (m_eta * (1 - exp(-m_eta * m_Tc)))) * exp(-k * m_eta * m_delta) * exp(-m_eta * m_delay)
-                     * Eigen::Vector3d{m_ZMP_u[k], m_ZMP_u[k + m_C], 0};
-        }
-      else if(m_Tail_save == "Truncated")
-      {
-        for(int k = 0; k < m_C; k++)
-        {
-          P_u_k_2 += (m_lambda/(m_lambda + m_eta)) * exp(-k * m_eta * m_delta) * exp(-m_eta * m_delay)
-                     * Eigen::Vector3d{m_ZMP_u[k], m_ZMP_u[k + m_C], 0};
-        }
-      }
-      else
-      {
+      // if(m_Tail_save == "Periodic")
+      //   for(int k = 0; k < m_C; k++)
+      //   {
+      //     P_u_k_2 += ((1 - exp(-m_eta * m_delta)) / (m_eta * (1 - exp(-m_eta * m_Tc)))) * exp(-k * m_eta * m_delta) * exp(-m_eta * m_delay)
+      //                * Eigen::Vector3d{m_ZMP_u[k], m_ZMP_u[k + m_C], 0};
+      //   }
+      // else if(m_Tail_save == "Truncated")
+      // {
+      //   for(int k = 0; k < m_C; k++)
+      //   {
+      //     P_u_k_2 += (m_lambda/(m_lambda + m_eta)) * exp(-k * m_eta * m_delta) * exp(-m_eta * m_delay)
+      //                * Eigen::Vector3d{m_ZMP_u[k], m_ZMP_u[k + m_C], 0};
+      //   }
+      // }
+      // else
+      // {
 
         for(int k = 0; k < m_C; k++)
         {
           P_u_k_2 += (m_lambda/(m_lambda + m_eta)) * exp(-k * m_eta * m_delta) * exp(-m_eta * m_delay)
                      * Eigen::Vector3d{m_ZMP_u[k], m_ZMP_u[k + m_C], 0};
         }
+
         //P_u_k_2 += ((1 - exp(-m_eta * m_delta)) / (m_eta)) * Eigen::Vector3d{Ant_Tail_X, Ant_Tail_Y, 0};
-      }
+      // }
 
       V_c_k = m_eta * (P_u_k_2 - P_c_k);
       // P_c_k = P_u_k_2 - V_c_k/m_eta;
-      // Eigen::Vector3d P_u_error = P_u_k - P_u_k_2; P_u_error.z() = 0.;
-      // Eigen::Vector3d P_z_corr = P_u_error / (1 - exp(m_eta * (0.1)));
-      // mc_rtc::log::info("P_z_corr \n{}",P_z_corr);
+      Eigen::Vector3d P_u_error = P_u_k - P_u_k_2; P_u_error.z() = 0.;
+      
+      // mc_rtc::log::info("P_u_error \n{}",P_u_error);
     }
 
     Integrate();

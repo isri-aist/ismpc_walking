@@ -175,7 +175,7 @@ bool Walking_controller::MoveFeet(double t)
       //   kfoot += 1;
       // }
     }
-    if(DoubleSupport_state && t - t_contact >= 0.05)
+    if(DoubleSupport_state)// && t - t_contact >= 0.05)
     {
       addContact({robot().name(), "ground", swingFootName, "AllGround", 0.7, footcontact_dof});
 

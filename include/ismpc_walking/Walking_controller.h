@@ -84,6 +84,7 @@ public:
     controller_config_.safety_roll_error_ = config("walking_controller")("safety_foot_roll_error");
     controller_config_.wrench_filter_cutoff = config("walking_controller")("wrench_filter_cutoff_T");
     controller_config_.gamma_filter_cutoff = config("walking_controller")("gamma_filter_cutoff_T");
+    controller_config_.FootStepHeight = config("walking_controller")("footstep_height");
 
     controller_config_.SwingFootStiffness = config("tasks")("swingfoot_stiffness");
     controller_config_.SwingFootWeight = config("tasks")("swingfoot_weight");
@@ -391,7 +392,7 @@ private:
   std::condition_variable compute_trajectory_once;
   std::atomic<bool> WalkingTrajectory_Computing = false;
   bool emergencyFlag = false; // Stop controller run loop
-  bool AutoFootstepPlacement = true; // To enable the Autofootstep placement MPC
+  bool AutoFootstepPlacement = false; // To enable the Autofootstep placement MPC
   bool Tds_by_ratio = true;
   bool force_contact_safety_ = true;
 

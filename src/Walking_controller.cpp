@@ -253,6 +253,7 @@ void Walking_controller::ComputeWalkingTrajectory()
   std::vector<double> & timesteps = datastore().get<std::vector<double>>("footsteps_planner::output_time_steps");
   // mc_rtc::log::info("tds by ratio {}",Tds_by_ratio);
   double tds = controller_config_.Double_Step_Ratio * timesteps[0];
+  if(StepRecoveryState){tds = 0.3;}
   if(!Tds_by_ratio)
   {
     tds = mpc_thread_state.input_tds;
@@ -332,11 +333,11 @@ void Walking_controller::UpdatePlanner_input()
   mpc_state_.input_v_.clear();
   Eigen::Vector3d step_velocity = reference_velocity;
   double step_time = T_Steps;
-     
+
   if(StepRecoveryState)
   {
     step_velocity = Eigen::Vector3d{0,0,0};
-    step_time = 0.6;
+    step_time = 0.8;
     
   }
   if(supportFootName == leftFootName_)
@@ -495,7 +496,7 @@ bool Walking_controller::run()
     
       compute_trajectory_once.notify_all();
     }
-    //compute_trajectory_once.notify_all();
+    compute_trajectory_once.notify_all();
 
     t_k = 0.;
     kfoot = 0;
