@@ -51,12 +51,12 @@ ismpc:
   lambda: 15
   zmp_delay: 0
   # hrp4
-  zmp_cstr_square: [0.12,0.08]
-  zmp_cstr_square_sg_supp: [0.12,0.05]
-  zmp_cstr_square_static: [0.16,0.08]
-  zmp_ref_offset: [0.0,0.0]
-  offset: [0.0,0.02]
-  offset_sg: [0.,0.01]
+  zmp_cstr_square: [0.14,0.08]
+  zmp_cstr_square_sg_supp: [0.14,0.05]
+  zmp_cstr_square_static: [0.14,0.08]
+  zmp_ref_offset: [0.0,0.05]
+  offset: [-0.00,0.0]
+  offset_sg: [0.,0.0]
   next_stp_cstr_ratio: 1
   next_stp_cstr_ratio: 0.1
   #hrp2
@@ -68,8 +68,8 @@ ismpc:
   # offset_sg: [0.,0.02]
   # next_stp_cstr_ratio: 0.1
   allow_none_tail: true
-  foosteps_kin_cstr: [1,1]
-  footsteps_cstr_square: [0.5,0.5]
+  foosteps_kin_cstr: [0.8,0.15]
+  footsteps_cstr_square: [0.8,0.15]
   double_support_ratio: 0.25
   sliding_zmp_cstr_region: false
   use_stability_task: true
@@ -105,6 +105,7 @@ walking_controller:
   min_dbl_suport_duration: 0.25
   max_step_duration: 2
   impact_threshold: 40
+  footstep_height: 0.03
   wrench_filter_cutoff_T: 2
   gamma_filter_cutoff_T: 2
   safety_foot_roll_error: 0.1
