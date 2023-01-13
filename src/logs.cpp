@@ -45,9 +45,9 @@ void Walking_controller::AddToLog()
   logger().addLogEntry("ISMPC_stab-error", [this]() -> const double { return this->mpc_state_.stab_error; });
   logger().addLogEntry("ISMPC_process-time", [this]() -> const double { return this->mpc_thread_process_time; });
 
-  logger().addLogEntry("ISMPC_TargetForce", [this]() -> const Eigen::Vector3d {
+  logger().addLogEntry("ISMPC_Target_Wrench", [this]() -> const sva::ForceVecd {
 
-    return target_force_;
+    return target_wrench_;
   });
 
   logger().addLogEntry("ISMPC_State_CoM", [this]() -> const Eigen::Vector3d {

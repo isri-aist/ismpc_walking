@@ -411,6 +411,7 @@ private:
   StabilizerState stabilizer_state_ = StabilizerState::None;
 
   Eigen::Vector3d target_force_ = Eigen::Vector3d::Zero();
+  sva::ForceVecd target_wrench_ = sva::ForceVecd::Zero();
   
 
   double maxStiffTimeThreshold_ = 3; // Time after which hand task gain reach max [s]

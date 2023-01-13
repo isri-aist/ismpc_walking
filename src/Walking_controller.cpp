@@ -575,9 +575,10 @@ void Walking_controller::MoveCoM()
   admittanceTarget.z() = 0;
 
   Eigen::Vector3d Ac_wrench = std::pow(eta(), 2) * (Pcom - admittanceTarget);
+  Ac_wrench.z() = 0;
 
-
-  target_force_ = robot().mass() * (Ac_wrench - mc_rtc::constants::gravity);
+  target_force_ = robot().mass() * (Ac_wrench + mc_rtc::constants::gravity);
+  target_wrench_ = sva::ForceVecd{realRobot().com().cross(target_force_),target_force_};
 
   Ac_wrench.z() = 0;
   dcmTarget = Pcom + Vc / eta();

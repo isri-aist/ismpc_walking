@@ -51,22 +51,22 @@ ismpc:
   lambda: 15
   zmp_delay: 0
   # hrp4
-  zmp_cstr_square: [0.14,0.08]
-  zmp_cstr_square_sg_supp: [0.14,0.05]
-  zmp_cstr_square_static: [0.14,0.08]
-  zmp_ref_offset: [0.0,0.05]
-  offset: [-0.00,0.0]
-  offset_sg: [0.,0.0]
-  next_stp_cstr_ratio: 1
-  next_stp_cstr_ratio: 0.1
-  #hrp2
-  # zmp_cstr_square: [0.25,0.1]
-  # zmp_cstr_square_sg_supp: [0.15,0.1]
-  # zmp_cstr_square_static: [0.16,0.12]
-  # zmp_ref_offset: [0.0,0.04]
-  # offset: [0.00,0.02]
-  # offset_sg: [0.,0.02]
+  # zmp_cstr_square: [0.14,0.08]
+  # zmp_cstr_square_sg_supp: [0.14,0.05]
+  # zmp_cstr_square_static: [0.14,0.08]
+  # zmp_ref_offset: [0.0,0.05]
+  # offset: [-0.00,0.0]
+  # offset_sg: [0.,0.0]
+  # next_stp_cstr_ratio: 1
   # next_stp_cstr_ratio: 0.1
+  #hrp2
+  zmp_cstr_square: [0.2,0.1]
+  zmp_cstr_square_sg_supp: [0.2,0.1]
+  zmp_cstr_square_static: [0.2,0.1]
+  zmp_ref_offset: [0.0,0.04]
+  offset: [0.00,0.0]
+  offset_sg: [0.,0.02]
+  next_stp_cstr_ratio: 0.1
   allow_none_tail: true
   foosteps_kin_cstr: [0.8,0.15]
   footsteps_cstr_square: [0.8,0.15]
@@ -83,7 +83,7 @@ footsteps_planner:
   delta: 0.1
   Ts_limit: [0.6,2]
   kinematics_cstr: [0.4,0.08]
-  feet_distance: 0.15
+  feet_distance: 0.2
   mean_speed: 0.1
   robot_height: 150
   max_rotation: 0.17
@@ -375,12 +375,6 @@ stabilizer:
           ## gain (not loaded automatically) ##
           ext_wrench_gain: [1, 1, 1]
       stabilizer_sgsupp:
-        dcm_tracking:
-          gains:
-            prop: [0,0]
-            integral: [0,0]
-            deriv: [0,0]
-            comdError: 0.
         admittance:
           dfz: 0.0002
           cop: [0.02, 0.02]
@@ -393,12 +387,6 @@ stabilizer:
           dfz: 0.0001
           cop: [0.03, 0.03]
       stabilizer_dblsupp:
-        dcm_tracking:
-          gains:
-            prop: [0,0]
-            integral: [0,0]
-            deriv: [0.,0.]
-            comdError: 0.
         tasks:
           torso:
             weight: 500
