@@ -496,7 +496,7 @@ bool Walking_controller::run()
     
       compute_trajectory_once.notify_all();
     }
-    compute_trajectory_once.notify_all();
+    // compute_trajectory_once.notify_all();
 
     t_k = 0.;
     kfoot = 0;
@@ -619,6 +619,8 @@ void Walking_controller::UpdateInitialVectors()
   //                       ( (robot().mass()*(mc_rtc::constants::gravity - robot().comAcceleration())).transpose() *
   //                       Eigen::Vector3d{0,0,1} );
 
+
+
   if(UseMPCState && mpc_state_.X_MPC.size() != 0)
   {
     mpc_state_.Pck = mpc_state_.Get_CoM_planarTarget(mpc_state_.Index);
@@ -685,6 +687,14 @@ void Walking_controller::UpdateInitialVectors()
   mpc_state_.Pck.z() = controller_config_.Stab_config.comHeight;
   mpc_state_.Vck.z() = 0;
   mpc_state_.Pzk.z() = 0;
+
+  mpc_state_.Uk.setZero();
+  if(mpc_state_.X_MPC.size() != 0)
+  {
+    mpc_state_.Uk = mpc_state_.get_u(0) + mpc_state_.initial_zmp_ - mpc_state_.Pzk;
+    
+  }
+
 }
 
 void Walking_controller::reset(const mc_control::ControllerResetData & reset_data)

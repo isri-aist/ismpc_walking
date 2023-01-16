@@ -619,6 +619,7 @@ private:
   Eigen::VectorXd solveQP();
 
   Eigen::Vector3d P_z_k; // Initial ZMP position
+  Eigen::Vector3d P_z_k_delayed; //ZMP pose after input U_k during input delay
   Eigen::Vector3d P_c_k; // Initial CoM Position
   Eigen::Vector3d V_c_k; // Initial CoM Velocity
   Eigen::Vector3d P_u_k; // Initial Unstable Component/DCM
