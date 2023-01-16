@@ -164,7 +164,7 @@ stabilizer:
             stiffness: 2
             weight: 500
           com:
-            stiffness: [1000.,1000.,100.]
+            stiffness: [10.,10.,10.]
             dimWeight: [1 , 1 , 1]
             weight: 1000.
             height: 0.835
@@ -340,7 +340,7 @@ stabilizer:
             stiffness: 2
             weight: 500
           com:
-            stiffness: [1000.,1000.,100.]
+            stiffness: [10.,10.,10.]
             # active_joints: ["Root", "RLEG_JOINT0", "RLEG_JOINT1", "RLEG_JOINT2", "RLEG_JOINT3", "RLEG_JOINT4", "RLEG_JOINT5",
             #                 "LLEG_JOINT0", "LLEG_JOINT1", "LLEG_JOINT2", "LLEG_JOINT3", "LLEG_JOINT4", "LLEG_JOINT5",
             #                 "LARM_JOINT0", "LARM_JOINT1", "LARM_JOINT2", "LARM_JOINT3", "LARM_JOINT4", "LARM_JOINT5",
