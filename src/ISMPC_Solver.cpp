@@ -944,7 +944,7 @@ void ISMPC_Solver::Integrate()
                     + Integration_Vec * u_i.y());
 
   Eigen::Vector2d Pz = P_z_k.segment(0,2);
-  for(int k = 0; k < N_delay; k++)
+  for(int k = 0; k < N_delay - 1; k++)
   {
     Eigen::Vector3d X_vec = Eigen::Vector3d{m_X_MPC.back()[0],m_X_MPC.back()[1],P_z_k.x()- w_k.x()};
     Eigen::Vector3d Y_vec = Eigen::Vector3d{m_Y_MPC.back()[0],m_Y_MPC.back()[1],P_z_k.y()- w_k.y()};
@@ -961,6 +961,7 @@ void ISMPC_Solver::Integrate()
     m_X_MPC.push_back(Integration_Mat * X_vec + Integration_Vec * u_0.x());
     m_Y_MPC.push_back(Integration_Mat * Y_vec + Integration_Vec * u_0.y());
   }
+  // mc_rtc::log::info("N {} size {}",N,m_Y_MPC.size());
 
   for(int i = 1; i < m_C; i++)
   {
