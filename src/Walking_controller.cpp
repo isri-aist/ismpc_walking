@@ -589,6 +589,11 @@ void Walking_controller::MoveCoM()
     Pcom.segment(0,2) = sva::interpolate(robot().surfacePose(leftFootName_),robot().surfacePose(rightFootName_),0.5).translation().segment(0,2);
     Vc.setZero();
     Ac_com.setZero();
+    if(!Stop)
+    {
+      Stop = true;
+      mc_rtc::log::warning("[Walking Controller] MPC control is off, cannot walk");
+    }
   }
   comTask->com(Pcom);
   comTask->refVel(Vc);
