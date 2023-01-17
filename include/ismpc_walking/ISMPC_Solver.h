@@ -446,6 +446,11 @@ public:
     return P_u_k; //+ Offset;
   }
 
+  const Eigen::Vector3d & Uk()
+  {
+    return U_k;
+  }
+
   double stability_error() const noexcept
   {
     return stab_error;
