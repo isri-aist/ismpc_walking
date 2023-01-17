@@ -412,7 +412,7 @@ public:
    */
   const Eigen::Vector3d & Puk_min()
   {
-    return P_u_k_min; //+ R_0_support * Offset;
+    return P_u_k_min;
   }
 
   /**
@@ -420,7 +420,7 @@ public:
    */
   const Eigen::Vector3d & Puk_max() const noexcept
   {
-    return P_u_k_max; //+ R_0_support * Offset;
+    return P_u_k_max; 
   }
 
   const Eigen::Matrix3d & Support_ori() const noexcept
@@ -443,7 +443,7 @@ public:
    */
   const Eigen::Vector3d & Puk() const noexcept
   {
-    return P_u_k; //+ Offset;
+    return P_u_k; 
   }
 
   const Eigen::Vector3d & Uk()
@@ -461,18 +461,12 @@ public:
    */
   void Puk(Eigen::Vector3d puk)
   {
-    P_u_k = puk - Offset;
+    P_u_k = puk ;
     P_u_k.z() = 0;
   }
 
   const Eigen::VectorXd & GetAfterTc_ZMP_trajectory()
   {
-    // int Size = (int) AfterTc_ZMP_trajectory.size()/2;
-    // Eigen::VectorXd Output =AfterTc_ZMP_trajectory;
-    // for(int i = 0; i < Size ; i++){
-    //     Output(i) += Offset.x();
-    //     Output(i + Size) += Offset.y();
-    // }
     return AfterTc_ZMP_trajectory;
   }
 
@@ -531,10 +525,7 @@ public:
 
   const std::vector<Eigen::Vector3d> & get_polynome_support()
   {
-    // std::vector<Eigen::Vector3d> Output;
-    // for (int k = 0; k < SuppPolyCorners.size() ; k++){
-    //     Output.push_back(SuppPolyCorners[k] + Offset);
-    // }
+
     return SuppPolyCorners;
   }
 
@@ -551,7 +542,7 @@ public:
     int n = static_cast<int>(b_zmp_traj.size() / 2);
     for(int i = 0; i < n; i++)
     {
-      Output.push_back(Eigen::Vector3d{b_zmp_traj(2 * i), b_zmp_traj(2 * i + 1), 0} + P_z_k + Offset);
+      Output.push_back(Eigen::Vector3d{b_zmp_traj(2 * i), b_zmp_traj(2 * i + 1), 0} + P_z_k_delayed);
     }
     return Output;
   }
@@ -562,15 +553,7 @@ public:
 
   const std::vector<std::vector<Eigen::Vector3d>> & get_allpolys()
   {
-    // std::vector<std::vector<Eigen::Vector3d>> Output;
-    // for (int k = 0; k < All_poly.size() ; k++){
-    //     std::vector<Eigen::Vector3d> poly;
-    //     for (int i = 0 ; i < All_poly[k].size() ; i++)
-    //     {
-    //         poly.push_back(All_poly[k][i] + Offset);
-    //     }
-    //     Output.push_back(poly);
-    // }
+
     return All_poly;
   }
 
@@ -632,7 +615,6 @@ private:
   Eigen::Vector3d m_Pfm1; // Swing Foot Pose Before Swinging orientation in z
   Eigen::Vector3d w_k; // Perturbance
 
-  Eigen::Vector3d Offset; // Offset added to coordinated such as trajectory are computed using the support foot as origin
 
   Eigen::Matrix3d R_support_0 = Eigen::Matrix3d::Identity();
   Eigen::Matrix3d R_0_support = Eigen::Matrix3d::Identity();
