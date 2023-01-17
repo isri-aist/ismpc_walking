@@ -61,11 +61,10 @@ ismpc:
   # next_stp_cstr_ratio: 0.1
   #hrp2
   zmp_cstr_square: [0.2,0.1]
-  zmp_cstr_square_sg_supp: [0.2,0.1]
   zmp_cstr_square_static: [0.2,0.1]
-  zmp_ref_offset: [0.0,0.04]
+  zmp_ref_offset: [0.0,0.0]
   offset: [0.00,0.0]
-  offset_sg: [0.,0.02]
+  offset_static: [-0.01,0]
   next_stp_cstr_ratio: 0.1
   allow_none_tail: true
   foosteps_kin_cstr: [0.8,0.15]

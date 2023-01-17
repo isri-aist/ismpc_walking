@@ -54,7 +54,6 @@ public:
 
     controller_config_.Beta = config("ismpc")("beta");
     controller_config_.Beta_range = config("ismpc")("safety_thresholds")("beta_range");
-    controller_config_.MPC_ZMP_Constraint_size = config("ismpc")("zmp_cstr_square");
     controller_config_.MPC_ZMP_Constraint_min_size = config("ismpc")("safety_thresholds")("zmp_cstr_square_min");
     controller_config_.MPC_ZMP_Constraint_max_size = config("ismpc")("safety_thresholds")("zmp_cstr_square_max");
     controller_config_.MPC_Footsteps_Constraint_size = config("ismpc")("footsteps_cstr_square");
@@ -64,6 +63,10 @@ public:
     controller_config_.delta = config("ismpc")("delta");
     controller_config_.MPC_ZMP_next_stp_cstr_ratio = config("ismpc")("next_stp_cstr_ratio");
     controller_config_.MPC_ZMP_cstr_square_offset = config("ismpc")("offset");
+    controller_config_.MPC_ZMP_static_cstr_square_offset = config("ismpc")("offset_static");
+    controller_config_.MPC_ZMP_ref_offset_sg_supp = config("ismpc")("zmp_ref_offset");
+    controller_config_.MPC_ZMP_Constraint_size = config("ismpc")("zmp_cstr_square");
+    controller_config_.MPC_ZMP_cstr_square_static = config("ismpc")("zmp_cstr_square_static");
     controller_config_.MPC_allow_None = config("ismpc")("allow_none_tail");
     controller_config_.Tc = config("ismpc")("Tc");
     controller_config_.delta = config("ismpc")("delta");
@@ -72,10 +75,6 @@ public:
     controller_config_.Beta_traj = config("ismpc")("beta_traj");
     controller_config_.lambda_ = config("ismpc")("lambda");
     controller_config_.zmp_delay = config("ismpc")("zmp_delay");
-    controller_config_.MPC_ZMP_cstr_square_offset_sg_supp = config("ismpc")("offset_sg");
-    controller_config_.MPC_ZMP_ref_offset_sg_supp = config("ismpc")("zmp_ref_offset");
-    controller_config_.MPC_ZMP_Constraint_size_sg_supp = config("ismpc")("zmp_cstr_square_sg_supp");
-    controller_config_.MPC_ZMP_cstr_square_static = config("ismpc")("zmp_cstr_square_static");
 
     controller_config_.Ts_max = config("walking_controller")("max_step_duration");
     controller_config_.T_ss_min = config("walking_controller")("min_sg_suport_duration");

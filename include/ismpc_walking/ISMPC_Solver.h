@@ -686,12 +686,11 @@ private:
   double m_dy_static;
   double m_dx;
   double m_dy; // ZMP square size at one timestep
-  double m_dx_sg_s;
-  double m_dy_sg_s; // ZMP square size at one timestep in single support;
   Eigen::Vector2d rect_pose_offset; // cstr zone offset in the foot frame for y axis, positive offset is an offset
                                     // toward the other feet;
-  Eigen::Vector2d rect_pose_offset_sg_supp; // ss cstr zone offset in the foot frame for y axis, positive offset is an
-                                            // offset toward the other feet;
+  Eigen::Vector2d rect_pose_offset_static; // cstr zone offset in the foot frame for y axis, positive offset is an offset
+                                    // toward the other feet;
+
   Eigen::Vector2d zmp_ref_offset;          
   
   double zmp_cstr_next_stp_ratio = 2;
