@@ -582,49 +582,39 @@ void ISMPC_Solver::FootSteps_Constraints()
     }
     Eigen::Matrix3d R_Theta_i_0 = X_0_step_im1.rotation().transpose();
 
-    if(i + 1 < input_steps_.size())
-    {
-      l = (R_Theta_i_0.transpose() * (X_0_step_i.translation() - X_0_step_im1.translation())).y();
-    }
-    else
-    {
-      l *= -1;
-    }
-
-    Rectangle Kinematic_Rectangle = Rectangle(theta_i, Eigen::Vector2d{m_dx_f, m_dy_f}, R_Theta_i_0 * Eigen::Vector3d{0,(l/std::abs(l)) * m_dy_f/2,0});
-    SupportPolygon Kinematic_Poly = SupportPolygon(Kinematic_Rectangle);
-    Eigen::MatrixX2d normals((Kinematic_Poly.normals()));
-    Eigen::VectorXd offsets(Kinematic_Poly.offsets());
-    kin_cstr_normals_vec.push_back(normals);
+    Rectangle Kinematic_Rectangle = Rectangle(theta_i, Eigen::Vector2d{m_dx_f, m_dy_f}, R_Theta_i_0 * Eigen::Vector3d{0,l + (l/std::abs(l)) * m_dy_f/2,0});
+    
+  
     if(i > 0)
     {
       Delta.block(2*i,2*(i-1),2,2) = -Eigen::Matrix2d::Identity();
-      b_kin_cstr_vec.push_back(offsets + normals * R_Theta_i_0.block(0, 0, 2, 2) * Eigen::Vector2d{0, l});
     }
     else
     {
-      b_kin_cstr_vec.push_back(offsets + normals * X_0_support_foot.translation().segment(0, 2)
-                               + normals * R_Theta_i_0.block(0, 0, 2, 2) * Eigen::Vector2d{0, l});
-      
+      Kinematic_Rectangle = Rectangle(X_0_support_foot, Eigen::Vector2d{m_dx_f, m_dy_f}, R_Theta_i_0 * Eigen::Vector3d{0,l + (l/std::abs(l)) * m_dy_f/2,0});
 
-      Rectangle step_admissible_region_rect = Rectangle(X_0_step_i, Eigen::Vector2d{m_dx_f_rect, m_dy_f_rect});
-      SupportPolygon step_admissible_region_poly = SupportPolygon(step_admissible_region_rect);
-      normals = step_admissible_region_poly.normals();
+      // Rectangle step_admissible_region_rect = Rectangle(X_0_step_i, Eigen::Vector2d{m_dx_f_rect, m_dy_f_rect});
+      // SupportPolygon step_admissible_region_poly = SupportPolygon(step_admissible_region_rect);
 
-      step_cstr_normals_vec.push_back(normals);
-      b_step_cstr_vec.push_back(step_admissible_region_poly.offsets());
-      N_footsteps_cstr += static_cast<int>(step_cstr_normals_vec.back().rows());
+      // step_cstr_normals_vec.push_back(step_admissible_region_poly.normals());
+      // b_step_cstr_vec.push_back(step_admissible_region_poly.offsets());
+      // N_footsteps_cstr += static_cast<int>(step_cstr_normals_vec.back().rows());
     }
+    SupportPolygon Kinematic_Poly = SupportPolygon(Kinematic_Rectangle);
+    b_kin_cstr_vec.push_back(Kinematic_Poly.offsets());
+    kin_cstr_normals_vec.push_back(Kinematic_Poly.normals());
+
     N_footsteps_kin_cstr += static_cast<int>(kin_cstr_normals_vec.back().rows());
+    l*=-1;
   }
   
   Eigen::MatrixXd foosteps_kin_cstr = Eigen::MatrixXd::Zero(N_footsteps_kin_cstr, 2 * (j_Max_C));
   Eigen::MatrixXd foosteps_cstr = Eigen::MatrixXd::Zero(N_footsteps_cstr, 2 * (j_Max_C));
   Eigen::VectorXd b_kin_cstr(N_footsteps_kin_cstr);
   Eigen::VectorXd b_steps_cstr(N_footsteps_cstr);
-  Aineq_steps.resize(N_footsteps_kin_cstr + 0*N_footsteps_cstr, N_variable);
+  Aineq_steps.resize(N_footsteps_kin_cstr + N_footsteps_cstr, N_variable);
   Aineq_steps.setZero();
-  bineq_steps.resize(N_footsteps_kin_cstr + 0*N_footsteps_cstr);
+  bineq_steps.resize(N_footsteps_kin_cstr + N_footsteps_cstr);
   bineq_steps.setZero();
 
   int step = 0;
