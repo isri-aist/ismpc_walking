@@ -508,12 +508,12 @@ public:
     }
     else
     {
-      Eigen::Vector3d p0 = R_support_0 * Puk_min();
-      Eigen::Vector3d p2 = R_support_0 * Puk_max();
+      Eigen::Vector3d p0 =  Puk_min();
+      Eigen::Vector3d p2 =  Puk_max();
       Eigen::Vector3d p1 =
-          p0 + R_support_0 * Eigen::Vector3d{Puk_max().x() - Puk_min().x(), 0, 0};
+          p0 + R_support_0 * Eigen::Vector3d{ (R_0_support * (Puk_max() - Puk_min())).x(), 0, 0};
       Eigen::Vector3d p3 =
-          p0 + R_support_0 * Eigen::Vector3d{0, Puk_max().y() - Puk_min().y(), 0};
+          p0 + R_support_0 * Eigen::Vector3d{ 0, (R_0_support * (Puk_max() - Puk_min())).y(), 0};
       return {p0, p1, p2, p3};
     }
   } 
