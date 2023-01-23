@@ -439,12 +439,13 @@ void ISMPC_Solver::ZMP_Constraints()
       sva::PTransformd X_0_step_j_max;
       X_0_step_j_min =
           sva::PTransformd(X_0_step_j.rotation(),
-                           X_0_step_jm1.translation() + X_0_step_j.rotation().transpose() * Eigen::Vector3d{0., l, 0.}
-                               - X_0_step_j.rotation().transpose() * Eigen::Vector3d{m_dx_f / 2, 0, 0});
+                           X_0_step_jm1.translation() + X_0_step_j.rotation().transpose() * ( Eigen::Vector3d{0., l, 0.}
+                               - Eigen::Vector3d{m_dx_f / 2, int(m_support_foot == "LeftFoot" ) * m_dy_f, 0}) );
       X_0_step_j_max =
           sva::PTransformd(X_0_step_j.rotation(),
-                           X_0_step_jm1.translation() + X_0_step_j.rotation().transpose() * Eigen::Vector3d{0., l, 0.}
-                               + X_0_step_j.rotation().transpose() * Eigen::Vector3d{m_dx_f / 2, m_dy_f, 0});
+                           X_0_step_jm1.translation() + X_0_step_j.rotation().transpose() * ( Eigen::Vector3d{0., l, 0.}
+                               +  Eigen::Vector3d{m_dx_f / 2, int(m_support_foot == "RightFoot" ) * m_dy_f, 0}) );
+
 
       sva::PTransformd ZMP_Zone_min(Eigen::Matrix3d::Identity(),
                                     (X_0_step_j_min.translation() * alpha + X_0_step_jm1.translation() * (1-alpha)));
