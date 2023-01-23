@@ -717,7 +717,7 @@ private:
   int m_C; // Number of indexs in the Control time length Tc = m_C * m_delta
   int m_P; // Number of indexs in the Preview time length Tp = m_P * m_delta
   int m_D; // Number of Iteration on the double steps period
-  int count_Dstep; // Number bounded between 1 and m_D describing the position of the zone during the doubleStep timing
+  double count_Dstep; // Number bounded between 1 and m_D describing the position of the zone during the doubleStep timing
 
   std::vector<SupportPolygon> zmp_cstr_polygons;
 

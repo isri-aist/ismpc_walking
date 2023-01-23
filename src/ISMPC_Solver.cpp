@@ -357,12 +357,9 @@ void ISMPC_Solver::ZMP_Constraints()
       Delta.block(2 * i,2 * k,2,2) = Eigen::Matrix2d::Identity() * (1-exp( - m_lambda * t_m_tk));
     }
 
-    int n = std::max(0, std::min(m_D + 1, count_Dstep));
+    double n = std::max(0., std::min(static_cast<double>(m_D + 1.), count_Dstep));
 
-    double DD = static_cast<double>(m_D);
-    double nn = static_cast<double>(n);
-
-    double alpha = std::min(1.0,std::max(0.,nn / (DD + 1)));
+    double alpha = std::min(1.0,std::max(0., n / (static_cast<double>(m_D) + 1)));
     // mc_rtc::log::info("i {} jf {} alpha {}",i,j_f,alpha);
     if(j_f == 0 || !AutoFootstepPlacement)
     {
@@ -671,7 +668,7 @@ void ISMPC_Solver::AntTailTrajectory()
   AfterTc_ZMP_trajectory;
   AfterTc_ZMP_trajectory.resize(2 * PreviewSize, 1);
   AfterTc_ZMP_trajectory.setZero();
-  double DD = static_cast<double>(m_D);
+
   for(int i = 0; i < PreviewSize; i++)
   {
 
@@ -689,7 +686,7 @@ void ISMPC_Solver::AntTailTrajectory()
         if(j_f - 1 >= input_steps_.size())
         {
           j_f -= 1;
-          count_Dstep = static_cast<int>(m_D / 2) + 1;
+          count_Dstep = (static_cast<double>(m_D) / 2) + 1;
         }
         else
         {
@@ -717,10 +714,13 @@ void ISMPC_Solver::AntTailTrajectory()
     {
       X_0_step_j = sva::PTransformd(X_0_step_j.rotation(), (X_0_step_j.translation() + X_0_step_jm1.translation()) / 2);
     }
+  
+    int n = std::max(0., std::min( static_cast<double>(m_D) + 1, count_Dstep));
 
-    double nn = std::max(1.0, std::min((double)count_Dstep, DD + 1));
+    double alpha = std::min(1.0,std::max(0., static_cast<double>(n) / (static_cast<double>(m_D) + 1)));
 
-    Eigen::Vector3d StepZone = (X_0_step_j.translation() * nn + X_0_step_jm1.translation() * (DD + 1 - nn)) / (DD + 1);
+
+    Eigen::Vector3d StepZone = (X_0_step_j.translation() * alpha + X_0_step_jm1.translation() * (1 - alpha));
 
     AfterTc_ZMP_trajectory(i) = StepZone.x();
     AfterTc_ZMP_trajectory(i + PreviewSize) = StepZone.y();
@@ -729,9 +729,9 @@ void ISMPC_Solver::AntTailTrajectory()
     ZMP_min_ref_traj.push_back(R_0_support * StepZone);
 
     count_Dstep += 1;
-    if(j_f - 1 == input_steps_.size() && nn > DD / 2)
+    if(j_f - 1 == input_steps_.size() && alpha > 0.5)
     {
-      count_Dstep = static_cast<int>(m_D / 2) + 1;
+      count_Dstep = static_cast<double>(m_D) / 2 + 1;
     }
   }
 
@@ -971,7 +971,7 @@ bool ISMPC_Solver::GetWalkingParameters(double Tds, bool stop)
   N_variable = 2 * (m_C + j_Max_C);
 
   m_D = static_cast<int>(m_Tds / m_delta) - Tds_offset;
-  count_Dstep = static_cast<int>(std::min((m_tk / m_delta) + 1, static_cast<double>(m_D + 1)));
+  count_Dstep = (std::min((m_tk / m_delta) + 1, static_cast<double>(m_D + 1)));
   std::chrono::duration<double, std::milli> time_span = std::chrono::high_resolution_clock::now() - t_clock;
 
   // mc_rtc::log::info("countD {}, m_D {} ,t_k : {}; Tc : {} ; Tds {} ; j_f_max : {}",count_Dstep,m_D,m_tk,
@@ -1028,7 +1028,7 @@ bool ISMPC_Solver::GetWalkingParameters(double Tds, bool stop)
   Eigen::MatrixXd M_u = Eigen::MatrixXd::Zero(2*m_C, N_variable);
   Eigen::MatrixXd M_steps = Eigen::MatrixXd::Zero(2*j_Max_C, N_variable);
   M_u.block(0, 0, 2 * m_C, 2 * m_C) = Eigen::MatrixXd::Identity(2 * m_C, 2 * m_C);
-  M_u.block(2*(m_C - 10),2*(m_C - 10),2*10,2*10) *= 1e1;
+  // M_u.block(2*(m_C - 10),2*(m_C - 10),2*10,2*10) *= 1e1;
   M_steps.block(0, 2 * m_C, 2 * j_Max_C, 2 * j_Max_C) = Eigen::MatrixXd::Identity(2 * j_Max_C, 2 * j_Max_C);
   Eigen::VectorXd b_u = Eigen::VectorXd::Zero(2*m_C);
   Eigen::VectorXd b_steps = Eigen::VectorXd::Zero(2*j_Max_C);
