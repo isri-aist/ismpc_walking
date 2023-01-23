@@ -45,11 +45,12 @@ ismpc:
   Tc: 1.5
   Tp: 4
   delta: 0.05
-  beta: 1e6
+  beta_u: 1
+  beta_step: 4e6
   beta_stab: 1e8
-  beta_traj : 1e2
+  beta_traj : 1e1
   lambda: 15
-  zmp_delay: 0
+  zmp_delay: 0.015
   # hrp4
   # zmp_cstr_square: [0.14,0.08]
   # zmp_cstr_square_sg_supp: [0.14,0.05]
@@ -60,19 +61,19 @@ ismpc:
   # next_stp_cstr_ratio: 1
   # next_stp_cstr_ratio: 0.1
   #hrp2
-  zmp_cstr_square: [0.2,0.1]
-  zmp_cstr_square_sg_supp: [0.2,0.1]
+  zmp_cstr_square: [0.17,0.12]
+  zmp_ref_offset: [0.0,0.03]
+  offset: [0.0,0.01]
   zmp_cstr_square_static: [0.2,0.1]
-  zmp_ref_offset: [0.0,0.04]
-  offset: [0.00,0.0]
-  offset_sg: [0.,0.02]
-  next_stp_cstr_ratio: 0.1
+  offset_static: [0.0,0]
+  next_stp_cstr_ratio: 1
+  feet_distance: 0.2
   allow_none_tail: true
-  foosteps_kin_cstr: [0.8,0.15]
-  footsteps_cstr_square: [0.8,0.15]
+  foosteps_kin_cstr: [1,0.25]
+  footsteps_cstr_square: [0.7,0.1]
   double_support_ratio: 0.25
   sliding_zmp_cstr_region: false
-  use_stability_task: true
+  use_stability_task: false
   safety_thresholds:
     beta_range: [1e-9,1e9]
     zmp_cstr_square_min: 0.01

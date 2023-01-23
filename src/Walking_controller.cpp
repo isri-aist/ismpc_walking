@@ -253,7 +253,7 @@ void Walking_controller::ComputeWalkingTrajectory()
   std::vector<double> & timesteps = datastore().get<std::vector<double>>("footsteps_planner::output_time_steps");
   // mc_rtc::log::info("tds by ratio {}",Tds_by_ratio);
   double tds = controller_config_.Double_Step_Ratio * timesteps[0];
-  if(StepRecoveryState){tds = 0.3;}
+  // if(StepRecoveryState){tds = 0.3;}
   if(!Tds_by_ratio)
   {
     tds = mpc_thread_state.input_tds;
@@ -337,17 +337,17 @@ void Walking_controller::UpdatePlanner_input()
   if(StepRecoveryState)
   {
     step_velocity = Eigen::Vector3d{0,0,0};
-    step_time = 0.8;
+    step_time = 0.6;
     
   }
-  if(supportFootName == leftFootName_)
-  {
-    step_velocity.y() = mc_filter::utils::clamp(step_velocity.y(), -0.07, 0.0);
-  }
-  else
-  {
-    step_velocity.y() = mc_filter::utils::clamp(step_velocity.y(), 0.0, 0.07);
-  }
+  // if(supportFootName == leftFootName_)
+  // {
+  //   step_velocity.y() = mc_filter::utils::clamp(step_velocity.y(), -0.07, 0.0);
+  // }
+  // else
+  // {
+  //   step_velocity.y() = mc_filter::utils::clamp(step_velocity.y(), 0.0, 0.07);
+  // }
   for(int k = 0; k < static_cast<int>(std::round(controller_config_.Tp / controller_config_.delta)); k++)
   {
     mpc_state_.input_v_.push_back(sva::MotionVecd(Eigen::Vector3d{0, 0, step_velocity.z()},
@@ -496,7 +496,7 @@ bool Walking_controller::run()
     
       compute_trajectory_once.notify_all();
     }
-    compute_trajectory_once.notify_all();
+    // compute_trajectory_once.notify_all();
 
     t_k = 0.;
     kfoot = 0;
@@ -619,6 +619,8 @@ void Walking_controller::UpdateInitialVectors()
   //                       ( (robot().mass()*(mc_rtc::constants::gravity - robot().comAcceleration())).transpose() *
   //                       Eigen::Vector3d{0,0,1} );
 
+
+
   if(UseMPCState && mpc_state_.X_MPC.size() != 0)
   {
     mpc_state_.Pck = mpc_state_.Get_CoM_planarTarget(mpc_state_.Index);
@@ -685,6 +687,14 @@ void Walking_controller::UpdateInitialVectors()
   mpc_state_.Pck.z() = controller_config_.Stab_config.comHeight;
   mpc_state_.Vck.z() = 0;
   mpc_state_.Pzk.z() = 0;
+
+  mpc_state_.Uk.setZero();
+  if(mpc_state_.X_MPC.size() != 0)
+  {
+    mpc_state_.Uk = stabTask->distribZMP() - mpc_state_.Pzk;
+    
+  }
+
 }
 
 void Walking_controller::reset(const mc_control::ControllerResetData & reset_data)
