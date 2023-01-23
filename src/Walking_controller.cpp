@@ -253,7 +253,7 @@ void Walking_controller::ComputeWalkingTrajectory()
   std::vector<double> & timesteps = datastore().get<std::vector<double>>("footsteps_planner::output_time_steps");
   // mc_rtc::log::info("tds by ratio {}",Tds_by_ratio);
   double tds = controller_config_.Double_Step_Ratio * timesteps[0];
-  if(StepRecoveryState){tds = 0.3;}
+  // if(StepRecoveryState){tds = 0.3;}
   if(!Tds_by_ratio)
   {
     tds = mpc_thread_state.input_tds;
@@ -337,17 +337,17 @@ void Walking_controller::UpdatePlanner_input()
   if(StepRecoveryState)
   {
     step_velocity = Eigen::Vector3d{0,0,0};
-    step_time = 0.8;
+    step_time = 0.6;
     
   }
-  if(supportFootName == leftFootName_)
-  {
-    step_velocity.y() = mc_filter::utils::clamp(step_velocity.y(), -0.07, 0.0);
-  }
-  else
-  {
-    step_velocity.y() = mc_filter::utils::clamp(step_velocity.y(), 0.0, 0.07);
-  }
+  // if(supportFootName == leftFootName_)
+  // {
+  //   step_velocity.y() = mc_filter::utils::clamp(step_velocity.y(), -0.07, 0.0);
+  // }
+  // else
+  // {
+  //   step_velocity.y() = mc_filter::utils::clamp(step_velocity.y(), 0.0, 0.07);
+  // }
   for(int k = 0; k < static_cast<int>(std::round(controller_config_.Tp / controller_config_.delta)); k++)
   {
     mpc_state_.input_v_.push_back(sva::MotionVecd(Eigen::Vector3d{0, 0, step_velocity.z()},

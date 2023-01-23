@@ -323,17 +323,17 @@ void Walking_controller::addToGUI()
                                 return Output;
                               }),
 
-      mc_rtc::gui::Trajectory("Anticipative Trajectory", mc_rtc::gui::Color(1., 0., 1.),
-                              [this]() -> std::vector<Eigen::Vector3d> {
-                                std::vector<Eigen::Vector3d> Output;
-                                Eigen::VectorXd Traj = MPCSolver.GetAfterTc_ZMP_trajectory();
-                                int n = (int)(Traj.size() / 2);
-                                for(int k = 0; k < n; k++)
-                                {
-                                  Output.push_back(Eigen::Vector3d{Traj(k), Traj(k + n), 0});
-                                }
-                                return Output;
-                              }),
+      // mc_rtc::gui::Trajectory("Anticipative Trajectory", mc_rtc::gui::Color(1., 0., 1.),
+      //                         [this]() -> std::vector<Eigen::Vector3d> {
+      //                           std::vector<Eigen::Vector3d> Output;
+      //                           Eigen::VectorXd Traj = MPCSolver.GetAfterTc_ZMP_trajectory();
+      //                           int n = (int)(Traj.size() / 2);
+      //                           for(int k = 0; k < n; k++)
+      //                           {
+      //                             Output.push_back(Eigen::Vector3d{Traj(k), Traj(k + n), 0});
+      //                           }
+      //                           return Output;
+      //                         }),
 
       mc_rtc::gui::Polygon(
           "AllPoly", mc_rtc::gui::Color(1., 0.3, 0.),
