@@ -52,7 +52,8 @@ public:
   void Configure(const mc_rtc::Configuration & config)
   {
 
-    controller_config_.Beta = config("ismpc")("beta");
+    controller_config_.Beta_u = config("ismpc")("beta_u");
+    controller_config_.Beta_step = config("ismpc")("beta_step");
     controller_config_.Beta_range = config("ismpc")("safety_thresholds")("beta_range");
     controller_config_.MPC_ZMP_Constraint_min_size = config("ismpc")("safety_thresholds")("zmp_cstr_square_min");
     controller_config_.MPC_ZMP_Constraint_max_size = config("ismpc")("safety_thresholds")("zmp_cstr_square_max");
@@ -101,8 +102,8 @@ public:
     controller_config_ = config;
     // controller_config_.update_config();
 
-    controller_config_.Beta =
-        std::min(controller_config_.Beta_range(1), std::max(controller_config_.Beta_range(0), controller_config_.Beta));
+    controller_config_.Beta_step =
+        std::min(controller_config_.Beta_range(1), std::max(controller_config_.Beta_range(0), controller_config_.Beta_step));
     controller_config_.MPC_ZMP_Constraint_size.x() = std::min(
         controller_config_.MPC_ZMP_Constraint_max_size,
         std::max(controller_config_.MPC_ZMP_Constraint_min_size, controller_config_.MPC_ZMP_Constraint_size.x()));

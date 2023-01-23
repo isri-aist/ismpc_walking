@@ -50,7 +50,8 @@ void ISMPC_Solver::configure(const ControllerConfiguration & config)
   m_dy = config.MPC_ZMP_Constraint_size.y();
   m_dx_static = config.MPC_ZMP_cstr_square_static.x();
   m_dy_static = config.MPC_ZMP_cstr_square_static.y();
-  m_Beta = config.Beta;
+  m_Beta_step = config.Beta_step;
+  m_Beta_u = config.Beta_u;
   m_Beta_stab = config.Beta_stab;
   m_Beta_traj = config.Beta_traj;
   m_lambda = config.lambda_;
@@ -90,7 +91,7 @@ void ISMPC_Solver::configure(const ControllerConfiguration & config)
 
 
   mc_rtc::log::info("[ISMPC] Configuration :");
-  mc_rtc::log::info("Beta {}", m_Beta);
+  mc_rtc::log::info("Beta {}", m_Beta_step);
   mc_rtc::log::info("ZMP cstr\n{}", Eigen::Vector2d{m_dx, m_dy});
   mc_rtc::log::info("Footsteps kin cstr\n{}", Eigen::Vector2d{m_dx_f, m_dy_f});
   mc_rtc::log::info("Footsteps cstr\n{}", Eigen::Vector2d{m_dx_f_rect, m_dy_f_rect});
@@ -1043,14 +1044,14 @@ bool ISMPC_Solver::GetWalkingParameters(double Tds, bool stop)
   // t_clock = std::chrono::high_resolution_clock::now();
 
   m_Q = Eigen::MatrixXd::Identity(N_variable, N_variable) * 1e-12 + 
-        (M_u.transpose() * M_u) + 
-         m_Beta * (M_steps.transpose() * M_steps) + 
+         m_Beta_u*(M_u.transpose() * M_u) + 
+         m_Beta_step * (M_steps.transpose() * M_steps) + 
          m_Beta_traj * (M_zmp_traj.transpose() * M_zmp_traj);
          //1e6 * (M_comPos.transpose() * M_comPos);
          //1e6 * (M_comVel.transpose() * M_comVel);
 
-  m_p = (-M_u.transpose() * b_u) + 
-        m_Beta * (-M_steps.transpose() * b_steps) + 
+  m_p = m_Beta_u*(-M_u.transpose() * b_u) + 
+        m_Beta_step * (-M_steps.transpose() * b_steps) + 
         m_Beta_traj * (-M_zmp_traj.transpose() * b_zmp_traj);
         //1e6 * (-M_comPos.transpose() * b_comPos);
         //1e6 * (-M_comVel.transpose() * b_comVel);
@@ -1211,7 +1212,7 @@ Eigen::VectorXd ISMPC_Solver::solveQP()
   int Nvar = m_Q.rows();
   int NIneqConstr = Aineq.rows();
   int NEqConstr = Aeq.rows();
-  // QP.tolerance(5e-3);
+  // QP.tolerance(1e-3);
   QP.problem(Nvar, NEqConstr, NIneqConstr);
   QPsuccess = QP.solve(m_Q, m_p, Aeq, beq, Aineq, bineq);
 

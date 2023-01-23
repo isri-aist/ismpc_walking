@@ -680,7 +680,8 @@ private:
   double m_dy_f; // Step kinematic admissible Region
   double m_dx_f_rect;
   double m_dy_f_rect; // Step admissible region
-  double m_Beta = 1e1;
+  double m_Beta_u = 1;
+  double m_Beta_step = 1e1;
   double m_Beta_stab = 1e5;
   double m_Beta_traj = 0.;
   double m_lambda = 100;
