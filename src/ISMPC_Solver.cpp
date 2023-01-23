@@ -55,6 +55,7 @@ void ISMPC_Solver::configure(const ControllerConfiguration & config)
   m_Beta_stab = config.Beta_stab;
   m_Beta_traj = config.Beta_traj;
   m_lambda = config.lambda_;
+  m_feet_distance = config.feet_ditance_;
   zmp_delay(config.zmp_delay);
   Slide_ZMP_region = config.sliding_zmp_cstr_region;
   zmp_cstr_next_stp_ratio = config.MPC_ZMP_next_stp_cstr_ratio;
@@ -118,6 +119,7 @@ void ISMPC_Solver::init_MPC(const MPC_state & mpc_state,
   U_k = mpc_state.Uk;
   P_z_k_delayed = P_z_k + (1 - exp(-m_lambda * m_delay)) * U_k;
   m_Tail = Tail;
+  m_support_foot = mpc_state.input_Support_FootName;
   m_tk = mpc_state.t_k;
   // m_eta = sqrt(g / P_c_k.z());
   P_u_k = P_c_k + (V_c_k / m_eta);
@@ -148,11 +150,8 @@ void ISMPC_Solver::Static_ZMP_Constraints()
   zmp_cstr_polygons.clear();
   b_zmp_ineq.clear();
   double sgn = -1;
-  if((X_0_support_foot.rotation() * (input_steps_[0].translation() - X_0_support_foot.translation())).y()
-     > 0) // Right Support
-  {
-    sgn = 1;
-  }
+
+  if(m_support_foot == "RightFoot"){sgn = 1;} 
   const Eigen::Vector3d rect_offset_support =
       X_0_support_foot.rotation().transpose() * Eigen::Vector3d{rect_pose_offset_static.x(), sgn * rect_pose_offset_static.y(), 0};
 
@@ -259,8 +258,7 @@ void ISMPC_Solver::ZMP_Constraints()
   std::vector<Eigen::VectorXd> b_zmp_ineq = std::vector<Eigen::VectorXd>{} ;
   zmp_cstr_polygons = std::vector<SupportPolygon>{};
   double sgn = -1; //change between 1 and -1 depending of support foot (1 if right)
-  if((X_0_support_foot.rotation() * (input_steps_[0].translation() - X_0_support_foot.translation())).y()
-     > 0) // Right Support
+  if(m_support_foot == "RightFoot") // Right Support
   {
     sgn = 1;
   }
@@ -574,7 +572,8 @@ void ISMPC_Solver::FootSteps_Constraints()
   std::vector<Eigen::VectorXd> b_step_cstr_vec;
   Eigen::MatrixXd Delta = Eigen::MatrixXd::Identity(2 * j_Max_C, 2 * j_Max_C); // Matrix to differentiate two footsteps
 
-  double l = 0.2;
+  double l = m_feet_distance;
+  if(m_support_foot == "LeftFoot"){l*=-1;}
   int N_footsteps_kin_cstr = 0;
   int N_footsteps_cstr = 0;
   for(int i = 0; i < j_Max_C; i++)

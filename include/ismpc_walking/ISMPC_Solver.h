@@ -686,6 +686,8 @@ private:
   double m_Beta_traj = 0.;
   double m_lambda = 100;
   double m_delay = 0; //delay ( < m_delta ) during which zmp is constant
+  double m_feet_distance = 0.2; 
+  std::string m_support_foot = "LeftFoot";
   int j_Max_C = 0; // Number of footsteps in the Control Horizon
   int j_f; // Index of the actual support foot
   int j_fm1; // Index of the previous support foot

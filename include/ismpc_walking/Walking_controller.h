@@ -76,6 +76,7 @@ public:
     controller_config_.Beta_traj = config("ismpc")("beta_traj");
     controller_config_.lambda_ = config("ismpc")("lambda");
     controller_config_.zmp_delay = config("ismpc")("zmp_delay");
+    controller_config_.feet_ditance_ = config("ismpc")("feet_distance");
 
     controller_config_.Ts_max = config("walking_controller")("max_step_duration");
     controller_config_.T_ss_min = config("walking_controller")("min_sg_suport_duration");
