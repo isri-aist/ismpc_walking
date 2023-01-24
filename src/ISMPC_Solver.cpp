@@ -242,7 +242,15 @@ void ISMPC_Solver::Static_ZMP_Constraints()
     zk += 2;
     cstr_index += n_vertice;
   }
-  Aineq_zmp = ZMP_Cstr * Delta;
+  Eigen::MatrixXd u_Delta = Delta;
+  for(int i = 0; i < m_C; i++)
+  {
+    for(int k = 0; k <= i; k++)
+    {
+      u_Delta.block(2*i,2*k,2,2) = Eigen::Matrix2d::Identity();
+    }
+  }
+  Aineq_zmp = ZMP_Cstr * u_Delta;
 
   b_zmp_traj = Eigen::Map<Eigen::VectorXd, Eigen::Unaligned>(ZMP_ref_traj.data(), ZMP_ref_traj.size());
   M_zmp_traj = Eigen::MatrixXd::Zero(b_zmp_traj.rows(), N_variable);
@@ -550,7 +558,15 @@ void ISMPC_Solver::ZMP_Constraints()
     zk += 2;
     cstr_index += n_vertice;
   }
-  Aineq_zmp = ZMP_Cstr * Delta;
+  Eigen::MatrixXd u_Delta = Delta;
+  for(int i = 0; i < m_C; i++)
+  {
+    for(int k = 0; k <= i; k++)
+    {
+      u_Delta.block(2*i,2*k,2,2) = Eigen::Matrix2d::Identity();
+    }
+  }
+  Aineq_zmp = ZMP_Cstr * u_Delta;
 
   b_zmp_traj = Eigen::Map<Eigen::VectorXd, Eigen::Unaligned>(ZMP_ref_traj.data(), ZMP_ref_traj.size());
   M_zmp_traj = Eigen::MatrixXd::Zero(b_zmp_traj.rows(), N_variable);
