@@ -84,6 +84,12 @@ void ISMPC_Solver::configure(const ControllerConfiguration & config)
   Integration_Mat(2, 1) = 0;
   Integration_Mat(2, 2) = 1;
 
+  m_dynamic_matrix_A << 0 , 1 , 0,
+                        std::pow(m_eta,2) , 0 , -std::pow(m_eta,2),
+                        0 , 0 , - m_lambda;
+  m_dynamic_matrix_A = Eigen::Matrix3d::Identity() + m_delta_control * m_dynamic_matrix_A/N_integration;
+  m_dynamic_matrix_B = Eigen::MatrixXd::Zero(3,m_C);
+
 
   Integration_Vec = Eigen::Vector3d{m_delta_control - (std::sinh(m_eta * m_delta_control) / m_eta),
                                     1 - std::cosh(m_eta * m_delta_control), m_delta_control};
@@ -863,64 +869,48 @@ void ISMPC_Solver::Compute_Integration_Vector(int i)
 void ISMPC_Solver::Integrate()
 {
   
-  Eigen::Vector3d u_0 = Eigen::Vector3d{m_ZMP_u[0], m_ZMP_u[m_C], 0};
-  Eigen::Vector3d u_i = u_0;
-
+  m_X_MPC.clear();
+  m_Y_MPC.clear();
   int N = (int)(m_delta / m_delta_control);
   int N_delay = static_cast<int>(m_delay/m_delta_control);
 
-  if(N_delay != 0){u_i = U_k;}
 
-  Compute_Integration_Vector(1);
-
-  m_X_MPC.clear();
-  m_Y_MPC.clear();
-  m_X_MPC.push_back(Integration_Mat * (Eigen::Vector3d{P_c_k.x(), V_c_k.x(), P_z_k.x() - w_k.x()})
-                    + Integration_Vec * u_i.x());
-  m_Y_MPC.push_back(Integration_Mat * (Eigen::Vector3d{P_c_k.y(), V_c_k.y(), P_z_k.y() - w_k.y()})
-                    + Integration_Vec * u_i.y());
-
-  Eigen::Vector2d Pz = (P_z_k - w_k).segment(0,2);
-  for(int k = 0; k < N_delay - 1; k++)
+  Eigen::Vector3d state_x = Eigen::Vector3d{P_c_k.x(), V_c_k.x(), P_z_k.x() - w_k.x()};
+  Eigen::Vector3d state_y = Eigen::Vector3d{P_c_k.y(), V_c_k.y(), P_z_k.y() - w_k.y()};
+  Eigen::Vector3d b{0,0,m_delta_control * m_lambda/N_integration};
+  for(int k = 1; k < N_delay + 1; k++)
   {
-    Compute_Integration_Vector(k + 2);
-    Eigen::Vector3d X_vec = Eigen::Vector3d{m_X_MPC.back()[0],m_X_MPC.back()[1],P_z_k.x()- w_k.x()};
-    Eigen::Vector3d Y_vec = Eigen::Vector3d{m_Y_MPC.back()[0],m_Y_MPC.back()[1],P_z_k.y()- w_k.y()};
-    m_X_MPC.push_back(Integration_Mat * X_vec + Integration_Vec * u_i.x());
-    m_Y_MPC.push_back(Integration_Mat * Y_vec + Integration_Vec * u_i.y());
-  }
-  // mc_rtc::log::info("N_delay {} size {}",N_delay,m_Y_MPC.size());
-  int k_start = 0;
-  if(N_delay == 0)
-  {
-    k_start +=1;
-  }
-  else {Pz = Eigen::Vector2d{m_X_MPC.back()[2],m_Y_MPC.back()[2]};}
-  for(int k = 0; k < N  - N_delay + 2; k++)
-  {
-    Compute_Integration_Vector(k + k_start + 1);
-    Eigen::Vector3d X_vec = Eigen::Vector3d{m_X_MPC.back()[0],m_X_MPC.back()[1],Pz.x()};
-    Eigen::Vector3d Y_vec = Eigen::Vector3d{m_Y_MPC.back()[0],m_Y_MPC.back()[1],Pz.y()};
-    m_X_MPC.push_back(Integration_Mat * X_vec + Integration_Vec * u_0.x());
-    m_Y_MPC.push_back(Integration_Mat * Y_vec + Integration_Vec * u_0.y());
-  }
-  // mc_rtc::log::info("N {} size {}",N,m_Y_MPC.size());
-
-  for(int i = 1; i < m_C; i++)
-  {
-
-    u_i = Eigen::Vector3d{m_ZMP_u[i], m_ZMP_u[m_C + i], 0};
-    Pz = Eigen::Vector2d{m_X_MPC.back()[2],m_Y_MPC.back()[2]};
-    for(int k = 1; k < N + 1; k++)
+    for(int __ = 0 ; __ < N_integration ; __++)
     {
-      Compute_Integration_Vector(k);
-      Eigen::Vector3d X_vec = Eigen::Vector3d{m_X_MPC.back()[0],m_X_MPC.back()[1],Pz.x()};
-      Eigen::Vector3d Y_vec = Eigen::Vector3d{m_Y_MPC.back()[0],m_Y_MPC.back()[1],Pz.y()};
-      m_X_MPC.push_back(Integration_Mat * X_vec + Integration_Vec * u_i.x());
-
-      m_Y_MPC.push_back(Integration_Mat * Y_vec + Integration_Vec * u_i.y());
+      state_x = m_dynamic_matrix_A * state_x + b * (U_k+P_z_k).x();
+      state_y = m_dynamic_matrix_A * state_y + b * (U_k+P_z_k).y();
     }
+    m_X_MPC.push_back(state_x);
+    m_Y_MPC.push_back(state_y);
+  }
+  Eigen::VectorXd u_x = m_ZMP_u.segment(0,m_C);
+  u_x(0) += state_x(2);
+
   
+  Eigen::VectorXd u_y = m_ZMP_u.segment(m_C,m_C);
+  u_y(0) += state_y(2);
+
+  m_dynamic_matrix_B = Eigen::MatrixXd::Zero(3,m_C);
+  for (Eigen::Index i = 0 ; i < m_C; i++)
+  {
+    m_dynamic_matrix_B(2,i) = m_lambda * m_delta_control/N_integration;
+    
+    for (int _ = 0; _ < N ; _ ++)
+    {    
+      for(int __ = 0 ; __ < N_integration ; __++)
+      {
+        state_x = m_dynamic_matrix_A * state_x + m_dynamic_matrix_B * u_x;
+        state_y = m_dynamic_matrix_A * state_y + m_dynamic_matrix_B * u_y;
+      }
+      m_X_MPC.push_back(state_x);
+      m_Y_MPC.push_back(state_y);
+
+    }
   }
 
   for(size_t i = 0; i < m_Y_MPC.size(); i++)
@@ -995,27 +985,7 @@ bool ISMPC_Solver::GetWalkingParameters(double Tds, bool stop)
     return false;
   }
 
-  // mc_rtc::log::info("Pu min\n{}", P_u_k_min);
-  // mc_rtc::log::info("Pu max\n{}", P_u_k_max);
-  int N = static_cast<int>(m_delta/m_delta_control);
-  // Eigen::Vector3d X_0 = Eigen::Vector3d{P_c_k.x(), V_c_k.x(), P_z_k.x() - w_k.x()};
-  // Eigen::Vector3d Y_0 = Eigen::Vector3d{P_c_k.y(), V_c_k.y(), P_z_k.y() - w_k.y()};
-  Eigen::MatrixXd M_comVel = Eigen::MatrixXd::Zero(2 * N , N_variable);
-  Eigen::MatrixXd M_comPos = Eigen::MatrixXd::Zero(2 * N , N_variable);
-  Eigen::VectorXd b_comVel = Eigen::VectorXd::Zero(M_comVel.rows());
-  Eigen::VectorXd b_comPos = Eigen::VectorXd::Zero(M_comPos.rows());
-
-  for (int i = 0 ; i < N ; i++)
-  {
-
-    Compute_Integration_Vector(i);
-    M_comPos(2 * i ,2 * i) = Integration_Vec(i) ;
-    M_comPos(2*i + 1,2*i + 1) = M_comPos(2 * i ,2 * i);
-    // b_comPos(2 * i) = b_zmp_traj(0) - (IntMatPow[i]* X_0)(0);
-    // b_comPos(2 * i + 1) = b_zmp_traj(1) - (IntMatPow[i]* Y_0)(0);
-  }
-
-
+ 
   Eigen::MatrixXd M_u = Eigen::MatrixXd::Zero(2*m_C, N_variable);
   Eigen::MatrixXd M_steps = Eigen::MatrixXd::Zero(2*j_Max_C, N_variable);
   M_u.block(0, 0, 2 * m_C, 2 * m_C) = Eigen::MatrixXd::Identity(2 * m_C, 2 * m_C);
@@ -1035,14 +1005,11 @@ bool ISMPC_Solver::GetWalkingParameters(double Tds, bool stop)
          m_Beta_u*(M_u.transpose() * M_u) + 
          m_Beta_step * (M_steps.transpose() * M_steps) + 
          m_Beta_traj * (M_zmp_traj.transpose() * M_zmp_traj);
-         //1e6 * (M_comPos.transpose() * M_comPos);
-         //1e6 * (M_comVel.transpose() * M_comVel);
-
+         
   m_p = m_Beta_u*(-M_u.transpose() * b_u) + 
         m_Beta_step * (-M_steps.transpose() * b_steps) + 
         m_Beta_traj * (-M_zmp_traj.transpose() * b_zmp_traj);
-        //1e6 * (-M_comPos.transpose() * b_comPos);
-        //1e6 * (-M_comVel.transpose() * b_comVel);
+     
 
 
   if(m_Tail == "None")

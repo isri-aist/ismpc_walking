@@ -664,6 +664,7 @@ private:
   double m_Dstep_ratio; // T_DoubleStep/T_Step
   double m_delta; // t_k - t_k-1
   double m_delta_control; // Controller timestep
+  double N_integration = 1;
   double m_dx_static;
   double m_dy_static;
   double m_dx;
@@ -709,6 +710,10 @@ private:
   // CoM,CoMd,ZMP Integration
   Eigen::Matrix3d Integration_Mat;
   Eigen::Vector3d Integration_Vec;
+
+  //Pendulum dynamic to integrate state : \dot{s} = A * s + B * U 
+  Eigen::Matrix3d m_dynamic_matrix_A;
+  Eigen::MatrixXd m_dynamic_matrix_B;
 
   Eigen::VectorXd Pzk_Offset; // Vector that represent the intial position of the ZMP
   Eigen::MatrixXd C; // Temporary matrix to compute ZMP constraints with footsteps placements
