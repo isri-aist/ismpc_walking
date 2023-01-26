@@ -126,6 +126,7 @@ struct MPC_state
   bool QPSuccess;
   Eigen::Vector2d Pu_min;
   Eigen::Vector2d Pu_max;
+  double alpha = 0;
   int Index = 0;
 
   Eigen::Vector3d initial_zmp_ = Eigen::Vector3d::Zero();

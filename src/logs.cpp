@@ -87,6 +87,9 @@ void Walking_controller::AddToLog()
     }
     return 0;
   });
+  logger().addLogEntry("ISMPC_alpha", [this]() -> const double {
+    return mpc_state_.alpha;
+  });
   // logger().addLogEntry("ISMPC_State_ZMP_kinmes", [this]() -> const Eigen::Vector3d {
 
   //   return Eigen::Vector3d{0,0,1}.cross( robot().com().cross(robot().mass()*mc_rtc::constants::gravity) ) /

@@ -495,6 +495,11 @@ public:
     return m_lambda;
   }
 
+  const double support_state() const noexcept
+  {
+    return m_support_state;
+  }
+
   void set_lambda(const double in)
   {
     m_lambda = in;
@@ -583,7 +588,7 @@ private:
   /**
    * ZMP Trajectory constraints :
    * QP is build such as the output vector contains :
-   * -The ZMP velocities in x and y (world frame) ordered by timesteps then x then y
+   * -The ZMP reference in x and y (world frame) ordered by timesteps then x then y
    * -The Optimized Footstep (if computed) in x and y ordered by timesteps then x then y
    * -The inequality constraints are set in the constraints matrix such as the first part represent the zmp position
    * constraints and then the Footsteps position constraints
@@ -680,7 +685,7 @@ private:
   double m_Tc;
   double m_Tp; // Control & Preview horizon time
   double m_Tds; // Double Support Duration
-  int Tds_offset = 0;
+  int Tds_offset = 1;
   double m_Dstep_ratio; // T_DoubleStep/T_Step
   double m_delta; // t_k - t_k-1
   double m_delta_control; // Controller timestep
@@ -714,7 +719,7 @@ private:
   int j_Max_C = 0; // Number of footsteps in the Control Horizon
   int j_f; // Index of the actual support foot
   int j_fm1; // Index of the previous support foot
-
+  double m_support_state = 0;;
   int kfoot = 0;
 
   std::string m_Tail; // Velocity Tailing desired

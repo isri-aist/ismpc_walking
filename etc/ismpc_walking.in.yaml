@@ -61,8 +61,8 @@ ismpc:
   # next_stp_cstr_ratio: 1
   # next_stp_cstr_ratio: 0.1
   #hrp2
-  u_cstr_square: [0.2,0.12]
-  zmp_cstr_square: [0.1,0.12]
+  u_cstr_square: [0.2,0.13]
+  zmp_cstr_square: [0.12,0.12]
   zmp_ref_offset: [0.0,0.03]
   offset: [0.0,0.0]
   zmp_cstr_square_static: [0.2,0.1]

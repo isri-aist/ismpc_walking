@@ -316,6 +316,7 @@ void Walking_controller::ComputeWalkingTrajectory()
     mpc_thread_state.initial_zmp_ = MPCSolver.Initial_ZMP();
     mpc_thread_state.stop = MPCSolver.stop();
     mpc_thread_state.FeasibilityPolygon = MPCSolver.feasibility_region();
+    mpc_thread_state.alpha = MPCSolver.support_state();
     kfoot = 0;
     NewThreadState = true;
     
@@ -470,9 +471,9 @@ bool Walking_controller::run()
   if(!(Stop && Swing_Foot_Contact))
   {
 
-    if(t - t_k > controller_config_.delta)
+    if(t - t_k >= controller_config_.delta || true )
     {
-      t_k += controller_config_.delta; 
+      t_k += t - t_k; 
       compute_trajectory_once.notify_all();
     }
     
@@ -497,7 +498,7 @@ bool Walking_controller::run()
     
       compute_trajectory_once.notify_all();
     }
-    // compute_trajectory_once.notify_all();
+    compute_trajectory_once.notify_all();
 
     t_k = 0.;
     kfoot = 0;

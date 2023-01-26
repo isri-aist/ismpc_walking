@@ -389,7 +389,7 @@ void ISMPC_Solver::ZMP_Constraints()
       // j_f = std::min(j_f + 1, (int)input_steps_.size() - 1);
       j_f += 1;
       j_fm1 = j_f - 1;
-      count_Dstep = 0;
+      count_Dstep = 1;
       sgn *= -1;
 
       NextStepTiming = m_timestamp[j_f];
@@ -434,6 +434,7 @@ void ISMPC_Solver::ZMP_Constraints()
     double n = std::max(0., std::min(static_cast<double>(m_D ), count_Dstep));
 
     double alpha = std::min(1.0,std::max(0., n / (static_cast<double>(m_D))));
+    
     // mc_rtc::log::info("i {} jf {} alpha {}",i,j_f,alpha);
     if(j_f == 0 || !AutoFootstepPlacement)
     {
@@ -505,6 +506,7 @@ void ISMPC_Solver::ZMP_Constraints()
       if(i == 0)
       {
         SuppPolyCorners = zmp_cstr_polygons.back().Get_Polygone_Corners();
+        m_support_state = alpha;
       }
 
       Eigen::MatrixX2d normals(zmp_cstr_polygons.back().normals());
@@ -1035,7 +1037,7 @@ bool ISMPC_Solver::GetWalkingParameters(double Tds, bool stop)
   N_variable = 2 * (m_C + j_Max_C);
 
   m_D = static_cast<int>(m_Tds / m_delta) - Tds_offset;
-  count_Dstep = (std::min((m_tk / m_delta) + 1, static_cast<double>(m_D + 1)));
+  count_Dstep = (std::min((m_tk / m_delta) + 1, static_cast<double>(m_D)));
   std::chrono::duration<double, std::milli> time_span = std::chrono::high_resolution_clock::now() - t_clock;
 
   // mc_rtc::log::info("countD {}, m_D {} ,t_k : {}; Tc : {} ; Tds {} ; j_f_max : {}",count_Dstep,m_D,m_tk,
