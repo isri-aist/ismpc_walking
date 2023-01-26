@@ -389,7 +389,7 @@ void ISMPC_Solver::ZMP_Constraints()
       // j_f = std::min(j_f + 1, (int)input_steps_.size() - 1);
       j_f += 1;
       j_fm1 = j_f - 1;
-      count_Dstep = 0;
+      count_Dstep = 1;
       sgn *= -1;
 
       NextStepTiming = m_timestamp[j_f];
