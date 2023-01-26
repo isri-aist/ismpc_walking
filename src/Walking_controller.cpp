@@ -472,7 +472,7 @@ bool Walking_controller::run()
   if(!(Stop && Swing_Foot_Contact))
   {
 
-    if(t - t_k >= controller_config_.delta || true )
+    if(t - t_k >= controller_config_.delta )
     {
       t_k += t - t_k; 
       compute_trajectory_once.notify_all();
@@ -499,7 +499,7 @@ bool Walking_controller::run()
     
       compute_trajectory_once.notify_all();
     }
-    compute_trajectory_once.notify_all();
+    // compute_trajectory_once.notify_all();
 
     t_k = 0.;
     kfoot = 0;

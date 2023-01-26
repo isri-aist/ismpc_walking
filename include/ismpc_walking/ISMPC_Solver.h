@@ -495,7 +495,7 @@ public:
     return m_lambda;
   }
 
-  const double support_state() const noexcept
+  const double support_state()
   {
     return m_support_state;
   }

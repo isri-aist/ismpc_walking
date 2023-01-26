@@ -953,7 +953,7 @@ void ISMPC_Solver::Integrate()
 
   Eigen::Vector3d state_x = Eigen::Vector3d{P_c_k.x(), V_c_k.x(), P_z_k.x() - w_k.x()};
   Eigen::Vector3d state_y = Eigen::Vector3d{P_c_k.y(), V_c_k.y(), P_z_k.y() - w_k.y()};
-  Eigen::Vector3d b{0,0,m_delta_control * m_lambda/N_integration};
+
   for(int k = 1; k < N_delay + 1; k++)
   {
     Compute_Integration_Vector(k);
@@ -967,14 +967,21 @@ void ISMPC_Solver::Integrate()
     m_Y_MPC.push_back(state_y);
 
   }
-  double u_x = m_ZMP_u(0);
 
-  double u_y = m_ZMP_u(m_C);
-  Eigen::Vector3d Pzi = Eigen::Vector3d{m_X_MPC.back()(2),m_Y_MPC.back()(2),0};
+  
   m_admittance_targets.clear();
   for (Eigen::Index i = 0 ; i < m_C; i++)
   {
+    double u_x = P_z_k_delayed.x() - state_x(2);
+    double u_y = P_z_k_delayed.y() - state_y(2);
+    for (Eigen::Index j = 0 ; j <= i ; j++)
+    {
+      u_x += m_ZMP_u(j);
+      u_y += m_ZMP_u(j + m_C);
+    }
+    Eigen::Vector3d Pzi = Eigen::Vector3d{state_x(2),state_y(2),0};
     m_admittance_targets.push_back(Eigen::Vector3d{u_x,u_y,0} + Pzi);
+
 
     for (int k = 0; k < N ; k ++)
     {    
@@ -990,14 +997,6 @@ void ISMPC_Solver::Integrate()
       m_Y_MPC.push_back(state_y);
 
     }
-    u_x = P_z_k_delayed.x() - state_x(2);
-    u_y = P_z_k_delayed.y() - state_y(2);
-    for (Eigen::Index j = 0 ; j <= i ; j++)
-    {
-      u_x += m_ZMP_u(j);
-      u_y += m_ZMP_u(j + m_C);
-    }
-    Pzi = Eigen::Vector3d{m_X_MPC.back()(2),m_Y_MPC.back()(2),0};
   }
 
   for(size_t i = 0; i < m_Y_MPC.size(); i++)
@@ -1153,7 +1152,7 @@ bool ISMPC_Solver::GetWalkingParameters(double Tds, bool stop)
 
     QPsuccess = false;
 
-    mc_rtc::log::warning("[ISMPC] Ignoring Stability cstr");
+    mc_rtc::log::warning("[ISMPC] Ignoring Stability cstr stab error {}",stab_error);
     m_Tail = "None";
     Stability_Constraints();
     m_p += m_Beta_stab * (-A_stab.transpose() * b_stab);
@@ -1161,6 +1160,8 @@ bool ISMPC_Solver::GetWalkingParameters(double Tds, bool stop)
     Aeq = Eigen::MatrixXd::Zero(1, N_variable);
     beq = Eigen::VectorXd::Zero(1);
     QP_Output = solveQP();
+    stab_error = (A_stab * QP_Output - b_stab).norm();
+    mc_rtc::log::warning("[ISMPC] New stab error {}",stab_error);
   }
 
   if(!QPsuccess)
