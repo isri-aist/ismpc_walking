@@ -589,6 +589,10 @@ private:
    */
   void Stability_Constraints();
 
+
+  void create_cstr_matrices(Eigen::MatrixXd & A_out, Eigen::VectorXd & b_out, std::vector<SupportPolygon> & A_in, const std::vector<Eigen::VectorXd> & b_in);
+
+  void create_cstr_matrices(Eigen::MatrixXd & A_out, Eigen::VectorXd & b_out, std::vector<Eigen::MatrixX2d> & A_in, const std::vector<Eigen::VectorXd> & b_in);
   
 
   /**
@@ -669,6 +673,8 @@ private:
   double m_dy_static;
   double m_dx;
   double m_dy; // ZMP square size at one timestep
+  double m_dx_u;
+  double m_dy_u; // ZMP square size at one timestep
   Eigen::Vector2d rect_pose_offset; // cstr zone offset in the foot frame for y axis, positive offset is an offset
                                     // toward the other feet;
   Eigen::Vector2d rect_pose_offset_static; // cstr zone offset in the foot frame for y axis, positive offset is an offset

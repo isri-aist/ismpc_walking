@@ -48,6 +48,8 @@ void ISMPC_Solver::configure(const ControllerConfiguration & config)
   m_dy_f_rect = config.MPC_Footsteps_Constraint_size.y();
   m_dx = config.MPC_ZMP_Constraint_size.x();
   m_dy = config.MPC_ZMP_Constraint_size.y();
+  m_dx_u = config.MPC_U_Constraint_size.x();
+  m_dy_u = config.MPC_U_Constraint_size.y();
   m_dx_static = config.MPC_ZMP_cstr_square_static.x();
   m_dy_static = config.MPC_ZMP_cstr_square_static.y();
   m_Beta_step = config.Beta_step;
@@ -149,11 +151,48 @@ void ISMPC_Solver::init_MPC(const MPC_state & mpc_state,
   w_k.setZero();
 }
 
+void ISMPC_Solver::create_cstr_matrices(Eigen::MatrixXd & A_out, Eigen::VectorXd & b_out, std::vector<SupportPolygon> & A_in, const std::vector<Eigen::VectorXd> & b_in)
+{
+  int k = 0;
+  int cstr_index = 0;
+  for(size_t i_ineq = 0; i_ineq < A_in.size(); i_ineq++)
+  {
+    double n_vertice = (A_in[i_ineq].normals().rows());
+
+    A_out.block(cstr_index, k, n_vertice, 2) = A_in[i_ineq].normals();
+    b_out.segment(cstr_index, n_vertice) = b_in[i_ineq];
+
+    k += 2;
+    cstr_index += n_vertice;
+  }
+}
+
+void ISMPC_Solver::create_cstr_matrices(Eigen::MatrixXd & A_out, Eigen::VectorXd & b_out, std::vector<Eigen::MatrixX2d> & A_in, const std::vector<Eigen::VectorXd> & b_in)
+{
+  int step = 0;
+  int cstr_index = 0;
+  for(int i_ineq = 0; i_ineq < A_in.size(); i_ineq++)
+  {
+
+    Eigen::MatrixX2d ineq = A_in[i_ineq];
+
+    A_out.block(cstr_index, step, ineq.rows(), 2) = ineq.block(0, 0, ineq.rows(), 2);
+    b_out.segment(cstr_index, ineq.rows()) = b_in[i_ineq].segment(0, ineq.rows());
+
+    step += 2;
+    cstr_index += ineq.rows();
+  }
+}
+
 void ISMPC_Solver::Static_ZMP_Constraints()
 {
 
   std::vector<Eigen::VectorXd> b_zmp_ineq;
+  std::vector<Eigen::VectorXd> b_u_ineq;
+
   zmp_cstr_polygons.clear();
+  std::vector<SupportPolygon> u_cstr_polygons;
+
   b_zmp_ineq.clear();
   double sgn = -1;
 
@@ -167,8 +206,12 @@ void ISMPC_Solver::Static_ZMP_Constraints()
 
   Rectangle Rect_jm1 = Rectangle(X_0_swing_foot_initial, Eigen::Vector2d{m_dx_static, m_dy_static}, rect_offset_swing);
   Rectangle Rect_j = Rectangle(X_0_support_foot, Eigen::Vector2d{m_dx_static, m_dy_static}, rect_offset_support);
+  Rectangle Rect_jm1_u = Rectangle(X_0_swing_foot_initial, Eigen::Vector2d{m_dx_u, m_dy_u});
+  Rectangle Rect_j_u = Rectangle(X_0_support_foot, Eigen::Vector2d{m_dx_u, m_dy_u});
 
   SupportPolygon SuppPoly = SupportPolygon(Rect_jm1, Rect_j);
+  SupportPolygon SuppPoly_u = SupportPolygon(Rect_jm1_u, Rect_j_u);
+
   m_double_support_polygon = SuppPoly;
 
   ZMP_ref_traj.clear();
@@ -178,6 +221,7 @@ void ISMPC_Solver::Static_ZMP_Constraints()
 
   Eigen::MatrixXd Delta; // Matrix to derive the ZMP position from u
   Delta = Eigen::MatrixXd::Zero(N_variable, N_variable);
+  Eigen::MatrixXd u_Delta = Delta;
 
   P_u_k_max = m_eta * m_delta * R_0_support * P_z_k;
   P_u_k_min = m_eta * m_delta * R_0_support * P_z_k;
@@ -193,6 +237,7 @@ void ISMPC_Solver::Static_ZMP_Constraints()
       double t_m_tk = (1 + i - k) * m_delta;
       if(k == 0){t_m_tk -= m_delay;}
       Delta.block(2*i,2*k,2,2) = Eigen::Matrix2d::Identity() * (1-exp( - m_lambda * t_m_tk));
+      u_Delta.block(2*i,2*k,2,2) = Eigen::Matrix2d::Identity();
     }
 
     sva::PTransformd X_0_step_stop =
@@ -205,6 +250,7 @@ void ISMPC_Solver::Static_ZMP_Constraints()
     ZMP_ref_traj.push_back(ZMP_Zone.translation().y() - P_z_k_delayed.y());
 
     zmp_cstr_polygons.push_back(SuppPoly);
+    u_cstr_polygons.push_back(SuppPoly_u);
 
     ZMP_max_ref_traj.push_back(SuppPoly.get_center() + R_support_0 * Eigen::Vector3d{m_dx_static / 2, m_dy_static / 2, 0});
     ZMP_min_ref_traj.push_back(SuppPoly.get_center() - R_support_0 * Eigen::Vector3d{m_dx_static / 2, m_dy_static / 2, 0});
@@ -218,6 +264,7 @@ void ISMPC_Solver::Static_ZMP_Constraints()
     Eigen::VectorXd offsets(zmp_cstr_polygons.back().offsets());
 
     b_zmp_ineq.push_back(offsets - normals * P_z_k_delayed.segment(0, 2));
+    b_u_ineq.push_back(u_cstr_polygons.back().offsets() - u_cstr_polygons.back().normals() * P_z_k_delayed.segment(0, 2));
 
     All_poly.push_back(zmp_cstr_polygons.back().Get_Polygone_Corners());
   }
@@ -227,41 +274,31 @@ void ISMPC_Solver::Static_ZMP_Constraints()
   {
     N_zmp_cstr += static_cast<int>(zmp_cstr_polygons[k].normals().rows());
   }
+  int N_u_cstr = 0;
+  for(size_t k = 0; k < u_cstr_polygons.size(); k++)
+  {
+    N_u_cstr += static_cast<int>(u_cstr_polygons[k].normals().rows());
+  }
   // mc_rtc::log::success("ZMP cstr computed, Ncstr = {}", N_zmp_cstr);
   Eigen::MatrixXd ZMP_Cstr = Eigen::MatrixXd::Zero(N_zmp_cstr, N_variable);
+  Eigen::VectorXd b_zmp = Eigen::VectorXd::Zero(ZMP_Cstr.rows());
+  Eigen::MatrixXd U_Cstr = Eigen::MatrixXd::Zero(N_u_cstr, N_variable);
+  Eigen::VectorXd b_u = Eigen::VectorXd::Zero(U_Cstr.rows());
+
   // std::cout << "ZMP_cstr_rows" << ZMP_Cstr.rows() << std::endl;
 
+  create_cstr_matrices(ZMP_Cstr,b_zmp,zmp_cstr_polygons,b_zmp_ineq);
 
-  int zk = 0;
-  int cstr_index = 0;
-  Eigen::VectorXd b = Eigen::VectorXd::Zero(ZMP_Cstr.rows());
-  for(size_t i_ineq = 0; i_ineq < zmp_cstr_polygons.size(); i_ineq++)
-  {
-    // std::cout << "i ineq " << i_ineq << std::endl;
-    // std::cout << "n cols" << zmp_cstr_polygons[i_ineq].normals().cols() << std::endl;
+  create_cstr_matrices(U_Cstr,b_u,u_cstr_polygons,b_u_ineq);
 
-    double n_vertice = (zmp_cstr_polygons[i_ineq].normals().rows());
 
-    ZMP_Cstr.block(cstr_index, zk, n_vertice, 2) = zmp_cstr_polygons[i_ineq].normals();
-    b.segment(cstr_index, n_vertice) = b_zmp_ineq[i_ineq];
 
-    zk += 2;
-    cstr_index += n_vertice;
-  }
-  Eigen::MatrixXd u_Delta = Delta;
-  for(int i = 0; i < m_C; i++)
-  {
-    for(int k = 0; k <= i; k++)
-    {
-      u_Delta.block(2*i,2*k,2,2) = Eigen::Matrix2d::Identity();
-    }
-  }
-  Aineq_zmp.resize(2 * ZMP_Cstr.rows(),N_variable);
-  bineq_zmp.resize(2 * ZMP_Cstr.rows());
+  Aineq_zmp.resize(ZMP_Cstr.rows() + U_Cstr.rows(),N_variable);
+  bineq_zmp.resize(Aineq_zmp.rows());
 
-  Aineq_zmp << ZMP_Cstr * u_Delta , ZMP_Cstr * Delta;
-  bineq_zmp << b , b;
-
+  Aineq_zmp << U_Cstr * u_Delta , ZMP_Cstr * Delta;
+  bineq_zmp << b_u , b_zmp;
+  A_zmp = Delta;
   b_zmp_traj = Eigen::Map<Eigen::VectorXd, Eigen::Unaligned>(ZMP_ref_traj.data(), ZMP_ref_traj.size());
   M_zmp_traj = Eigen::MatrixXd::Zero(b_zmp_traj.rows(), N_variable);
   M_zmp_traj.block(0, 0, b_zmp_traj.rows(), b_zmp_traj.rows()) = Delta.block(0, 0, b_zmp_traj.rows(), b_zmp_traj.rows());
@@ -274,7 +311,9 @@ void ISMPC_Solver::ZMP_Constraints()
   // std::chrono::high_resolution_clock::time_point t_clock_0 = std::chrono::high_resolution_clock::now();
 
   std::vector<Eigen::VectorXd> b_zmp_ineq = std::vector<Eigen::VectorXd>{} ;
+  std::vector<Eigen::VectorXd> b_u_ineq = std::vector<Eigen::VectorXd>{} ;
   zmp_cstr_polygons = std::vector<SupportPolygon>{};
+  std::vector<SupportPolygon> u_cstr_polygons;
   double sgn = -1; //change between 1 and -1 depending of support foot (1 if right)
   if(m_support_foot == "RightFoot") // Right Support
   {
@@ -300,18 +339,26 @@ void ISMPC_Solver::ZMP_Constraints()
   // t_clock_0 = std::chrono::high_resolution_clock::now();
   Rectangle Sliding_rect =
       Rectangle(mc_rbdyn::rpyFromMat(X_0_support_foot.rotation()).z(), Eigen::Vector2d{m_dx, m_dy});
+  Rectangle Sliding_rect_u =
+      Rectangle(mc_rbdyn::rpyFromMat(X_0_support_foot.rotation()).z(), Eigen::Vector2d{m_dx_u, m_dy_u});
 
 
   Rectangle Rect_jm1 = Rectangle(X_0_swing_foot_initial, Eigen::Vector2d{m_dx, m_dy}, rect_offset_swing);
   Rectangle Rect_j = Rectangle(X_0_support_foot, Eigen::Vector2d{m_dx, m_dy}, rect_offset_support);
 
+  Rectangle Rect_jm1_u = Rectangle(X_0_swing_foot_initial, Eigen::Vector2d{m_dx_u, m_dy_u}, rect_offset_swing);
+  Rectangle Rect_j_u = Rectangle(X_0_support_foot, Eigen::Vector2d{m_dx_u, m_dy_u}, rect_offset_support);
+
 
   SupportPolygon Poly_Rect = SupportPolygon(Sliding_rect);
+  SupportPolygon Poly_Rect_u = SupportPolygon(Sliding_rect_u);
 
   SupportPolygon SuppPoly = SupportPolygon(Rect_jm1, Rect_j);
+  SupportPolygon SuppPoly_u = SupportPolygon(Rect_jm1_u, Rect_j_u);
 
 
   SupportPolygon S_Support_Poly = SupportPolygon(Rect_j);
+  SupportPolygon S_Support_Poly_u = SupportPolygon(Rect_j_u);
 
   ZMP_ref_traj.clear();
   ZMP_max_ref_traj.clear();
@@ -360,11 +407,20 @@ void ISMPC_Solver::ZMP_Constraints()
 
       Rect_jm1 = Rectangle(X_0_step_jm1, Eigen::Vector2d{m_dx, m_dy},rect_offset_swing);
       Rect_j = Rectangle(X_0_step_j, Eigen::Vector2d{m_dx, m_dy},rect_offset_support);
+
+      Rect_jm1_u = Rectangle(X_0_step_jm1, Eigen::Vector2d{m_dx_u, m_dy_u}, rect_offset_swing);
+      Rect_j_u = Rectangle(X_0_step_j, Eigen::Vector2d{m_dx_u, m_dy_u}, rect_offset_support);
       
       Sliding_rect = Rectangle(mc_rbdyn::rpyFromMat(X_0_step_jm1.rotation()).z(),
                                Eigen::Vector2d{m_dx, m_dy} * zmp_cstr_next_stp_ratio);
 
       Poly_Rect = SupportPolygon(Sliding_rect);
+
+      Sliding_rect_u = Rectangle(mc_rbdyn::rpyFromMat(X_0_step_jm1.rotation()).z(),
+                               Eigen::Vector2d{m_dx_u, m_dy_u} * zmp_cstr_next_stp_ratio);
+
+      Poly_Rect_u = SupportPolygon(Sliding_rect_u);
+
     
     }
 
@@ -387,9 +443,11 @@ void ISMPC_Solver::ZMP_Constraints()
         if(!Slide_ZMP_region)
         {
           SuppPoly = SupportPolygon(Rect_jm1, Rect_j);
+          SuppPoly_u = SupportPolygon(Rect_jm1_u, Rect_j_u);
         }
         
         S_Support_Poly = SupportPolygon(Rect_j);
+        S_Support_Poly_u = SupportPolygon(Rect_j_u);
       }
       if(N_Steps == N_Steps_Desired && i == 0)
       {
@@ -407,15 +465,26 @@ void ISMPC_Solver::ZMP_Constraints()
       
       Rectangle ZMP_rect = Rectangle(ZMP_Zone, Eigen::Vector2d{m_dx, m_dy});
 
+      sva::PTransformd U_Zone =
+          sva::PTransformd(X_0_step_j.rotation(),
+                           (   Rect_j_u.get_center()) * alpha + 
+                           ( Rect_jm1_u.get_center()) * (1-alpha) 
+                            );
+      
+      Rectangle U_rect = Rectangle(U_Zone, Eigen::Vector2d{m_dx_u, m_dy_u});
+
       if(Slide_ZMP_region || alpha == 1)
       {
         if(alpha == 1)
         {
           zmp_cstr_polygons.push_back(S_Support_Poly);
+          u_cstr_polygons.push_back(S_Support_Poly_u);
         }
         else
         {
           zmp_cstr_polygons.push_back(SupportPolygon(ZMP_rect));
+          u_cstr_polygons.push_back(SupportPolygon(U_rect));
+
         }
 
         ZMP_max_ref_traj.push_back( ZMP_rect.get_center() + R_support_0 * Eigen::Vector3d{m_dx / 2, m_dy / 2, 0});
@@ -424,6 +493,7 @@ void ISMPC_Solver::ZMP_Constraints()
       else
       {
         zmp_cstr_polygons.push_back(SuppPoly);
+        u_cstr_polygons.push_back(SuppPoly_u);
         ZMP_max_ref_traj.push_back(ZMP_rect.get_center() + R_support_0 * Eigen::Vector3d{m_dx / 2, m_dy / 2, 0});
         ZMP_min_ref_traj.push_back(ZMP_rect.get_center() - R_support_0 * Eigen::Vector3d{m_dx / 2, m_dy / 2, 0});
       }
@@ -441,6 +511,7 @@ void ISMPC_Solver::ZMP_Constraints()
       Eigen::VectorXd offsets(zmp_cstr_polygons.back().offsets());
 
       b_zmp_ineq.push_back(offsets - normals * P_z_k_delayed.segment(0, 2));
+      b_u_ineq.push_back(u_cstr_polygons.back().offsets() - u_cstr_polygons.back().normals() * P_z_k_delayed.segment(0, 2));
 
       All_poly.push_back(zmp_cstr_polygons.back().Get_Polygone_Corners());
 
@@ -474,12 +545,14 @@ void ISMPC_Solver::ZMP_Constraints()
       sva::PTransformd ZMP_Zone =
           sva::PTransformd(Eigen::Matrix3d::Identity(), ( Rect_jm1.get_center() + zmp_ref_offset_swing) * (1-alpha));
 
+      sva::PTransformd U_Zone =
+          sva::PTransformd(Eigen::Matrix3d::Identity(), ( Rect_jm1_u.get_center()) * (1-alpha));
 
       ZMP_max_ref_traj.push_back( ZMP_Zone_max.translation() + X_0_step_j.rotation().transpose() * Eigen::Vector3d{m_dx / 2, m_dy / 2, 0});
       ZMP_min_ref_traj.push_back( ZMP_Zone_min.translation() - X_0_step_j.rotation().transpose() * Eigen::Vector3d{m_dx / 2, m_dy / 2, 0});
 
       zmp_cstr_polygons.push_back(Poly_Rect);
-      
+      u_cstr_polygons.push_back(Poly_Rect_u);
 
       Eigen::MatrixX2d normals(zmp_cstr_polygons[i].normals());
       Eigen::VectorXd offsets(zmp_cstr_polygons[i].offsets());
@@ -490,6 +563,9 @@ void ISMPC_Solver::ZMP_Constraints()
                                 normals * (rect_offset_support).segment(0,2) * alpha;
 
       b_zmp_ineq.push_back(bcstr);
+      b_u_ineq.push_back(u_cstr_polygons[i].offsets()
+                        - u_cstr_polygons[i].normals() * P_z_k_delayed.segment(0, 2) + 
+                          u_cstr_polygons[i].normals() * U_Zone.translation().segment(0, 2));
 
       ZMP_ref_traj.push_back(ZMP_Zone.translation().x() - P_z_k_delayed.x() + alpha * (rect_offset_support + zmp_ref_offset_sg).x());
       ZMP_ref_traj.push_back(ZMP_Zone.translation().y() - P_z_k_delayed.y() + alpha * (rect_offset_support + zmp_ref_offset_sg).y());
@@ -511,6 +587,7 @@ void ISMPC_Solver::ZMP_Constraints()
 
  
       zmp_cstr_polygons.push_back(Poly_Rect);
+      u_cstr_polygons.push_back(Poly_Rect_u);
       
 
       Eigen::MatrixX2d normals(zmp_cstr_polygons.back().normals());
@@ -520,9 +597,12 @@ void ISMPC_Solver::ZMP_Constraints()
                                      normals * ((rect_offset_support).segment(0,2)) * alpha + 
                                      normals * ((rect_offset_swing).segment(0,2)) * (1-alpha) );
 
+      b_u_ineq.push_back(u_cstr_polygons.back().offsets() - u_cstr_polygons.back().normals() * P_z_k_delayed.segment(0, 2) );
+
  
       Delta.block(2*i ,2 * m_C + 2 * (j_f - 1),2,2) = -Eigen::Matrix2d::Identity()*alpha;
       Delta.block(2*i ,2 * m_C + 2 * (j_fm1 - 1),2,2) = -Eigen::Matrix2d::Identity()*(1-alpha);
+      
 
       if(i == 0)
       {
@@ -539,34 +619,27 @@ void ISMPC_Solver::ZMP_Constraints()
   // t_clock = std::chrono::high_resolution_clock::now();
 
   int N_zmp_cstr = 0;
+  int N_u_cstr = 0;
   for(size_t k = 0; k < zmp_cstr_polygons.size(); k++)
   {
     N_zmp_cstr += static_cast<int>(zmp_cstr_polygons[k].normals().rows());
+  }
+  for(size_t k = 0; k < u_cstr_polygons.size(); k++)
+  {
+    N_u_cstr += static_cast<int>(u_cstr_polygons[k].normals().rows());
   }
   // mc_rtc::log::success("ZMP cstr computed, Ncstr = {}", N_zmp_cstr);
   Eigen::MatrixXd ZMP_Cstr = Eigen::MatrixXd::Zero(N_zmp_cstr, N_variable);
   // std::cout << "ZMP_cstr_rows" << ZMP_Cstr.rows() << std::endl;
 
-  Eigen::VectorXd b = Eigen::VectorXd::Zero(ZMP_Cstr.rows());
-  int zk = 0;
-  int cstr_index = 0;
-  for(size_t i_ineq = 0; i_ineq < zmp_cstr_polygons.size(); i_ineq++)
-  {
-    // std::cout << "i ineq " << i_ineq << std::endl;
-    // std::cout << "n cols" << zmp_cstr_polygons[i_ineq].normals().cols() << std::endl;
+  Eigen::MatrixXd U_Cstr = Eigen::MatrixXd::Zero(N_u_cstr, N_variable);
 
-    double n_vertice = (zmp_cstr_polygons[i_ineq].normals().rows());
+  Eigen::VectorXd b_zmp = Eigen::VectorXd::Zero(ZMP_Cstr.rows());
+  Eigen::VectorXd b_u = Eigen::VectorXd::Zero(U_Cstr.rows());
 
-    ZMP_Cstr.block(cstr_index, zk, n_vertice, 2) = zmp_cstr_polygons[i_ineq].normals();
-    b.segment(cstr_index, n_vertice) = b_zmp_ineq[i_ineq];
-    // for (int i = 0 ; i < b_zmp_ineq[i_ineq].rows(); i++)
-    // {
-    //   b_u.push_back(b_zmp_ineq[i_ineq](i));
-    // }
+  create_cstr_matrices(ZMP_Cstr,b_zmp,zmp_cstr_polygons,b_zmp_ineq);
+  create_cstr_matrices(U_Cstr,b_u,u_cstr_polygons,b_u_ineq);
 
-    zk += 2;
-    cstr_index += n_vertice;
-  }
   Eigen::MatrixXd u_Delta = Delta;
   for(int i = 0; i < m_C; i++)
   {
@@ -578,12 +651,14 @@ void ISMPC_Solver::ZMP_Constraints()
   Aineq_zmp.resize(2 * ZMP_Cstr.rows(),N_variable);
   bineq_zmp.resize(2 * ZMP_Cstr.rows());
 
-  Aineq_zmp << ZMP_Cstr * u_Delta , ZMP_Cstr * Delta;
-  bineq_zmp << b , b;
+  Aineq_zmp << U_Cstr * u_Delta , ZMP_Cstr * Delta;
+  bineq_zmp << b_u , b_zmp;
 
   b_zmp_traj = Eigen::Map<Eigen::VectorXd, Eigen::Unaligned>(ZMP_ref_traj.data(), ZMP_ref_traj.size());
   M_zmp_traj = Eigen::MatrixXd::Zero(b_zmp_traj.rows(), N_variable);
   M_zmp_traj.block(0, 0, b_zmp_traj.rows(), N_variable) = Delta.block(0, 0, b_zmp_traj.rows(), N_variable);
+  A_zmp = Delta.block(0,0,2 * m_C,N_variable);
+  A_zmp.block(0,2 * m_C, 2 * m_C ,N_variable - 2* m_C).setZero();
 
   // time_span = std::chrono::high_resolution_clock::now() - t_clock;
   // mc_rtc::log::info("[ZMP cstr] matrix gen time {} ms", time_span.count());
@@ -647,34 +722,8 @@ void ISMPC_Solver::FootSteps_Constraints()
   bineq_steps.resize(N_footsteps_kin_cstr + N_footsteps_cstr);
   bineq_steps.setZero();
 
-  int step = 0;
-  int cstr_index = 0;
-
-  for(size_t i_ineq = 0; i_ineq < kin_cstr_normals_vec.size(); i_ineq++)
-  {
-
-    Eigen::MatrixX2d ineq = kin_cstr_normals_vec[i_ineq];
-
-    foosteps_kin_cstr.block(cstr_index, step, ineq.rows(), 2) = ineq.block(0, 0, ineq.rows(), 2);
-    b_kin_cstr.segment(cstr_index, ineq.rows()) = b_kin_cstr_vec[i_ineq].segment(0, ineq.rows());
-
-    step += 2;
-    cstr_index += ineq.rows();
-  }
-
-  step = 0;
-  cstr_index = 0;
-  for(int i_ineq = 0; i_ineq < step_cstr_normals_vec.size(); i_ineq++)
-  {
-
-    Eigen::MatrixX2d ineq = step_cstr_normals_vec[i_ineq];
-
-    foosteps_cstr.block(cstr_index, step, ineq.rows(), 2) = ineq.block(0, 0, ineq.rows(), 2);
-    b_steps_cstr.segment(cstr_index, ineq.rows()) = b_step_cstr_vec[i_ineq].segment(0, ineq.rows());
-
-    step += 2;
-    cstr_index += ineq.rows();
-  }
+  create_cstr_matrices(foosteps_kin_cstr,b_kin_cstr,kin_cstr_normals_vec,b_kin_cstr_vec);
+  create_cstr_matrices(foosteps_cstr,b_steps_cstr,step_cstr_normals_vec,b_step_cstr_vec);
 
   Aineq_steps.block(0, 2 * m_C, N_footsteps_kin_cstr, 2 * j_Max_C) = foosteps_kin_cstr * Delta;
   bineq_steps.segment(0, N_footsteps_kin_cstr) = b_kin_cstr;

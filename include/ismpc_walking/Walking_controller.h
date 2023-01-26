@@ -67,6 +67,7 @@ public:
     controller_config_.MPC_ZMP_static_cstr_square_offset = config("ismpc")("offset_static");
     controller_config_.MPC_ZMP_ref_offset_sg_supp = config("ismpc")("zmp_ref_offset");
     controller_config_.MPC_ZMP_Constraint_size = config("ismpc")("zmp_cstr_square");
+    controller_config_.MPC_U_Constraint_size = config("ismpc")("u_cstr_square");
     controller_config_.MPC_ZMP_cstr_square_static = config("ismpc")("zmp_cstr_square_static");
     controller_config_.MPC_allow_None = config("ismpc")("allow_none_tail");
     controller_config_.Tc = config("ismpc")("Tc");
