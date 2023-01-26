@@ -154,7 +154,7 @@ void Walking_controller::addToGUI()
 {
 
   gui()->addElement(
-      {"Walking", "Action"},
+      {"Walking", "Main"},
 
       mc_rtc::gui::Button("Start Move",
                           [this]() {
@@ -335,6 +335,7 @@ void Walking_controller::addToGUI()
                                 }
                                 return Output;
                               }),
+      
 
       // mc_rtc::gui::Trajectory("Anticipative Trajectory", mc_rtc::gui::Color(1., 0., 1.),
       //                         [this]() -> std::vector<Eigen::Vector3d> {
@@ -353,28 +354,85 @@ void Walking_controller::addToGUI()
           [this]() -> const std::vector<std::vector<Eigen::Vector3d>> & { return this->MPCSolver.get_allpolys(); }),
       mc_rtc::gui::Polygon("SupportPolygon", mc_rtc::gui::Color(1., 1., 0.),
                            [this]() -> const std::vector<Eigen::Vector3d> & { return mpc_state_.get_SupPolygon(); }));
+      
+      gui()->addElement({"Walking","Plots"}, mc_rtc::gui::ElementsStacking::Horizontal,
+                    mc_rtc::gui::Button("Plot ZMP Tracking (x)",
+                            [this]() {
+                              gui()->addPlot(
+                                  "DCM-ZMP Tracking (x)", mc_rtc::gui::plot::X("t", [this]() { return static_cast<double>(count) * controller_timestep; }),
+                                  mc_rtc::gui::plot::Y(
+                                      "u", [this]() { return admittanceTarget.x(); }, mc_rtc::gui::Color::Red),
+                                  mc_rtc::gui::plot::Y(
+                                      "zmp_mes", [this]() { return mpc_state_.getPzk().x(); }, mc_rtc::gui::Color::Blue, mc_rtc::gui::plot::Style::Dashed),
+                                  mc_rtc::gui::plot::Y(
+                                      "zmp modelled", [this]() { return zmpTarget.x(); }, mc_rtc::gui::Color::Blue));
+                            }
+                            ),
+                    mc_rtc::gui::Button("Stop ZMP (x)", [this]() { gui()->removePlot("DCM-ZMP Tracking (x)"); })
+                  );
+      
+      gui()->addElement({"Walking","Plots"}, mc_rtc::gui::ElementsStacking::Horizontal,              
+                    mc_rtc::gui::Button("Plot ZMP Tracking (y)",
+                            [this]() {
+                              gui()->addPlot(
+                                  "DCM-ZMP Tracking (y)", mc_rtc::gui::plot::X("t", [this]() { return static_cast<double>(count) * controller_timestep; }),
+                                  mc_rtc::gui::plot::Y(
+                                      "u", [this]() { return admittanceTarget.y(); }, mc_rtc::gui::Color::Red),
+                                  mc_rtc::gui::plot::Y(
+                                      "zmp_mes", [this]() { return mpc_state_.getPzk().y(); }, mc_rtc::gui::Color::Blue, mc_rtc::gui::plot::Style::Dashed),
+                                  mc_rtc::gui::plot::Y(
+                                      "zmp modelled", [this]() { return zmpTarget.y(); }, mc_rtc::gui::Color::Blue));
+                            }
+                            ),
+                    mc_rtc::gui::Button("Stop ZMP (y)", [this]() { gui()->removePlot("DCM-ZMP Tracking (y)"); })
+                    
+                    
+                    );
 
-  // gui()->addElement({"Walking ","Plots"}, mc_rtc::gui::ElementsStacking::Horizontal,
-  //                Button("Plot CoM Tracking (x)",
-  //                       [this]() {
-  //                         gui()->addPlot("CoM Tracking (x)", plot::X("t", [this]() { return t_; }),
-  //                                     mc_rtc::gui::plot::Y(
-  //                                         "com_ref", [this]() { return comTarget_.x(); }, Color::Red),
-  //                                     mc_rtc::gui::plot::Y(
-  //                                         "com_mes", [this]() { return measuredCoM_.x(); }, Color::Magenta));
-  //                       }),
-  //                Button("Stop CoM (x)", [this]() { gui()->removePlot("CoM Tracking (x)"); }));
-  // gui()->addElement({"Walking ","Plots"}, mc_rtc::gui::ElementsStacking::Horizontal,
-  //                Button("Plot CoM Tracking (y)",
-  //                       [this]() {
-  //                         gui()->addPlot("CoM Tracking (y)", plot::X("t", [this]() { return t_; }),
-  //                                     mc_rtc::gui::plot::Y(
-  //                                         "com_ref", [this]() { return comTarget_.y(); }, Color::Red),
-  //                                     mc_rtc::gui::plot::Y(
-  //                                         "com_mes", [this]() { return measuredCoM_.y(); }, Color::Magenta));
-  //                       }),
-  //                Button("Stop CoM (y)", [this]() { gui()->removePlot("CoM Tracking (y)"); }));
+
 };
+
+void Walking_controller::add_ISMPC_Config_GUI()
+{
+  gui()->addElement(
+      {"Walking", "ISMPC Configuration"},
+      mc_rtc::gui::Form(
+          "Configure", [this](const mc_rtc::Configuration & conf) { reconfigure(conf);},
+          mc_rtc::gui::FormArrayInput("QP Weight (u ; step ; zmp traj ; stab)", false,
+                                      [this]() -> std::array<double, 4> {
+                                        return {controller_config_.Beta_u, controller_config_.Beta_step,controller_config_.Beta_traj,controller_config_.Beta_stab};
+                                      }),
+          
+          mc_rtc::gui::FormNumberInput("Tc", false, [this]() { return controller_config_.Tc; }),
+          mc_rtc::gui::FormNumberInput("delta", false, [this]() { return controller_config_.delta; }),
+          mc_rtc::gui::FormArrayInput("step kinematics cstr", false,
+                                      [this]() -> std::array<double, 2> {
+                                        return {controller_config_.MPC_Footsteps_kin_Constraint_size.x(), controller_config_.MPC_Footsteps_kin_Constraint_size.y()};
+                                      }),
+          mc_rtc::gui::FormArrayInput("zmp cstr square static", false,
+                                      [this]() -> std::array<double, 2> {
+                                        return {controller_config_.MPC_ZMP_cstr_square_static.x(), controller_config_.MPC_ZMP_cstr_square_static.y()};
+                                      }),
+          mc_rtc::gui::FormArrayInput("zmp cstr square", false,
+                                      [this]() -> std::array<double, 2> {
+                                        return {controller_config_.MPC_ZMP_Constraint_size.x(), controller_config_.MPC_ZMP_Constraint_size.y()};
+                                      }),
+          mc_rtc::gui::FormArrayInput("u cstr square", false,
+                                      [this]() -> std::array<double, 2> {
+                                        return {controller_config_.MPC_U_Constraint_size.x(), controller_config_.MPC_U_Constraint_size.y()};
+                                      }),
+          mc_rtc::gui::FormArrayInput("zmp cstr square offset", false,
+                                      [this]() -> std::array<double, 2> {
+                                        return {controller_config_.MPC_ZMP_cstr_square_offset.x(), controller_config_.MPC_ZMP_cstr_square_offset.y()};
+                                      }),
+          mc_rtc::gui::FormArrayInput("zmp ref offset", false,
+                                      [this]() -> std::array<double, 2> {
+                                        return {controller_config_.MPC_ZMP_ref_offset_sg_supp.x(), controller_config_.MPC_ZMP_ref_offset_sg_supp.y()};
+                                      }),
+          mc_rtc::gui::FormNumberInput("feet distance", false, [this]() { return controller_config_.feet_ditance_; }))
+  );
+
+}
 
 void Walking_controller::add_FootSteps_GUI()
 {

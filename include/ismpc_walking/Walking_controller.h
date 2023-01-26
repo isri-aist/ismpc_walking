@@ -99,6 +99,28 @@ public:
     Configure(controller_config_);
   }
 
+  void reconfigure(const mc_rtc::Configuration & config)
+  {
+    controller_config_.lambda_ = MPCSolver.get_lambda();
+    controller_config_.zmp_delay = MPCSolver.zmp_delay();
+    std::vector<double> qp_weight = config("QP Weight (u ; step ; zmp traj ; stab)");
+    controller_config_.Beta_u = qp_weight[0]; 
+    controller_config_.Beta_step = qp_weight[1]; 
+    controller_config_.Beta_traj = qp_weight[2];
+    controller_config_.Beta_stab = qp_weight[3]; 
+    controller_config_.Tc = config("Tc");
+    controller_config_.delta = config("delta");
+    controller_config_.MPC_Footsteps_kin_Constraint_size = config("step kinematics cstr");
+    controller_config_.MPC_ZMP_cstr_square_static = config("zmp cstr square static");
+    controller_config_.MPC_ZMP_Constraint_size = config("zmp cstr square");
+    controller_config_.MPC_U_Constraint_size = config("u cstr square");
+    controller_config_.MPC_ZMP_static_cstr_square_offset = config("zmp cstr square offset");
+    controller_config_.MPC_ZMP_ref_offset_sg_supp = config("zmp ref offset");
+    controller_config_.feet_ditance_ = config("feet distance");
+    Configure(controller_config_);
+
+  }
+
   void Configure(const ControllerConfiguration & config)
   {
     controller_config_ = config;
@@ -249,6 +271,8 @@ protected:
   void updateTasks();
 
   void addToGUI();
+
+  void add_ISMPC_Config_GUI();
 
   void AddToLog();
 

@@ -192,6 +192,7 @@ bool Walking_controller::wait_for_mpc_thread()
       {
         MPC_thread_ready = true;
         mc_rtc::log::success("MPC thread on");
+        add_ISMPC_Config_GUI();
         addToGUI();
         add_FootSteps_GUI();
         Stabilizer_GUI(controller_config_.Stab_config_sg_supp, "single support");
