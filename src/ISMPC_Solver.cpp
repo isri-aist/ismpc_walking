@@ -389,7 +389,7 @@ void ISMPC_Solver::ZMP_Constraints()
       // j_f = std::min(j_f + 1, (int)input_steps_.size() - 1);
       j_f += 1;
       j_fm1 = j_f - 1;
-      count_Dstep = 1;
+      count_Dstep = 0;
       sgn *= -1;
 
       NextStepTiming = m_timestamp[j_f];
@@ -431,9 +431,9 @@ void ISMPC_Solver::ZMP_Constraints()
       Delta.block(2 * i,2 * k,2,2) = Eigen::Matrix2d::Identity() * (1-exp( - m_lambda * t_m_tk));
     }
 
-    double n = std::max(0., std::min(static_cast<double>(m_D + 1.), count_Dstep));
+    double n = std::max(0., std::min(static_cast<double>(m_D ), count_Dstep));
 
-    double alpha = std::min(1.0,std::max(0., n / (static_cast<double>(m_D) + 1)));
+    double alpha = std::min(1.0,std::max(0., n / (static_cast<double>(m_D))));
     // mc_rtc::log::info("i {} jf {} alpha {}",i,j_f,alpha);
     if(j_f == 0 || !AutoFootstepPlacement)
     {
@@ -786,7 +786,7 @@ void ISMPC_Solver::AntTailTrajectory()
   
     int n = std::max(0., std::min( static_cast<double>(m_D) + 1, count_Dstep));
 
-    double alpha = std::min(1.0,std::max(0., static_cast<double>(n) / (static_cast<double>(m_D) + 1)));
+    double alpha = std::min(1.0,std::max(0., static_cast<double>(n) / (static_cast<double>(m_D))));
 
 
     Eigen::Vector3d StepZone = (X_0_step_j.translation() * alpha + X_0_step_jm1.translation() * (1 - alpha));
@@ -1129,6 +1129,7 @@ bool ISMPC_Solver::GetWalkingParameters(double Tds, bool stop)
 
   QP_Output = solveQP();
   stab_error = (A_stab * QP_Output - b_stab).norm();
+  
   // std::cout << "QP out " << QP_Output << std::endl;
 
   Eigen::VectorXd zmp_vel_ = QP_Output.segment(0, 2 * m_C);
