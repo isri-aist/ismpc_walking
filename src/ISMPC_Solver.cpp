@@ -231,10 +231,10 @@ void ISMPC_Solver::Static_ZMP_Constraints()
   Eigen::MatrixXd ZMP_Cstr = Eigen::MatrixXd::Zero(N_zmp_cstr, N_variable);
   // std::cout << "ZMP_cstr_rows" << ZMP_Cstr.rows() << std::endl;
 
+  bineq_zmp.resize(ZMP_Cstr.rows());
 
   int zk = 0;
   int cstr_index = 0;
-  Eigen::VectorXd b = Eigen::VectorXd::Zero(ZMP_Cstr.rows());
   for(size_t i_ineq = 0; i_ineq < zmp_cstr_polygons.size(); i_ineq++)
   {
     // std::cout << "i ineq " << i_ineq << std::endl;
@@ -243,7 +243,7 @@ void ISMPC_Solver::Static_ZMP_Constraints()
     double n_vertice = (zmp_cstr_polygons[i_ineq].normals().rows());
 
     ZMP_Cstr.block(cstr_index, zk, n_vertice, 2) = zmp_cstr_polygons[i_ineq].normals();
-    b.segment(cstr_index, n_vertice) = b_zmp_ineq[i_ineq];
+    bineq_zmp.segment(cstr_index, n_vertice) = b_zmp_ineq[i_ineq];
 
     zk += 2;
     cstr_index += n_vertice;
@@ -256,11 +256,7 @@ void ISMPC_Solver::Static_ZMP_Constraints()
       u_Delta.block(2*i,2*k,2,2) = Eigen::Matrix2d::Identity();
     }
   }
-  Aineq_zmp.resize(2 * ZMP_Cstr.rows(),N_variable);
-  bineq_zmp.resize(2 * ZMP_Cstr.rows());
-
-  Aineq_zmp << ZMP_Cstr * u_Delta , ZMP_Cstr * Delta;
-  bineq_zmp << b , b;
+  Aineq_zmp = ZMP_Cstr * u_Delta;
 
   b_zmp_traj = Eigen::Map<Eigen::VectorXd, Eigen::Unaligned>(ZMP_ref_traj.data(), ZMP_ref_traj.size());
   M_zmp_traj = Eigen::MatrixXd::Zero(b_zmp_traj.rows(), N_variable);
@@ -547,7 +543,8 @@ void ISMPC_Solver::ZMP_Constraints()
   Eigen::MatrixXd ZMP_Cstr = Eigen::MatrixXd::Zero(N_zmp_cstr, N_variable);
   // std::cout << "ZMP_cstr_rows" << ZMP_Cstr.rows() << std::endl;
 
-  Eigen::VectorXd b = Eigen::VectorXd::Zero(ZMP_Cstr.rows());
+  bineq_zmp.resize(ZMP_Cstr.rows());
+
   int zk = 0;
   int cstr_index = 0;
   for(size_t i_ineq = 0; i_ineq < zmp_cstr_polygons.size(); i_ineq++)
@@ -558,7 +555,7 @@ void ISMPC_Solver::ZMP_Constraints()
     double n_vertice = (zmp_cstr_polygons[i_ineq].normals().rows());
 
     ZMP_Cstr.block(cstr_index, zk, n_vertice, 2) = zmp_cstr_polygons[i_ineq].normals();
-    b.segment(cstr_index, n_vertice) = b_zmp_ineq[i_ineq];
+    bineq_zmp.segment(cstr_index, n_vertice) = b_zmp_ineq[i_ineq];
     // for (int i = 0 ; i < b_zmp_ineq[i_ineq].rows(); i++)
     // {
     //   b_u.push_back(b_zmp_ineq[i_ineq](i));
@@ -575,11 +572,7 @@ void ISMPC_Solver::ZMP_Constraints()
       u_Delta.block(2*i,2*k,2,2) = Eigen::Matrix2d::Identity();
     }
   }
-  Aineq_zmp.resize(2 * ZMP_Cstr.rows(),N_variable);
-  bineq_zmp.resize(2 * ZMP_Cstr.rows());
-
-  Aineq_zmp << ZMP_Cstr * u_Delta , ZMP_Cstr * Delta;
-  bineq_zmp << b , b;
+  Aineq_zmp = ZMP_Cstr * u_Delta;
 
   b_zmp_traj = Eigen::Map<Eigen::VectorXd, Eigen::Unaligned>(ZMP_ref_traj.data(), ZMP_ref_traj.size());
   M_zmp_traj = Eigen::MatrixXd::Zero(b_zmp_traj.rows(), N_variable);
