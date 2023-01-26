@@ -89,7 +89,7 @@ void ISMPC_Solver::configure(const ControllerConfiguration & config)
   m_dynamic_matrix_A << 0 , 1 , 0,
                         std::pow(m_eta,2) , 0 , -std::pow(m_eta,2),
                         0 , 0 , - m_lambda;
-  m_dynamic_matrix_A = Eigen::Matrix3d::Identity() + m_delta_control * m_dynamic_matrix_A/N_integration;
+  m_dynamic_matrix_A = Eigen::Matrix3d::Identity() + (m_delta_control * m_dynamic_matrix_A)/N_integration;
   m_dynamic_matrix_B = Eigen::MatrixXd::Zero(3,m_C);
 
 
@@ -952,37 +952,48 @@ void ISMPC_Solver::Integrate()
   Eigen::Vector3d b{0,0,m_delta_control * m_lambda/N_integration};
   for(int k = 1; k < N_delay + 1; k++)
   {
-    for(int __ = 0 ; __ < N_integration ; __++)
-    {
-      state_x = m_dynamic_matrix_A * state_x + b * (U_k+P_z_k).x();
-      state_y = m_dynamic_matrix_A * state_y + b * (U_k+P_z_k).y();
-    }
+    Compute_Integration_Vector(k);
+    state_x(2) = P_z_k.x() - w_k.x();
+    state_y(2) = P_z_k.y() - w_k.y();
+
+    state_x = Integration_Mat * state_x + Integration_Vec * (U_k).x();
+    state_y = Integration_Mat * state_y + Integration_Vec * (U_k).y();
+    
     m_X_MPC.push_back(state_x);
     m_Y_MPC.push_back(state_y);
+
   }
-  Eigen::VectorXd u_x = m_ZMP_u.segment(0,m_C);
-  u_x(0) += state_x(2);
+  double u_x = m_ZMP_u(0);
 
-  
-  Eigen::VectorXd u_y = m_ZMP_u.segment(m_C,m_C);
-  u_y(0) += state_y(2);
-
-  m_dynamic_matrix_B = Eigen::MatrixXd::Zero(3,m_C);
+  double u_y = m_ZMP_u(m_C);
+  Eigen::Vector3d Pzi = Eigen::Vector3d{m_X_MPC.back()(2),m_Y_MPC.back()(2),0};
+  m_admittance_targets.clear();
   for (Eigen::Index i = 0 ; i < m_C; i++)
   {
-    m_dynamic_matrix_B(2,i) = m_lambda * m_delta_control/N_integration;
-    
-    for (int _ = 0; _ < N ; _ ++)
+    m_admittance_targets.push_back(Eigen::Vector3d{u_x,u_y,0} + Pzi);
+
+    for (int k = 0; k < N ; k ++)
     {    
-      for(int __ = 0 ; __ < N_integration ; __++)
-      {
-        state_x = m_dynamic_matrix_A * state_x + m_dynamic_matrix_B * u_x;
-        state_y = m_dynamic_matrix_A * state_y + m_dynamic_matrix_B * u_y;
-      }
+
+      Compute_Integration_Vector(k+1);
+      state_x(2) = Pzi.x();
+      state_y(2) = Pzi.y();
+
+      state_x = Integration_Mat * state_x + Integration_Vec * u_x;
+      state_y = Integration_Mat * state_y + Integration_Vec * u_y;
+      
       m_X_MPC.push_back(state_x);
       m_Y_MPC.push_back(state_y);
 
     }
+    u_x = P_z_k_delayed.x() - state_x(2);
+    u_y = P_z_k_delayed.y() - state_y(2);
+    for (Eigen::Index j = 0 ; j <= i ; j++)
+    {
+      u_x += m_ZMP_u(j);
+      u_y += m_ZMP_u(j + m_C);
+    }
+    Pzi = Eigen::Vector3d{m_X_MPC.back()(2),m_Y_MPC.back()(2),0};
   }
 
   for(size_t i = 0; i < m_Y_MPC.size(); i++)
