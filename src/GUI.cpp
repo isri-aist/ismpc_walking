@@ -312,6 +312,19 @@ void Walking_controller::addToGUI()
                                 std::vector<Eigen::Vector3d> ref_traj = this->MPCSolver.zmp_ref_traj();                   
                                 return ref_traj;
                               }),
+
+      // mc_rtc::gui::Trajectory("ZMP QP Trajectory", mc_rtc::gui::LineConfig(mc_rtc::gui::Color(0., 1., 0.6),0.02,mc_rtc::gui::LineStyle::Dotted),
+      //                         [this]() -> std::vector<Eigen::Vector3d> {
+                                
+      //                           std::vector<Eigen::Vector3d> ref_traj = this->MPCSolver.QP_zmp();                   
+      //                           return ref_traj;
+      //                         }),
+
+      mc_rtc::gui::Trajectory("Admittance ref Trajectory", mc_rtc::gui::LineConfig(mc_rtc::gui::Color(0., 1., 0.6),0.02,mc_rtc::gui::LineStyle::Dotted),
+                              [this]() -> const std::vector<Eigen::Vector3d> & {                                
+                                return MPCSolver.admittance_references();
+                              }),
+
       mc_rtc::gui::Trajectory("Predicted CoM Trajectory", mc_rtc::gui::Color(1., 0., 0.),
                               [this]() -> std::vector<Eigen::Vector3d> {
                                 std::vector<Eigen::Vector3d> Output;

@@ -456,6 +456,16 @@ public:
     return stab_error;
   }
 
+  const std::vector<Eigen::Vector3d> QP_zmp()
+  {
+    std::vector<Eigen::Vector3d> out;
+    for (Eigen::Index i = 0 ; i < m_QP_zmp.size()/2 ; i++)
+    {
+      out.push_back(P_z_k_delayed + Eigen::Vector3d{m_QP_zmp(2*i),m_QP_zmp(2*i + 1) , 0});
+    }
+    return out;
+  }
+
   /**
    * Set an initial DCM in the world frame
    */
@@ -545,6 +555,10 @@ public:
       Output.push_back(Eigen::Vector3d{b_zmp_traj(2 * i), b_zmp_traj(2 * i + 1), 0} + P_z_k_delayed);
     }
     return Output;
+  }
+  const std::vector<Eigen::Vector3d> & admittance_references()
+  {
+    return m_admittance_targets;
   }
 
   bool AutoFootstepPlacement = false;
@@ -646,6 +660,8 @@ private:
 
   bool QPsuccess = false;
   double stab_error = 0.;
+  Eigen::VectorXd m_QP_zmp;
+  std::vector<Eigen::Vector3d> m_admittance_targets;
   bool Use_Stability_Task = false;
   bool Allow_None = true;
   bool InStabilityRange = false;
@@ -745,6 +761,8 @@ private:
 
   Eigen::MatrixXd Aineq_steps; // Inequality Steps Matrix
   Eigen::VectorXd bineq_steps; // Inequality Steps Vector
+
+  Eigen::MatrixXd A_zmp; // Matrix that computes the zmp from the QP output;
 
   // QP Problem
   Eigen::QuadProgDense QP;

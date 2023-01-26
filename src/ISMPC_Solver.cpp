@@ -1172,6 +1172,7 @@ bool ISMPC_Solver::GetWalkingParameters(double Tds, bool stop)
 
     corr_steps_.clear();
 
+    m_QP_zmp = (A_zmp * QP_Output).segment(0,2 * m_C);
     m_ZMP_u.resize(2 * m_C, 1);
     for(int k = 0; k < m_C; k++)
     {
