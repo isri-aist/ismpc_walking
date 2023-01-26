@@ -258,6 +258,7 @@ void ISMPC_Solver::Static_ZMP_Constraints()
     if(i == 0)
     {
       SuppPolyCorners = zmp_cstr_polygons[i].Get_Polygone_Corners();
+      m_ref_zmp = ZMP_Zone.translation();
     }
 
     Eigen::MatrixX2d normals(zmp_cstr_polygons.back().normals());
@@ -507,6 +508,7 @@ void ISMPC_Solver::ZMP_Constraints()
       {
         SuppPolyCorners = zmp_cstr_polygons.back().Get_Polygone_Corners();
         m_support_state = alpha;
+        m_ref_zmp = ZMP_Zone.translation(); 
       }
 
       Eigen::MatrixX2d normals(zmp_cstr_polygons.back().normals());

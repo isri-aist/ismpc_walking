@@ -127,6 +127,7 @@ struct MPC_state
   Eigen::Vector2d Pu_min;
   Eigen::Vector2d Pu_max;
   double alpha = 0;
+  Eigen::Vector2d ref_zmp_ = Eigen::Vector2d::Zero();
   int Index = 0;
 
   Eigen::Vector3d initial_zmp_ = Eigen::Vector3d::Zero();

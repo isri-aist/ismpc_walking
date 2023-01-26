@@ -317,6 +317,7 @@ void Walking_controller::ComputeWalkingTrajectory()
     mpc_thread_state.stop = MPCSolver.stop();
     mpc_thread_state.FeasibilityPolygon = MPCSolver.feasibility_region();
     mpc_thread_state.alpha = MPCSolver.support_state();
+    mpc_thread_state.ref_zmp_ = MPCSolver.zmp_ref().segment(0,2);
     kfoot = 0;
     NewThreadState = true;
     

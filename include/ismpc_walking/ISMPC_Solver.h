@@ -500,6 +500,11 @@ public:
     return m_support_state;
   }
 
+  Eigen::Vector3d zmp_ref() 
+  {
+    return m_ref_zmp;
+  }
+
   void set_lambda(const double in)
   {
     m_lambda = in;
@@ -719,7 +724,8 @@ private:
   int j_Max_C = 0; // Number of footsteps in the Control Horizon
   int j_f; // Index of the actual support foot
   int j_fm1; // Index of the previous support foot
-  double m_support_state = 0;;
+  double m_support_state = 0;
+  Eigen::Vector3d m_ref_zmp = Eigen::Vector3d::Zero(); //first ref zmp in the horizon
   int kfoot = 0;
 
   std::string m_Tail; // Velocity Tailing desired
