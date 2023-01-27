@@ -122,7 +122,7 @@ struct MPC_state
   std::vector<double> TimeStamps; // Timing of each step
   bool Tail = true;
   int kfoot = 0;
-  double stab_error;
+  Eigen::Vector2d stab_error;
   bool QPSuccess;
   Eigen::Vector2d Pu_min;
   Eigen::Vector2d Pu_max;

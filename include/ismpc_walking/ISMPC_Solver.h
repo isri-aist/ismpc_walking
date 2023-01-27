@@ -451,7 +451,7 @@ public:
     return U_k;
   }
 
-  double stability_error() const noexcept
+  const Eigen::Vector2d & stability_error() const noexcept
   {
     return stab_error;
   }
@@ -669,7 +669,7 @@ private:
   int N_Steps = 0;
 
   bool QPsuccess = false;
-  double stab_error = 0.;
+  Eigen::Vector2d stab_error = Eigen::Vector2d::Zero();
   Eigen::VectorXd m_QP_zmp;
   std::vector<Eigen::Vector3d> m_admittance_targets;
   bool Use_Stability_Task = false;

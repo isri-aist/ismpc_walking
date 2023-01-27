@@ -1131,7 +1131,7 @@ bool ISMPC_Solver::GetWalkingParameters(double Tds, bool stop)
   bineq << bineq_zmp, bineq_steps;
 
   QP_Output = solveQP();
-  stab_error = (A_stab * QP_Output - b_stab).norm();
+  stab_error = (A_stab * QP_Output - b_stab).block(0,0,2,1);
   
   // std::cout << "QP out " << QP_Output << std::endl;
 
@@ -1152,7 +1152,7 @@ bool ISMPC_Solver::GetWalkingParameters(double Tds, bool stop)
 
     QPsuccess = false;
 
-    mc_rtc::log::warning("[ISMPC] Ignoring Stability cstr stab error {}",stab_error);
+    mc_rtc::log::warning("[ISMPC] Ignoring Stability cstr");
     m_Tail = "None";
     Stability_Constraints();
     m_p += m_Beta_stab * (-A_stab.transpose() * b_stab);
@@ -1160,7 +1160,7 @@ bool ISMPC_Solver::GetWalkingParameters(double Tds, bool stop)
     Aeq = Eigen::MatrixXd::Zero(1, N_variable);
     beq = Eigen::VectorXd::Zero(1);
     QP_Output = solveQP();
-    stab_error = (A_stab * QP_Output - b_stab).norm();
+    stab_error = (A_stab * QP_Output - b_stab);
     mc_rtc::log::warning("[ISMPC] New stab error {}",stab_error);
   }
 
@@ -1210,45 +1210,49 @@ bool ISMPC_Solver::GetWalkingParameters(double Tds, bool stop)
 
     if(m_Tail == "None" || Use_Stability_Task)
     {
-      double l_d_w_p_e = m_lambda / (m_lambda + m_eta);
-      Eigen::Vector3d P_u_k_2 = (P_z_k_delayed - w_k) * exp(-m_eta * m_delay) + (P_z_k - w_k) + l_d_w_p_e * U_k  - ( ( (P_z_k_delayed - w_k) + l_d_w_p_e * U_k ) ) * exp(-m_eta * m_delay) ;
-      // if(m_Tail_save == "Periodic")
+      // double l_d_w_p_e = m_lambda / (m_lambda + m_eta);
+      // Eigen::Vector3d P_u_k_2 = (P_z_k_delayed - w_k) * exp(-m_eta * m_delay) + 
+      //                           (P_z_k - w_k) + l_d_w_p_e * U_k  - 
+      //                           ( ( (P_z_k_delayed - w_k) + l_d_w_p_e * U_k ) ) * exp(-m_eta * m_delay) ;
+      // // if(m_Tail_save == "Periodic")
+      // //   for(int k = 0; k < m_C; k++)
+      // //   {
+      // //     P_u_k_2 += ((1 - exp(-m_eta * m_delta)) / (m_eta * (1 - exp(-m_eta * m_Tc)))) * exp(-k * m_eta * m_delta) * exp(-m_eta * m_delay)
+      // //                * Eigen::Vector3d{m_ZMP_u[k], m_ZMP_u[k + m_C], 0};
+      // //   }
+      // // else if(m_Tail_save == "Truncated")
+      // // {
+      // //   for(int k = 0; k < m_C; k++)
+      // //   {
+      // //     P_u_k_2 += (m_lambda/(m_lambda + m_eta)) * exp(-k * m_eta * m_delta) * exp(-m_eta * m_delay)
+      // //                * Eigen::Vector3d{m_ZMP_u[k], m_ZMP_u[k + m_C], 0};
+      // //   }
+      // // }
+      // // else
+      // // {
+
       //   for(int k = 0; k < m_C; k++)
       //   {
-      //     P_u_k_2 += ((1 - exp(-m_eta * m_delta)) / (m_eta * (1 - exp(-m_eta * m_Tc)))) * exp(-k * m_eta * m_delta) * exp(-m_eta * m_delay)
-      //                * Eigen::Vector3d{m_ZMP_u[k], m_ZMP_u[k + m_C], 0};
+      //     if(k == 0)
+      //     {
+      //       P_u_k_2 += (m_lambda/(m_lambda + m_eta)) * exp(- m_eta * m_delay)
+      //                             * Eigen::Vector3d{m_ZMP_u[k], m_ZMP_u[k + m_C], 0};
+      //     }
+      //     else
+      //     {
+      //       P_u_k_2 += (m_lambda/(m_lambda + m_eta)) * exp(-k * m_eta * m_delta)
+      //                             * Eigen::Vector3d{m_ZMP_u[k], m_ZMP_u[k + m_C], 0};
+      //     }
       //   }
-      // else if(m_Tail_save == "Truncated")
-      // {
-      //   for(int k = 0; k < m_C; k++)
-      //   {
-      //     P_u_k_2 += (m_lambda/(m_lambda + m_eta)) * exp(-k * m_eta * m_delta) * exp(-m_eta * m_delay)
-      //                * Eigen::Vector3d{m_ZMP_u[k], m_ZMP_u[k + m_C], 0};
-      //   }
-      // }
-      // else
-      // {
 
-        for(int k = 0; k < m_C; k++)
-        {
-          if(k == 0)
-          {
-            P_u_k_2 += (m_lambda/(m_lambda + m_eta)) * exp(- m_eta * m_delay)
-                                  * Eigen::Vector3d{m_ZMP_u[k], m_ZMP_u[k + m_C], 0};
-          }
-          else
-          {
-            P_u_k_2 += (m_lambda/(m_lambda + m_eta)) * exp(-k * m_eta * m_delta)
-                      * Eigen::Vector3d{m_ZMP_u[k], m_ZMP_u[k + m_C], 0};
-          }
-        }
+      //   //P_u_k_2 += ((1 - exp(-m_eta * m_delta)) / (m_eta)) * Eigen::Vector3d{Ant_Tail_X, Ant_Tail_Y, 0};
+      // // }
 
-        //P_u_k_2 += ((1 - exp(-m_eta * m_delta)) / (m_eta)) * Eigen::Vector3d{Ant_Tail_X, Ant_Tail_Y, 0};
-      // }
-
-      V_c_k = m_eta * (P_u_k_2 - P_c_k);
-      // P_c_k = P_u_k_2 - V_c_k/m_eta;
-      Eigen::Vector3d P_u_error = P_u_k - P_u_k_2; P_u_error.z() = 0.;
+      Eigen::Vector2d P_u_k_2 = P_u_k.segment(0,2) + stab_error;
+      V_c_k.segment(0,2) = m_eta * (P_u_k_2 - P_c_k.segment(0,2));
+      // P_c_k.segment(0,2) = P_u_k_2 - P_c_k.segment(0,2)/m_eta;
+      
+      Eigen::Vector2d P_u_error = P_u_k.segment(0,2) - P_u_k_2; 
       
       // mc_rtc::log::info("P_u_error \n{}",P_u_error);
     }
