@@ -230,6 +230,11 @@ void Walking_controller::ComputeWalkingTrajectory()
     //UpdateInitialVectors();
     mpc_thread_state = mpc_state_;
   }
+  if(NewConfigState)
+  {
+    MPCSolver.configure(controller_config_);
+    NewConfigState = false;
+  }
   MPCSolver.AutoFootstepPlacement = AutoFootstepPlacement;
 
   if(mpc_thread_state.input_steps_.size() != 0)

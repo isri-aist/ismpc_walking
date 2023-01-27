@@ -372,6 +372,7 @@ private:
   std::atomic<bool> MPC_thread_on = false;
   std::atomic<bool> MPC_thread_ready = false;
   std::atomic<bool> NewThreadState = false;
+  std::atomic<bool> NewConfigState = true;
   bool stabilizer_active_ = true;
   std::thread WalkingTrajectoryThread;
 

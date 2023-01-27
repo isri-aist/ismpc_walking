@@ -86,22 +86,14 @@ void ISMPC_Solver::configure(const ControllerConfiguration & config)
   Integration_Mat(2, 1) = 0;
   Integration_Mat(2, 2) = 1;
 
-  m_dynamic_matrix_A << 0 , 1 , 0,
-                        std::pow(m_eta,2) , 0 , -std::pow(m_eta,2),
-                        0 , 0 , - m_lambda;
-  m_dynamic_matrix_A = Eigen::Matrix3d::Identity() + (m_delta_control * m_dynamic_matrix_A)/N_integration;
-  m_dynamic_matrix_B = Eigen::MatrixXd::Zero(3,m_C);
-
-
   Integration_Vec = Eigen::Vector3d{m_delta_control - (std::sinh(m_eta * m_delta_control) / m_eta),
                                     1 - std::cosh(m_eta * m_delta_control), m_delta_control};
-
-
 
 
   mc_rtc::log::info("[ISMPC] Configuration :");
   mc_rtc::log::info("Beta {}", m_Beta_step);
   mc_rtc::log::info("ZMP cstr\n{}", Eigen::Vector2d{m_dx, m_dy});
+  mc_rtc::log::info("U cstr\n{}", Eigen::Vector2d{m_dx_u, m_dy_u});
   mc_rtc::log::info("Footsteps kin cstr\n{}", Eigen::Vector2d{m_dx_f, m_dy_f});
   mc_rtc::log::info("Footsteps cstr\n{}", Eigen::Vector2d{m_dx_f_rect, m_dy_f_rect});
   mc_rtc::log::info("CoM h {}", CoM_height);
@@ -127,9 +119,9 @@ void ISMPC_Solver::init_MPC(const MPC_state & mpc_state,
   U_k = mpc_state.Uk;
   P_z_k_delayed = P_z_k + (1 - exp(-m_lambda * m_delay)) * U_k;
   m_Tail = Tail;
+  
   m_support_foot = mpc_state.input_Support_FootName;
   m_tk = mpc_state.t_k;
-  // m_eta = sqrt(g / P_c_k.z());
   P_u_k = P_c_k + (V_c_k / m_eta);
   X_0_swing_foot_initial = mpc_state.X_0_Initial_SwingFoot;
 
