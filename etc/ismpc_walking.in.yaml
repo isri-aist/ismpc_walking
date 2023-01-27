@@ -69,7 +69,7 @@ ismpc:
   offset_static: [0.0,0]
   next_stp_cstr_ratio: 1
   feet_distance: 0.2
-  allow_none_tail: true
+  allow_none_tail: false
   foosteps_kin_cstr: [0.6,0.15]
   footsteps_cstr_square: [0.6,0.1]
   double_support_ratio: 0.3
@@ -78,7 +78,7 @@ ismpc:
   safety_thresholds:
     beta_range: [1e-9,1e9]
     zmp_cstr_square_min: 0.01
-    zmp_cstr_square_max: 0.2
+    zmp_cstr_square_max: 1
 
 footsteps_planner:
   Tp: 6

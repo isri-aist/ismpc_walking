@@ -272,13 +272,13 @@ void Walking_controller::ComputeWalkingTrajectory()
     Steps_Desired = Steps + 1;
   }
 
-  std::string tail = Tail;
-  if(mpc_thread_state.Index > 10. * MPCSolver.delta_mpc() / MPCSolver.delta_control())
-  {
+  // std::string tail = Tail;
+  // if(mpc_thread_state.Index > 10. * MPCSolver.delta_mpc() / MPCSolver.delta_control())
+  // {
 
-    tail = "None";
-    mc_rtc::log::warning("[ISMPC] Approaching Control Horizon, Tail temporary switched to None");
-  }
+  //   tail = "None";
+  //   mc_rtc::log::warning("[ISMPC] Approaching Control Horizon, Tail temporary switched to None");
+  // }
 
   MPCSolver.init_MPC(mpc_thread_state, planned_steps_, timesteps, Tail, Steps_Desired, Steps);
   // MPCSolver.Puk(mpc_state_.Pu);
@@ -564,7 +564,19 @@ void Walking_controller::MoveCoM()
 
   if(mpc_state_.Index + 1 >= mpc_state_.X_MPC.size())
   {
-    mc_rtc::log::error_and_throw<std::runtime_error>("Control Horizon reached");
+    
+    if(!Robot_Walking)
+    {
+      if(active)
+      {
+        mc_rtc::log::error("Control Horizon reached");
+        deactivate();
+      }
+    }
+    else
+    {
+      mc_rtc::log::error_and_throw<std::runtime_error>("Control Horizon reached");
+    }
   }
 
   Eigen::Vector3d Pcom(mpc_state_.Get_CoM_planarTarget(mpc_state_.Index));
