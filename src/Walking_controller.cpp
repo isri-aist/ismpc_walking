@@ -477,7 +477,7 @@ bool Walking_controller::run()
   if(!(Stop && Swing_Foot_Contact))
   {
 
-    if(t - t_k >= controller_config_.delta )
+    if(t - t_k >= controller_config_.delta || false )
     {
       t_k += t - t_k; 
       compute_trajectory_once.notify_all();
@@ -504,7 +504,7 @@ bool Walking_controller::run()
     
       compute_trajectory_once.notify_all();
     }
-    // compute_trajectory_once.notify_all();
+    compute_trajectory_once.notify_all();
 
     t_k = 0.;
     kfoot = 0;
@@ -591,7 +591,15 @@ void Walking_controller::MoveCoM()
   Eigen::Vector3d Ac_com = std::pow(eta(), 2) * (Pcom - zmpTarget);
 
   Ac_com.z() = 0;
-  admittanceTarget = mpc_state_.get_u(0) + mpc_state_.initial_zmp_;
+  admittanceTarget = mpc_state_.initial_zmp_;
+  int n = static_cast<int>(controller_config_.delta/controller_timestep);
+  for (int k = 0 ; k <= mpc_state_.Index/n ; k++)
+  {
+    // mc_rtc::log::info("index {} , k {}",mpc_state_.Index,k);
+    admittanceTarget += mpc_state_.get_u(k);
+  }
+  // mc_rtc::log::info("//");
+
   admittanceTarget.z() = 0;
 
   Eigen::Vector3d Ac_wrench = std::pow(eta(), 2) * (Pcom - admittanceTarget);

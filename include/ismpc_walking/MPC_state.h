@@ -106,6 +106,11 @@ struct MPC_state
 
   Eigen::Vector3d get_u(int indx)
   {
+    if(indx/2 >= mpc_u_.size())
+    {
+      std::cout << "[U access] Warning wrong index returning 0 vector" << std::endl;
+      return Eigen::Vector3d::Zero();
+    }
     double horizon_size = static_cast<double>(mpc_u_.size()) / 2;
     return Eigen::Vector3d{mpc_u_[indx] , mpc_u_[indx + static_cast<int>(horizon_size)],0.};
   }

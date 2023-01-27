@@ -238,9 +238,9 @@ void Walking_controller::addToGUI()
           "Reference velocity", {"x", "y", "omega"}, [this]() -> const Eigen::Vector3d & { return reference_velocity; },
           [this](const Eigen::Vector3d & vel) { reference_velocity = vel; }),
       mc_rtc::gui::NumberInput(
-          "Ts", [this]() -> double { return ts(); }, [this](const double & t) { T_Steps = t; }),
+          "Ts", [this]() -> double { return ts(); }, [this](const double t) { T_Steps = t; }),
       mc_rtc::gui::NumberInput(
-          "Steps", [this]() -> int { return N_Steps_Desired; }, [this](const double & n) { N_Steps_Desired = n; }),
+          "Steps", [this]() -> int { return N_Steps_Desired; }, [this](const double n) { N_Steps_Desired = n; }),
 
       mc_rtc::gui::Transform("Steps desired pose",
                            [this]() {
@@ -257,17 +257,7 @@ void Walking_controller::addToGUI()
               return mpc_state_.FeasibilityPolygon;
             
           })
-      // mc_rtc::gui::Point3D("Pu", mc_rtc::gui::PointConfig(mc_rtc::gui::Color(1, 0.5, 0.25)),
-      //                      [this]() {
-      //                        Eigen::Vector3d vec(this->MPCSolver.Puk());
-      //                        vec.z() = 0;
-      //                        return vec;
-      //                      }),
-      // mc_rtc::gui::Point3D("DCM", mc_rtc::gui::PointConfig(mc_rtc::gui::Color(1, 0.75, 0.25)), [this]() {
-      //   Eigen::Vector3d vec(stabTask->measuredDCM());
-      //   vec.z() = 0;
-      //   return vec;
-      // })
+
   );
 
   gui()->addElement(
