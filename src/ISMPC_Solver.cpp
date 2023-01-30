@@ -411,7 +411,7 @@ void ISMPC_Solver::ZMP_Constraints()
       Poly_Rect = SupportPolygon(Sliding_rect);
 
       Sliding_rect_u = Rectangle(mc_rbdyn::rpyFromMat(X_0_step_jm1.rotation()).z(),
-                               Eigen::Vector2d{m_dx_u, m_dy_u} * zmp_cstr_next_stp_ratio);
+                               Eigen::Vector2d{m_dx_u, m_dy_u});
 
       Poly_Rect_u = SupportPolygon(Sliding_rect_u);
 
@@ -561,9 +561,9 @@ void ISMPC_Solver::ZMP_Constraints()
                                 normals * (rect_offset_support).segment(0,2) * alpha;
 
       b_zmp_ineq.push_back(bcstr);
-      b_u_ineq.push_back(u_cstr_polygons[i].offsets()
-                        - u_cstr_polygons[i].normals() * P_z_k_delayed.segment(0, 2) + 
-                          u_cstr_polygons[i].normals() * U_Zone.translation().segment(0, 2));
+      b_u_ineq.push_back(u_cstr_polygons.back().offsets()
+                        - u_cstr_polygons.back().normals() * P_z_k_delayed.segment(0, 2) + 
+                          u_cstr_polygons.back().normals() * U_Zone.translation().segment(0, 2));
 
       ZMP_ref_traj.push_back( - P_z_k_delayed.x() + (rect_offset_support + zmp_ref_offset_sg).x());
       ZMP_ref_traj.push_back( - P_z_k_delayed.y() + (rect_offset_support + zmp_ref_offset_sg).y());
@@ -649,7 +649,7 @@ void ISMPC_Solver::ZMP_Constraints()
       u_Delta.block(2*i,2*k,2,2) = Eigen::Matrix2d::Identity();
     }
   }
-  Aineq_zmp.resize(ZMP_Cstr.rows() + U_Cstr.rows(),N_variable);
+  Aineq_zmp.resize( U_Cstr.rows() + ZMP_Cstr.rows(),N_variable);
   bineq_zmp.resize(Aineq_zmp.rows());
 
   Aineq_zmp << U_Cstr * u_Delta , ZMP_Cstr * Delta;
