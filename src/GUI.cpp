@@ -61,6 +61,9 @@ inline void AddStabilizerConfigToGUI(mc_rtc::gui::StateBuilder & gui,
   category.pop_back();
   category.push_back("Advanced");
   gui.addElement(category,
+                 mc_rtc::gui::Checkbox(
+                     "Constrain CoP", [&c_]() { return c_.constrainCoP; },
+                     [&c_]() { c_.constrainCoP = !c_.constrainCoP; }),
                  mc_rtc::gui::NumberInput(
                      "Admittance Velocity Filter [0-1]", [&c_]() { return c_.copVelFilterGain; },
                      [&c_](double gain) { c_.copVelFilterGain = gain; }),
