@@ -359,7 +359,6 @@ void ISMPC_Solver::ZMP_Constraints()
   All_poly.clear();
 
   Eigen::MatrixXd Delta = Eigen::MatrixXd::Zero(N_variable, N_variable);
-  Eigen::MatrixXd Delta_zmp_ref = Eigen::MatrixXd::Zero(N_variable, N_variable);
 
   P_u_k_max = m_eta * m_delta * R_0_support * P_z_k;
   P_u_k_min = m_eta * m_delta * R_0_support * P_z_k;
@@ -423,7 +422,6 @@ void ISMPC_Solver::ZMP_Constraints()
       double t_m_tk = (1 + i - k) * m_delta;
       if(k == 0){t_m_tk -= m_delay;}
       Delta.block(2 * i,2 * k,2,2) = Eigen::Matrix2d::Identity() * (1-exp( - m_lambda * t_m_tk));
-      Delta_zmp_ref.block(2 * i,2 * k,2,2) = Eigen::Matrix2d::Identity() * (1-exp( - m_lambda * t_m_tk));
     }
 
     double n = std::max(0., std::min(static_cast<double>(m_D ), count_Dstep));
@@ -495,14 +493,14 @@ void ISMPC_Solver::ZMP_Constraints()
       }
 
       
-      ZMP_ref_traj.push_back((Rect_j.get_center() + zmp_ref_offset_sg).x() - P_z_k_delayed.x());
-      ZMP_ref_traj.push_back((Rect_j.get_center() + zmp_ref_offset_sg).y() - P_z_k_delayed.y());
+      ZMP_ref_traj.push_back(ZMP_Zone.translation().x() - P_z_k_delayed.x());
+      ZMP_ref_traj.push_back(ZMP_Zone.translation().y() - P_z_k_delayed.y());
 
       if(i == 0)
       {
         SuppPolyCorners = zmp_cstr_polygons.back().Get_Polygone_Corners();
         m_support_state = alpha;
-        m_ref_zmp = Eigen::Vector3d{ZMP_ref_traj[0],ZMP_ref_traj[1],0} + P_z_k_delayed ; 
+        m_ref_zmp = ZMP_Zone.translation(); 
       }
 
       Eigen::MatrixX2d normals(zmp_cstr_polygons.back().normals());
@@ -565,11 +563,10 @@ void ISMPC_Solver::ZMP_Constraints()
                         - u_cstr_polygons.back().normals() * P_z_k_delayed.segment(0, 2) + 
                           u_cstr_polygons.back().normals() * U_Zone.translation().segment(0, 2));
 
-      ZMP_ref_traj.push_back( - P_z_k_delayed.x() + (rect_offset_support + zmp_ref_offset_sg).x());
-      ZMP_ref_traj.push_back( - P_z_k_delayed.y() + (rect_offset_support + zmp_ref_offset_sg).y());
+      ZMP_ref_traj.push_back(ZMP_Zone.translation().x() - P_z_k_delayed.x() + alpha * (rect_offset_support + zmp_ref_offset_sg).x());
+      ZMP_ref_traj.push_back(ZMP_Zone.translation().y() - P_z_k_delayed.y() + alpha * (rect_offset_support + zmp_ref_offset_sg).y());
 
       Delta.block(2*i ,2 * m_C + 2 * (j_f - 1),2,2) = -Eigen::Matrix2d::Identity()*alpha;
-      Delta_zmp_ref.block(2*i ,2 * m_C + 2 * (j_f - 1),2,2) = -Eigen::Matrix2d::Identity();
 
       All_poly.push_back(zmp_cstr_polygons.back().Get_Polygone_Corners());
       if(i == 0)
@@ -581,8 +578,8 @@ void ISMPC_Solver::ZMP_Constraints()
     else
     {
 
-      ZMP_ref_traj.push_back( - P_z_k_delayed.x() + alpha * (rect_offset_support + zmp_ref_offset_sg).x());
-      ZMP_ref_traj.push_back( - P_z_k_delayed.y() + alpha * (rect_offset_support + zmp_ref_offset_sg).y());
+      ZMP_ref_traj.push_back( - P_z_k_delayed.x() + alpha * (rect_offset_support + zmp_ref_offset_sg).x() + (1 - alpha) * (rect_offset_swing + zmp_ref_offset_swing).x() );
+      ZMP_ref_traj.push_back( - P_z_k_delayed.y() + alpha * (rect_offset_support + zmp_ref_offset_sg).y() + (1 - alpha) * (rect_offset_swing + zmp_ref_offset_swing).y() );
 
  
       zmp_cstr_polygons.push_back(Poly_Rect);
@@ -601,8 +598,6 @@ void ISMPC_Solver::ZMP_Constraints()
  
       Delta.block(2*i ,2 * m_C + 2 * (j_f - 1),2,2) = -Eigen::Matrix2d::Identity()*alpha;
       Delta.block(2*i ,2 * m_C + 2 * (j_fm1 - 1),2,2) = -Eigen::Matrix2d::Identity()*(1-alpha);
-
-      Delta_zmp_ref.block(2*i ,2 * m_C + 2 * (j_f - 1),2,2) = -Eigen::Matrix2d::Identity();
       
 
       if(i == 0)
@@ -657,8 +652,7 @@ void ISMPC_Solver::ZMP_Constraints()
 
   b_zmp_traj = Eigen::Map<Eigen::VectorXd, Eigen::Unaligned>(ZMP_ref_traj.data(), ZMP_ref_traj.size());
   M_zmp_traj = Eigen::MatrixXd::Zero(b_zmp_traj.rows(), N_variable);
-  M_zmp_traj.block(0, 0, b_zmp_traj.rows(), N_variable) = Delta_zmp_ref.block(0, 0, b_zmp_traj.rows(), N_variable);
-  
+  M_zmp_traj.block(0, 0, b_zmp_traj.rows(), N_variable) = Delta.block(0, 0, b_zmp_traj.rows(), N_variable);
   A_zmp = Delta.block(0,0,2 * m_C,N_variable);
   A_zmp.block(0,2 * m_C, 2 * m_C ,N_variable - 2* m_C).setZero();
 
