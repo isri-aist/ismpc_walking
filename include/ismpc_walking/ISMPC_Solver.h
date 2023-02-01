@@ -58,7 +58,18 @@ public:
     _center += Eigen::Vector3d{offset.x(), offset.y(), 0};
     compute_rect();
   }
-  ~Rectangle() = default;
+  ~Rectangle()
+  {
+    corners.clear();
+    _center.setZero();
+    _size.setZero();
+    _angle = 0;;
+    R = Eigen::Matrix3d::Identity();
+    upper_left_corner.setZero();
+    upper_right_corner.setZero();
+    lower_left_corner.setZero();
+    lower_right_corner.setZero();
+  }
 
   std::vector<Eigen::Vector3d> & Get_corners()
   {
