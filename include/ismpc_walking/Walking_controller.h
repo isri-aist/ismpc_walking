@@ -12,6 +12,7 @@
 #include <mc_solver/ConstraintSetLoader.h>
 #include <mc_tasks/AddRemoveContactTask.h>
 #include <mc_tasks/SurfaceTransformTask.h>
+#include <mc_tasks/CoPTask.h>
 #include <mc_tasks/MomentumTask.h>
 #include <mc_tasks/lipm_stabilizer/StabilizerTask.h>
 #include <Tasks/QPContactConstr.h>
@@ -107,7 +108,11 @@ public:
     controller_config_.Beta_u = qp_weight[0]; 
     controller_config_.Beta_step = qp_weight[1]; 
     controller_config_.Beta_traj = qp_weight[2];
-    controller_config_.Beta_stab = qp_weight[3]; 
+    controller_config_.Beta_stab = qp_weight[3];
+    std::vector<double> qp_f_weight = config("Force distribution Weight (force ; moment ; diff)"); 
+    controller_config_.Beta_wrench_f = qp_f_weight[0];
+    controller_config_.Beta_wrench_m = qp_f_weight[1];
+    controller_config_.Beta_wrench_diff = qp_f_weight[2];
     controller_config_.Tc = config("Tc");
     controller_config_.delta = config("delta");
     controller_config_.MPC_Footsteps_kin_Constraint_size = config("step kinematics cstr");
@@ -364,6 +369,7 @@ protected:
   std::shared_ptr<mc_tasks::PostureTask> armTask;
   std::shared_ptr<mc_tasks::MomentumTask> MomentumTask;
   std::shared_ptr<mc_tasks::CoMTask> comTask;
+
 
 private:
   std::mutex mutex_mpc_;

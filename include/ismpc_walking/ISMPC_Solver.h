@@ -505,6 +505,35 @@ public:
     return m_ref_zmp;
   }
 
+  const bool double_support()
+  {
+    return m_double_support;
+  }
+
+  const sva::ForceVecd & get_support_wrench()
+  {
+    return m_support_wrench;
+  }
+
+  const Eigen::Vector2d & get_wrench_zmp()
+  {
+    return m_wrench_zmp;
+  }
+
+  const sva::ForceVecd & get_swing_wrench()
+  {
+    return m_swing_wrench;
+  }
+
+  const sva::ForceVecd & get_wrench(std::string foot)
+  {
+    if(m_support_foot == foot)
+    {
+      return m_support_wrench;
+    }
+    return m_swing_wrench;
+  }
+
   void set_lambda(const double in)
   {
     m_lambda = in;
@@ -600,6 +629,8 @@ private:
    */
   void ZMP_Constraints();
 
+  void Wrench_Constraints();
+
   void Static_ZMP_Constraints();
 
   void Compute_Stability_Range();
@@ -618,13 +649,35 @@ private:
 
   void create_cstr_matrices(Eigen::MatrixXd & A_out, Eigen::VectorXd & b_out, std::vector<Eigen::MatrixX2d> & A_in, const std::vector<Eigen::VectorXd> & b_in);
   
+  /**
+   * @brief Create the delta matrix object that convert admittance delta references into zmp pose (minus zmp initial pose)
+   * 
+   * @param A_in 
+   */
+  Eigen::MatrixXd create_zmp_matrix();
 
   /**
-   * Integrate The ZMP velocity to compute the CoM, CoMd and ZMP trajectory
+   * @brief Create the delta matrix object that get admittance references from the deltas (minus zmp initial pose)
+   * 
+   * @param A_in 
+   */
+  Eigen::MatrixXd create_u_matrix();
+
+  /**
+   * @brief Create a contact constraint matrix (wrench is defined in the foot center frame)
+   * 
+   * @param size 
+   * @param mu 
+   * @return Eigen::MatrixXd 
+   */
+  Eigen::MatrixXd create_contact_matrix(Eigen::Vector2d size, double mu);
+
+  /**
+   * Integrate The inputs u to compute the CoM, CoMd and ZMP trajectory
    */
   void Integrate();
 
-  void Compute_Integration_Vector(int i);
+  void Compute_Integration_Vector(int i,double dt);
 
   /**
    * Generate a ZMP trajectory that is the middle point of the zmp square constraints between the preview and control
@@ -647,6 +700,14 @@ private:
   Eigen::Matrix3d R_support_0 = Eigen::Matrix3d::Identity();
   Eigen::Matrix3d R_0_support = Eigen::Matrix3d::Identity();
   Eigen::VectorXd m_ZMP_u; // Computed ZMP velocity in world frame
+  sva::ForceVecd m_support_wrench; //Computed support foot wrench in foot frame
+  Eigen::Vector2d m_wrench_zmp; //zmp corresponding to the computed wrench;
+  sva::ForceVecd m_swing_wrench; //Computed swing foot wrench in foot frame
+
+  sva::ForceVecd m_left_wrench = sva::ForceVecd::Zero(); //Computed left foot wrench at previous iteration
+  sva::ForceVecd m_right_wrench = sva::ForceVecd::Zero(); //Computed right foot wrench at previous iteration
+
+
   std::vector<double> m_timestamp; // Step TimesStamp Computed at the footStep Generation
 
   sva::PTransformd X_0_support_foot;
@@ -686,6 +747,7 @@ private:
   double m_eta; // Prendulum frequency
   double CoM_height = 0.78;
   double g = 9.8; // Gravity acceleration
+  double m_mass = 50.;
   double m_tk;
   double m_Tc;
   double m_Tp; // Control & Preview horizon time
@@ -694,7 +756,8 @@ private:
   double m_Dstep_ratio; // T_DoubleStep/T_Step
   double m_delta; // t_k - t_k-1
   double m_delta_control; // Controller timestep
-  double N_integration = 1;
+  double N_integration = 1.;
+  int N_wrench; //Number if wrench to compute;
   double m_dx_static;
   double m_dy_static;
   double m_dx;
@@ -716,6 +779,9 @@ private:
   double m_Beta_u = 1;
   double m_Beta_step = 1e1;
   double m_Beta_stab = 1e5;
+  double m_beta_wrench_f = 1e-6;
+  double m_beta_wrench_m = 1e-3;
+  double m_beta_wrench_diff = 1e-7;
   double m_Beta_traj = 0.;
   double m_lambda = 100;
   double m_delay = 0; //delay ( < m_delta ) during which zmp is constant
@@ -724,7 +790,8 @@ private:
   int j_Max_C = 0; // Number of footsteps in the Control Horizon
   int j_f; // Index of the actual support foot
   int j_fm1; // Index of the previous support foot
-  double m_support_state = 0;
+  double m_support_state = 0; //1st input support state
+  bool m_double_support = false;
   Eigen::Vector3d m_ref_zmp = Eigen::Vector3d::Zero(); //first ref zmp in the horizon
   int kfoot = 0;
 
@@ -739,6 +806,15 @@ private:
   std::vector<Eigen::Vector3d> ZMP_max_ref_traj;
   Eigen::MatrixXd M_zmp_traj;
   Eigen::VectorXd b_zmp_traj;
+
+  Eigen::MatrixXd M_wrench;
+  Eigen::VectorXd b_wrench;
+
+  Eigen::MatrixXd M_wrench_diff;
+  Eigen::VectorXd b_wrench_diff;
+
+  Eigen::MatrixXd M_wrench_reg;
+  Eigen::VectorXd b_wrench_reg;
 
   // CoM,CoMd,ZMP Integration
   Eigen::Matrix3d Integration_Mat;
@@ -766,6 +842,12 @@ private:
 
   Eigen::MatrixXd Aineq_zmp; // Inequality ZMP Matrix
   Eigen::VectorXd bineq_zmp; // Inequality ZMP Vector
+
+  Eigen::MatrixXd Aineq_wrench; // Inequality Wrench Matrix
+  Eigen::VectorXd bineq_wrench; // Inequality Wrench Vector
+
+  Eigen::MatrixXd Aeq_wrench; // Equality Wrench Matrix
+  Eigen::VectorXd beq_wrench; // Equality Wrench Vector
 
   Eigen::MatrixXd A_stab; // Equality stability cstr matrix
   Eigen::VectorXd b_stab; // Equality stability cstr vector

@@ -51,6 +51,7 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, c
   controller_config_.Stab_config_sg_supp = Stabiconfig_sg_supp;
   controller_config_.Stab_config_dbl_supp = Stabiconfig_dbl_supp;
   controller_config_.Controller_timestep = dt;
+  controller_config_.mass = robot().mass();
 
   MPCSolver = ISMPC_Solver(dt, controller_config_.delta, controller_config_.Tp, controller_config_.Tc);
 
@@ -98,7 +99,7 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, c
 
   comTask =
       std::make_shared<mc_tasks::CoMTask>(robots(),robot().robotIndex(),10,200);
-   
+    
   
   if(rConfig.has("momemtum_task_joints"))
   {
@@ -150,6 +151,7 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, c
   solver().addTask(comTask);
   solver().addTask(leftSwingFootTask);
   solver().addTask(rightSwingFootTask);
+
   // solver().addTask(MomentumTask);
   updateTasks();
   deactivate();
@@ -267,7 +269,7 @@ void Walking_controller::ComputeWalkingTrajectory()
   int Steps = N_Steps;
   int Steps_Desired = N_Steps_Desired;
 
-  if(Stop && !Swing_Foot_Contact)
+  if(Stop && !DoubleSupport_state)
   {
     Steps_Desired = Steps + 1;
   }
@@ -376,9 +378,13 @@ void Walking_controller::UpdatePlanner_input()
   mpc_state_.X_0_SupportFoot =
       sva::PTransformd(sva::RotZ(mc_rbdyn::rpyFromMat(robot().surfacePose(supportFootName).rotation()).z()),
                        robot().surfacePose(supportFootName).translation());
+  
   mpc_state_.X_0_Initial_SwingFoot =
       sva::PTransformd(sva::RotZ(mc_rbdyn::rpyFromMat(robot().surfacePose(swingFootName).rotation()).z()),
                        robot().surfacePose(swingFootName).translation());
+  
+  mpc_state_.X_0_SupportFoot = X_0_support;
+  mpc_state_.X_0_Initial_SwingFoot = X_0_swing;
   mpc_state_.SupportFootPose = robot().surfacePose(supportFootName).translation();
   mpc_state_.SupportFootPose.z() = mc_rbdyn::rpyFromMat(robot().surfacePose(supportFootName).rotation()).z();
 
@@ -474,7 +480,7 @@ bool Walking_controller::run()
   }
 
 
-  if(!(Stop && Swing_Foot_Contact))
+  if(!(Stop && DoubleSupport_state))
   {
 
     if(t - t_k >= controller_config_.delta || false )
@@ -482,7 +488,7 @@ bool Walking_controller::run()
       t_k += t - t_k; 
       compute_trajectory_once.notify_all();
     }
-    
+    compute_trajectory_once.notify_all();
     MoveFeet(t);
 
     Robot_Walking = true;
@@ -506,16 +512,16 @@ bool Walking_controller::run()
     }
     compute_trajectory_once.notify_all();
 
-    t_k = 0.;
+    t_k = -controller_config_.delta;
     kfoot = 0;
     N_Steps = 0;
-    countStart = count - 1;
+    countStart = count + 1;
 
     Robot_Walking = false;
   }
  
 
-  if(!Swing_Foot_Contact && stabilizer_state_ != StabilizerState::SingleSupport && active)
+  if(!DoubleSupport_state && stabilizer_state_ != StabilizerState::SingleSupport && active)
   {
     stabilizer_state_ = StabilizerState::SingleSupport;
     mc_rbdyn::lipm_stabilizer::StabilizerConfiguration config = controller_config_.Stab_config_sg_supp;
@@ -526,7 +532,7 @@ bool Walking_controller::run()
     stabTask->configure(config);
     mc_rtc::log::info("configure sg");
   }
-  else if(Robot_Walking && Swing_Foot_Contact && stabilizer_state_ != StabilizerState::DoubleSupport && active)
+  else if(Robot_Walking && DoubleSupport_state && stabilizer_state_ != StabilizerState::DoubleSupport && active)
   {
     stabilizer_state_ = StabilizerState::DoubleSupport;
     mc_rbdyn::lipm_stabilizer::StabilizerConfiguration config = controller_config_.Stab_config_dbl_supp;
@@ -585,9 +591,6 @@ void Walking_controller::MoveCoM()
   Vc.z() = 0;
   zmpTarget = mpc_state_.Get_ZMP_planarTarget(mpc_state_.Index);
     
-  // mc_rtc::log::info("//Index : {}, z_y {}",mpc_state_.Index,zmpTarget.y());
-
-
   Eigen::Vector3d Ac_com = std::pow(eta(), 2) * (Pcom - zmpTarget);
 
   Ac_com.z() = 0;
@@ -612,6 +615,11 @@ void Walking_controller::MoveCoM()
   dcmTarget = Pcom + Vc / eta();
 
   stabTask->target(Pcom, Vc, Ac_wrench, admittanceTarget);
+
+  sva::ForceVecd w_l_c = MPCSolver.get_wrench("LeftFoot");
+  sva::ForceVecd w_r_c = MPCSolver.get_wrench("RightFoot");
+  sva::ForceVecd w_swg_c = MPCSolver.get_swing_wrench();
+
   if(!active)
   {
     Pcom.segment(0,2) = sva::interpolate(robot().surfacePose(leftFootName_),robot().surfacePose(rightFootName_),0.5).translation().segment(0,2);
@@ -623,6 +631,13 @@ void Walking_controller::MoveCoM()
       mc_rtc::log::warning("[Walking Controller] MPC control is off, cannot walk");
     }
   }
+  else
+  {
+    stabTask->setManualWrench(w_l_c,w_r_c );
+    
+
+  }
+
   comTask->com(Pcom);
   comTask->refVel(Vc);
   comTask->refAccel(Ac_com);
@@ -683,6 +698,7 @@ void Walking_controller::UpdateInitialVectors()
     }
     Eigen::Vector3d zmp_vel = mpc_state_.Pzk;
     robot().zmp(mpc_state_.Pzk,measuredNetWrench_,zmpFrame);
+ 
     zmp_vel = (mpc_state_.Pzk - zmp_vel) / controller_timestep;
     zmp_vel_.append(zmp_vel);
 

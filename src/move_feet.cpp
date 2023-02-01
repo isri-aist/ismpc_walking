@@ -42,7 +42,7 @@ bool Walking_controller::MoveFeet(double t)
   const auto & sensor = robot().forceSensor(swingFoot_sensorName);
   const auto & sensor_support = robot().forceSensor(supportFoot_sensorName);
 
-  if(Swing_Foot_Contact)
+  if(DoubleSupport_state)
   {
     t_lift = PrevStepTiming + mpc_state_.get_tds();
     if(t >= PrevStepTiming + mpc_state_.get_tds()
@@ -72,7 +72,7 @@ bool Walking_controller::MoveFeet(double t)
       t_lift = t;
 
       DoubleSupport_state = false;
-      Swing_Foot_Contact = false;
+      // Swing_Foot_Contact = false;
     }
   }
 
@@ -102,7 +102,7 @@ bool Walking_controller::MoveFeet(double t)
   // SwingFootTask->refAccel(sva::PTransformd(X_0_swing.rotation())
   // *sva::MotionVecd(Eigen::Vector3d::Zero(),A_0_FootTask_Target.linear()));
 
-  if(!Swing_Foot_Contact)
+  if(!DoubleSupport_state)
   {
     if(controller_config_.FootStepHeight - X_0_FootTask_Target.translation().z() < 0.005)
     {
@@ -154,7 +154,6 @@ bool Walking_controller::MoveFeet(double t)
             {{mc_tasks::lipm_stabilizer::ContactState::Left, sva::PTransformd(sva::RotZ(swing_yaw), swing_pose)},
              {mc_tasks::lipm_stabilizer::ContactState::Right, sva::PTransformd(sva::RotZ(supp_yaw), supp_pose)}});
       }
-
       DoubleSupport_state = true;
       mc_rtc::log::info("height : {} ", swing_foot_height);
       mc_rtc::log::info("touchdown : {} ", TouchDown);
@@ -184,14 +183,13 @@ bool Walking_controller::MoveFeet(double t)
 
       N_Steps += 1;
 
-      Swing_Foot_Contact = true;
+      // Swing_Foot_Contact = true;
       if(N_Steps == N_Steps_Desired)
       {
         Stop = true;
       }
       t_k = -controller_config_.delta;
-      t_k = 0;
-      countStart = count - 1;
+      countStart = count + 1;
     }
   }
 
@@ -211,6 +209,7 @@ bool Walking_controller::MoveFeet(double t)
 
     solver().removeTask(leftSwingFootTask);
     solver().removeTask(rightSwingFootTask);
+   
 
   }
 
@@ -222,10 +221,12 @@ void Walking_controller::updateTasks()
   if(supportFootName == leftFootName_)
   {
     SwingFootTask = rightSwingFootTask;
+
   }
   else
   {
     SwingFootTask = leftSwingFootTask;
+
   }
   Eigen::MatrixXd dimW(Eigen::VectorXd::Zero(6));
   dimW(5) = 1;

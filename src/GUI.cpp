@@ -395,7 +395,10 @@ void Walking_controller::add_ISMPC_Config_GUI()
                                       [this]() -> std::array<double, 4> {
                                         return {controller_config_.Beta_u, controller_config_.Beta_step,controller_config_.Beta_traj,controller_config_.Beta_stab};
                                       }),
-          
+          mc_rtc::gui::FormArrayInput("Force distribution Weight (force ; moment ; diff)", false,
+                                      [this]() -> std::array<double, 3> {
+                                        return {controller_config_.Beta_wrench_f, controller_config_.Beta_wrench_m, controller_config_.Beta_wrench_diff};
+                                      }),
           mc_rtc::gui::FormNumberInput("Tc", false, [this]() { return controller_config_.Tc; }),
           mc_rtc::gui::FormNumberInput("delta", false, [this]() { return controller_config_.delta; }),
           mc_rtc::gui::FormArrayInput("step kinematics cstr", false,
