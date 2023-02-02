@@ -57,6 +57,16 @@ struct MPC_state
     return opti_steps;
   }
 
+  std::vector<Eigen::Vector2d> admittance_references()
+  {
+    std::vector<Eigen::Vector2d> output;
+    for (auto & ref : admittance_ref_)
+    {
+      output.push_back(ref.segment(0,2));
+    }
+    return output;
+  } 
+
   const std::vector<Eigen::Vector3d> & get_SupPolygon()
   {
     return SupPolygon;
@@ -143,6 +153,7 @@ struct MPC_state
   Eigen::Vector3d Pzk;
   Eigen::Vector3d Uk;
   Eigen::Vector3d ComBias = Eigen::Vector3d::Zero();
+  std::vector<Eigen::Vector3d> admittance_ref_;
   Eigen::Vector3d Pu;
   Eigen::Vector3d w; // Perturbation
   Eigen::VectorXd mpc_u_;

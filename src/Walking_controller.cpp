@@ -323,6 +323,7 @@ void Walking_controller::ComputeWalkingTrajectory()
     mpc_thread_state.FeasibilityPolygon = MPCSolver.feasibility_region();
     mpc_thread_state.alpha = MPCSolver.support_state();
     mpc_thread_state.ref_zmp_ = MPCSolver.zmp_ref().segment(0,2);
+    mpc_thread_state.admittance_ref_ = MPCSolver.admittance_references();
     kfoot = 0;
     NewThreadState = true;
     
@@ -601,6 +602,23 @@ void Walking_controller::MoveCoM()
   // mc_rtc::log::info("//");
 
   admittanceTarget.z() = 0;
+
+  if(DoubleSupport_state && mpc_state_.get_tds() - t_k > controller_config_.delta)
+  {
+    int n_indx = static_cast<int>((mpc_state_.get_tds() - t_k) / controller_config_.delta);
+    std::vector<Eigen::Vector2d> admittance_ref = mpc_state_.admittance_references();
+        // Starting and Ending iterators
+    auto start = admittance_ref.begin();
+    auto end = admittance_ref.begin()  + n_indx + 1;
+ 
+    // To store the sliced vector
+    std::vector<Eigen::Vector2d> result(n_indx + 1);
+ 
+    // Copy vector using copy function()
+    std::copy(start, end, result.begin());
+    stabTask->horizonReference(result, controller_config_.delta);
+  }
+
 
   Eigen::Vector3d Ac_wrench = std::pow(eta(), 2) * (Pcom - admittanceTarget);
   Ac_wrench.z() = 0;
