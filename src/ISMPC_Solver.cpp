@@ -773,7 +773,7 @@ void ISMPC_Solver::Wrench_Constraints()
   Aeq_wrench(1,support_foot_indx + 0) = -1/f_z_tot;
   Aeq_wrench.block(0,support_foot_indx + 5,2,1) = -X_0_support_foot.translation().segment(0,2)/f_z_tot;
   Aeq_wrench(2,support_foot_indx + 5) = 1;
-  beq_wrench.segment(0,2) = -P_z_k_delayed.segment(0,2);
+  beq_wrench.segment(0,2) = -P_z_k.segment(0,2);
   beq_wrench(2) = f_z_tot;
 
   Aineq_wrench.block(0,support_foot_indx,16,6) = contact_matrix * sva::PTransformd(X_0_support_foot.rotation()).dualMatrix();

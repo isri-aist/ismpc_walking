@@ -69,7 +69,7 @@ ismpc:
   offset_static: [0.0,0]
   next_stp_cstr_ratio: 1
   feet_distance: 0.2
-  allow_none_tail: false
+  allow_none_tail: true
   foosteps_kin_cstr: [0.6,0.15]
   footsteps_cstr_square: [0.6,0.1]
   double_support_ratio: 0.3
