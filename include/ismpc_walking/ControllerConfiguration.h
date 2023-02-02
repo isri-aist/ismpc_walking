@@ -27,9 +27,9 @@ struct ControllerConfiguration
   double Beta_step = 1e4; // 1e4;
   double Beta_stab = 1e7;
   double Beta_traj = 0.;
-  double Beta_wrench_f = 1e-5;
+  double Beta_wrench_f = 1e-3;
   double Beta_wrench_m = 1e-3;
-  double Beta_wrench_diff = 1e-7;
+  double Beta_wrench_diff = 1e-5;
   double lambda_ = 100.;
   double zmp_delay = 1e-2;
   Eigen::Vector2d Beta_range{1e10, 1e2};
