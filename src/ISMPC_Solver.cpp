@@ -972,10 +972,10 @@ void ISMPC_Solver::Integrate()
       u_y += m_ZMP_u(j + m_C);
     }
     Eigen::Vector3d Pzi = Eigen::Vector3d{state_x(2),state_y(2),0};
-    m_admittance_targets.push_back(Eigen::Vector3d{u_x,u_y,0} + Pzi);
+    m_admittance_targets.push_back(Eigen::Vector3d{u_x,u_y,0} + Pzi - P_z_k_delayed + P_z_k);
 
 
-    for (int k = 0; k < N ; k ++)
+    for (int k = 0; k < N - (i == 0 ? N_delay : 0) ; k ++)
     {    
 
       Compute_Integration_Vector(k+1);
@@ -1065,14 +1065,8 @@ bool ISMPC_Solver::GetWalkingParameters(double Tds, bool stop)
 
  
   Eigen::MatrixXd M_u = Eigen::MatrixXd::Zero(2*m_C, N_variable);
-  // M_u.block(0, 0, 2 * m_C, 2 * m_C) = Eigen::MatrixXd::Identity(2 * m_C, 2 * m_C);
-  for(int i = 0 ; i < m_C ; i++)
-  {
-    for(int j = 0 ; j<=i ; j++)
-    {
-      M_u.block(2*i,2*j,2,2) = Eigen::Matrix2d::Identity();
-    }
-  }
+  M_u.block(0, 0, 2 * m_C, 2 * m_C) = Eigen::MatrixXd::Identity(2 * m_C, 2 * m_C);
+
   Eigen::MatrixXd M_steps = Eigen::MatrixXd::Zero(2*j_Max_C, N_variable);
   // M_u.block(2*(m_C - 10),2*(m_C - 10),2*10,2*10) *= 1e1;
   M_steps.block(0, 2 * m_C, 2 * j_Max_C, 2 * j_Max_C) = Eigen::MatrixXd::Identity(2 * j_Max_C, 2 * j_Max_C);
