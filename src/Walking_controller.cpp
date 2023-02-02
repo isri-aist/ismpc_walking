@@ -505,12 +505,12 @@ bool Walking_controller::run()
     
       compute_trajectory_once.notify_all();
     }
-    compute_trajectory_once.notify_all();
+    // compute_trajectory_once.notify_all();
 
-    t_k = 0.;
+    t_k = - controller_config_.delta;
     kfoot = 0;
     N_Steps = 0;
-    countStart = count - 1;
+    countStart = count + 1;
 
     Robot_Walking = false;
   }

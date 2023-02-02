@@ -190,8 +190,7 @@ bool Walking_controller::MoveFeet(double t)
         Stop = true;
       }
       t_k = -controller_config_.delta;
-      t_k = 0;
-      countStart = count - 1;
+      countStart = count + 1;
     }
   }
 
