@@ -146,6 +146,8 @@ struct MPC_state
   Eigen::Vector3d Pu;
   Eigen::Vector3d w; // Perturbation
   Eigen::VectorXd mpc_u_;
+  sva::ForceVecd w_r_rc = sva::ForceVecd::Zero();
+  sva::ForceVecd w_l_lc = sva::ForceVecd::Zero();
 
   std::vector<sva::MotionVecd> input_v_;
   std::vector<sva::PTransformd> input_steps_;

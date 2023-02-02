@@ -325,6 +325,8 @@ void Walking_controller::ComputeWalkingTrajectory()
     mpc_thread_state.FeasibilityPolygon = MPCSolver.feasibility_region();
     mpc_thread_state.alpha = MPCSolver.support_state();
     mpc_thread_state.ref_zmp_ = MPCSolver.zmp_ref().segment(0,2);
+    mpc_thread_state.w_l_lc = MPCSolver.get_wrench("LeftFoot");
+    mpc_thread_state.w_r_rc = MPCSolver.get_wrench("RightFoot");
     kfoot = 0;
     NewThreadState = true;
     
@@ -616,9 +618,8 @@ void Walking_controller::MoveCoM()
 
   stabTask->target(Pcom, Vc, Ac_wrench, admittanceTarget);
 
-  sva::ForceVecd w_l_c = MPCSolver.get_wrench("LeftFoot");
-  sva::ForceVecd w_r_c = MPCSolver.get_wrench("RightFoot");
-  sva::ForceVecd w_swg_c = MPCSolver.get_swing_wrench();
+  sva::ForceVecd w_l_c = mpc_state_.w_l_lc;
+  sva::ForceVecd w_r_c = mpc_state_.w_r_rc;
 
   if(!active)
   {
@@ -631,11 +632,9 @@ void Walking_controller::MoveCoM()
       mc_rtc::log::warning("[Walking Controller] MPC control is off, cannot walk");
     }
   }
-  else
+  else if (mpc_state_.QPSuccess)
   {
     stabTask->setManualWrench(w_l_c,w_r_c );
-    
-
   }
 
   comTask->com(Pcom);
