@@ -644,11 +644,11 @@ void ISMPC_Solver::ZMP_Constraints()
       u_Delta.block(2*i,2*k,2,2) = Eigen::Matrix2d::Identity();
     }
   }
-  Aineq_zmp.resize( U_Cstr.rows() + ZMP_Cstr.rows(),N_variable);
+  Aineq_zmp.resize( ZMP_Cstr.rows(),N_variable);
   bineq_zmp.resize(Aineq_zmp.rows());
 
-  Aineq_zmp << U_Cstr * u_Delta , ZMP_Cstr * Delta;
-  bineq_zmp << b_u , b_zmp;
+  Aineq_zmp << ZMP_Cstr * Delta;
+  bineq_zmp << b_zmp;
 
   b_zmp_traj = Eigen::Map<Eigen::VectorXd, Eigen::Unaligned>(ZMP_ref_traj.data(), ZMP_ref_traj.size());
   M_zmp_traj = Eigen::MatrixXd::Zero(b_zmp_traj.rows(), N_variable);
