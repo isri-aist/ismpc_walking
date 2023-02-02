@@ -483,12 +483,12 @@ bool Walking_controller::run()
   if(!(Stop && DoubleSupport_state))
   {
 
-    if(t - t_k >= controller_config_.delta || false )
+    if(t - t_k >= controller_config_.delta || true )
     {
       t_k += t - t_k; 
       compute_trajectory_once.notify_all();
     }
-    compute_trajectory_once.notify_all();
+    // compute_trajectory_once.notify_all();
     MoveFeet(t);
 
     Robot_Walking = true;
