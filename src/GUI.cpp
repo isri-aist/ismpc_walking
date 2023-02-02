@@ -24,7 +24,7 @@ inline void AddStabilizerConfigToGUI(mc_rtc::gui::StateBuilder & gui,
           [&c_]() -> Eigen::Vector2d {
             return {c_.lambdaCoP.x(), c_.lambdaCoP.y()};
           },
-          [&c_](const Eigen::Vector2d & a) { c_.copAdmittance = a; }),
+          [&c_](const Eigen::Vector2d & a) { c_.lambdaCoP = a; }),
       // mc_rtc::gui::ArrayInput(
       //     "Foot force difference", {"Admittance", "Damping"},
       //     [&c_]() -> Eigen::Vector2d {
