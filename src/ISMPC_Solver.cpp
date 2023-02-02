@@ -444,7 +444,7 @@ void ISMPC_Solver::ZMP_Constraints()
       // j_f = std::min(j_f + 1, (int)input_steps_.size() - 1);
       j_f += 1;
       j_fm1 = j_f - 1;
-      count_Dstep = 1;
+      count_Dstep = 0;
       sgn *= -1;
 
       NextStepTiming = m_timestamp[j_f];
@@ -1186,7 +1186,7 @@ bool ISMPC_Solver::GetWalkingParameters(double Tds, bool stop)
 
 
   m_D = static_cast<int>(m_Tds / m_delta) - Tds_offset;
-  count_Dstep = (std::min((m_tk / m_delta) + 1, static_cast<double>(m_D)));
+  count_Dstep = (std::min((m_tk / m_delta) + 0, static_cast<double>(m_D)));
   m_double_support = m_tk < m_Tds;
   N_wrench = (m_double_support ? 2 : 1);
   

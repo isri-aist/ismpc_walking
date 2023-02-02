@@ -283,6 +283,7 @@ void Walking_controller::ComputeWalkingTrajectory()
   // }
 
   MPCSolver.init_MPC(mpc_thread_state, planned_steps_, timesteps, Tail, Steps_Desired, Steps);
+  
   // MPCSolver.Puk(mpc_state_.Pu);
 
   if(Use_w)
