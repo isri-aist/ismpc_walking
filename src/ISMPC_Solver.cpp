@@ -309,11 +309,11 @@ void ISMPC_Solver::Static_ZMP_Constraints()
 
 
 
-  Aineq_zmp.resize(ZMP_Cstr.rows() + U_Cstr.rows(),N_variable);
+  Aineq_zmp.resize(ZMP_Cstr.rows(),N_variable);
   bineq_zmp.resize(Aineq_zmp.rows());
 
-  Aineq_zmp << U_Cstr * u_Delta , ZMP_Cstr * Delta;
-  bineq_zmp << b_u , b_zmp;
+  Aineq_zmp << ZMP_Cstr * Delta;
+  bineq_zmp << b_zmp;
   A_zmp = Delta;
   b_zmp_traj = Eigen::Map<Eigen::VectorXd, Eigen::Unaligned>(ZMP_ref_traj.data(), ZMP_ref_traj.size());
   M_zmp_traj = Eigen::MatrixXd::Zero(b_zmp_traj.rows(), N_variable);
@@ -1068,9 +1068,10 @@ bool ISMPC_Solver::GetWalkingParameters(double Tds, bool stop)
  
   Eigen::MatrixXd M_u = Eigen::MatrixXd::Zero(2*m_C, N_variable);
   M_u.block(0, 0, 2 * m_C, 2 * m_C) = Eigen::MatrixXd::Identity(2 * m_C, 2 * m_C);
+  M_u.block(2*(m_C - 10),2*(m_C - 10),2*10,2*10) *= 1e1;
+
 
   Eigen::MatrixXd M_steps = Eigen::MatrixXd::Zero(2*j_Max_C, N_variable);
-  // M_u.block(2*(m_C - 10),2*(m_C - 10),2*10,2*10) *= 1e1;
   M_steps.block(0, 2 * m_C, 2 * j_Max_C, 2 * j_Max_C) = Eigen::MatrixXd::Identity(2 * j_Max_C, 2 * j_Max_C);
   Eigen::VectorXd b_u = Eigen::VectorXd::Zero(2*m_C);
   Eigen::VectorXd b_steps = Eigen::VectorXd::Zero(2*j_Max_C);
