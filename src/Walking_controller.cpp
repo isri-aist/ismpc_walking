@@ -324,6 +324,7 @@ void Walking_controller::ComputeWalkingTrajectory()
     mpc_thread_state.alpha = MPCSolver.support_state();
     mpc_thread_state.ref_zmp_ = MPCSolver.zmp_ref().segment(0,2);
     mpc_thread_state.admittance_ref_ = MPCSolver.admittance_references();
+    mpc_thread_state.QP_zmp = MPCSolver.QP_zmp();
     kfoot = 0;
     NewThreadState = true;
     

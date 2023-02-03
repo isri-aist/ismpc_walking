@@ -176,6 +176,36 @@ void ISMPC_Solver::create_cstr_matrices(Eigen::MatrixXd & A_out, Eigen::VectorXd
   }
 }
 
+Eigen::MatrixXd ISMPC_Solver::create_zmp_matrix()
+{
+  Eigen::MatrixXd A_out = Eigen::MatrixXd::Zero(2 * m_C , 2 * m_C );
+  for(int i = 0; i < m_C; i++)
+  {
+
+    for(int k = 0; k <= i; k++)
+    {
+      double t_m_tk = (1 + i - k) * m_delta;
+      if(k == 0){t_m_tk -= m_delay;}
+      A_out.block(2*i,2*k,2,2) = Eigen::Matrix2d::Identity() * (1-exp( - m_lambda * t_m_tk));
+    }
+  }
+  return A_out;
+}
+
+Eigen::MatrixXd ISMPC_Solver::create_u_matrix()
+{
+  Eigen::MatrixXd A_out = Eigen::MatrixXd::Zero(2 * m_C , 2 * m_C );
+  A_out = Eigen::MatrixXd::Zero(2 * m_C , 2 * m_C );
+  for(int i = 0; i < m_C; i++)
+  {
+
+    for(int k = 0; k <= i; k++)
+    {
+      A_out.block(2*i,2*k,2,2) = Eigen::Matrix2d::Identity();
+    }
+  }
+  return A_out;
+}
 void ISMPC_Solver::Static_ZMP_Constraints()
 {
 
@@ -211,9 +241,10 @@ void ISMPC_Solver::Static_ZMP_Constraints()
   ZMP_min_ref_traj.clear();
   All_poly.clear();
 
-  Eigen::MatrixXd Delta; // Matrix to derive the ZMP position from u
-  Delta = Eigen::MatrixXd::Zero(N_variable, N_variable);
+  Eigen::MatrixXd Delta = Eigen::MatrixXd::Zero(N_variable, N_variable); // Matrix to derive the ZMP position from u
   Eigen::MatrixXd u_Delta = Delta;
+  Delta.block(0,0,2*m_C,2*m_C) = create_zmp_matrix(); 
+  u_Delta.block(0,0,2*m_C,2*m_C) = create_u_matrix(); 
 
   P_u_k_max = m_eta * m_delta * R_0_support * P_z_k;
   P_u_k_min = m_eta * m_delta * R_0_support * P_z_k;
@@ -223,14 +254,6 @@ void ISMPC_Solver::Static_ZMP_Constraints()
 
   for(int i = 0; i < m_C; i++)
   {
-
-    for(int k = 0; k <= i; k++)
-    {
-      double t_m_tk = (1 + i - k) * m_delta;
-      if(k == 0){t_m_tk -= m_delay;}
-      Delta.block(2*i,2*k,2,2) = Eigen::Matrix2d::Identity() * (1-exp( - m_lambda * t_m_tk));
-      u_Delta.block(2*i,2*k,2,2) = Eigen::Matrix2d::Identity();
-    }
 
     sva::PTransformd X_0_step_stop =
         sva::PTransformd(X_0_step_j.rotation(), (Rect_j.get_center() + Rect_jm1.get_center()) * 0.5);
@@ -359,6 +382,7 @@ void ISMPC_Solver::ZMP_Constraints()
   All_poly.clear();
 
   Eigen::MatrixXd Delta = Eigen::MatrixXd::Zero(N_variable, N_variable);
+  Delta.block(0,0,2 * m_C , 2 * m_C) = create_zmp_matrix();
 
   P_u_k_max = m_eta * m_delta * R_0_support * P_z_k;
   P_u_k_min = m_eta * m_delta * R_0_support * P_z_k;
@@ -415,13 +439,6 @@ void ISMPC_Solver::ZMP_Constraints()
       Poly_Rect_u = SupportPolygon(Sliding_rect_u);
 
     
-    }
-
-    for(int k = 0; k <= i; k++)
-    {
-      double t_m_tk = (1 + i - k) * m_delta;
-      if(k == 0){t_m_tk -= m_delay;}
-      Delta.block(2 * i,2 * k,2,2) = Eigen::Matrix2d::Identity() * (1-exp( - m_lambda * t_m_tk));
     }
 
     double n = std::max(0., std::min(static_cast<double>(m_D ), count_Dstep));
@@ -637,13 +654,8 @@ void ISMPC_Solver::ZMP_Constraints()
   create_cstr_matrices(U_Cstr,b_u,u_cstr_polygons,b_u_ineq);
 
   Eigen::MatrixXd u_Delta = Delta;
-  for(int i = 0; i < m_C; i++)
-  {
-    for(int k = 0; k <= i; k++)
-    {
-      u_Delta.block(2*i,2*k,2,2) = Eigen::Matrix2d::Identity();
-    }
-  }
+  u_Delta.block(0,0,2*m_C,2*m_C) = create_u_matrix();
+
   Aineq_zmp.resize( ZMP_Cstr.rows(),N_variable);
   bineq_zmp.resize(Aineq_zmp.rows());
 
@@ -882,18 +894,8 @@ void ISMPC_Solver::Compute_Stability_Range()
   Eigen::VectorXd PzM = Eigen::VectorXd::Zero(2*m_C);
   Eigen::VectorXd Pzm = Eigen::VectorXd::Zero(2*m_C);
   Eigen::VectorXd Pz0 = Eigen::VectorXd::Zero(2*m_C);
-  Delta = Eigen::MatrixXd::Zero(2*m_C, 2*m_C);
-  for(int i = 0; i < m_C; i++)
-  {
+  Delta = create_zmp_matrix();
 
-    for(int k = 0; k <= i; k++)
-    {
-      double t_m_tk = (1 + i - k) * m_delta;
-      if(k == 0){t_m_tk -= m_delay;}
-      Delta.block(2*i,2*k,2,2) = Eigen::Matrix2d::Identity() * (1-exp( - m_lambda * t_m_tk));
-
-    }
-  }
   //mc_rtc::log::info("ZMP boundrie size {}\nControl size {}",ZMP_max_ref_traj.size(),m_C);
   for(size_t k = 1; k < ZMP_max_ref_traj.size(); k++)
   {

@@ -35,6 +35,20 @@ struct MPC_state
     return Eigen::Vector3d::Zero();
   }
 
+  std::vector<Eigen::Vector2d> zmp_references()
+  {
+    std::vector<Eigen::Vector2d> output;
+    // for (int indx = Index ; indx < X_MPC.size() ; indx++)
+    // {
+    //   output.push_back(Eigen::Vector2d{X_MPC[indx][2], Y_MPC[indx][2]});
+    // }
+    for (auto & ref : QP_zmp)
+    {
+      output.push_back(ref.segment(0,2));
+    }
+    return output; 
+  }
+
   sva::PTransformd & Get_CorrectedFootstep(int indx)
   {
 
@@ -157,6 +171,7 @@ struct MPC_state
   Eigen::Vector3d Pu;
   Eigen::Vector3d w; // Perturbation
   Eigen::VectorXd mpc_u_;
+  std::vector<Eigen::Vector3d> QP_zmp;
   std::vector<sva::MotionVecd> input_v_;
   std::vector<sva::PTransformd> input_steps_;
   std::vector<sva::PTransformd> planned_steps_;
