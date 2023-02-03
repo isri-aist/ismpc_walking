@@ -607,10 +607,11 @@ void Walking_controller::MoveCoM()
   if(DoubleSupport_state && mpc_state_.get_tds() - t_k > controller_config_.delta)
   {
     int n_indx = static_cast<int>((mpc_state_.get_tds() - t_k) / controller_config_.delta);
-    std::vector<Eigen::Vector2d> admittance_ref = mpc_state_.admittance_references();
+    n_indx = std::min(n_indx,20);
+    std::vector<Eigen::Vector2d> zmp_ref = mpc_state_.zmp_references();
         // Starting and Ending iterators
-    auto start = admittance_ref.begin();
-    auto end = admittance_ref.begin()  + n_indx + 1;
+    auto start = zmp_ref.begin();
+    auto end = zmp_ref.begin()  + n_indx + 1;
  
     // To store the sliced vector
     std::vector<Eigen::Vector2d> result(n_indx + 1);
