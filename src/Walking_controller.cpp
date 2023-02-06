@@ -80,7 +80,7 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, c
   // solver().addConstraintSet(kinematicsConstraint);
   // solver().addConstraintSet(dynamicsConstraint);
 
-  footcontact_dof << 0, 0, 1, 0, 0, 0;
+  footcontact_dof << 0, 0, 1, 1, 1, 0;
   addContact({robot().name(), "ground", rightFootName_, "AllGround", 0.7, footcontact_dof});
   addContact({robot().name(), "ground", leftFootName_, "AllGround", 0.7, footcontact_dof});
 
@@ -479,7 +479,7 @@ bool Walking_controller::run()
   if(!(Stop && Swing_Foot_Contact))
   {
 
-    if(t - t_k >= controller_config_.delta || true )
+    if(t - t_k >= controller_config_.delta || false )
     {
       t_k += t - t_k; 
       compute_trajectory_once.notify_all();
@@ -506,7 +506,7 @@ bool Walking_controller::run()
     
       compute_trajectory_once.notify_all();
     }
-    compute_trajectory_once.notify_all();
+    // compute_trajectory_once.notify_all();
 
     t_k = - controller_config_.delta;
     kfoot = 0;
