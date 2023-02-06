@@ -604,21 +604,26 @@ void Walking_controller::MoveCoM()
 
   admittanceTarget.z() = 0;
 
-  if(DoubleSupport_state && mpc_state_.get_tds() - t_k > controller_config_.delta)
+  if(DoubleSupport_state && mpc_state_.get_tds() - t_k > 0)
   {
     int n_indx = static_cast<int>((mpc_state_.get_tds() - t_k) / controller_config_.delta);
-    n_indx = std::min(n_indx,20);
+    n_indx = std::max(std::min(n_indx,20),1);
+    std::vector<Eigen::Vector2d> u_ref = mpc_state_.admittance_references();
     std::vector<Eigen::Vector2d> zmp_ref = mpc_state_.zmp_references();
         // Starting and Ending iterators
-    auto start = zmp_ref.begin();
-    auto end = zmp_ref.begin()  + n_indx + 1;
+    auto start_zmp = zmp_ref.begin();
+    auto end_zmp = zmp_ref.begin()  + n_indx + 1;
+    auto start_u = u_ref.begin();
+    auto end_u = u_ref.begin()  + n_indx + 1;
  
     // To store the sliced vector
-    std::vector<Eigen::Vector2d> result(n_indx + 1);
+    std::vector<Eigen::Vector2d> result_zmp(n_indx + 1);
+     std::vector<Eigen::Vector2d> result_u(n_indx + 1);
  
     // Copy vector using copy function()
-    std::copy(start, end, result.begin());
-    stabTask->horizonReference(result, controller_config_.delta);
+    std::copy(start_zmp, end_zmp, result_zmp.begin());
+    std::copy(start_u, end_u, result_u.begin());
+    stabTask->horizonReference(result_zmp,result_u, controller_config_.delta);
   }
 
 
