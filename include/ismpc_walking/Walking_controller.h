@@ -114,7 +114,7 @@ public:
     controller_config_.MPC_ZMP_cstr_square_static = config("zmp cstr square static");
     controller_config_.MPC_ZMP_Constraint_size = config("zmp cstr square");
     controller_config_.MPC_U_Constraint_size = config("u cstr square");
-    controller_config_.MPC_ZMP_static_cstr_square_offset = config("zmp cstr square offset");
+    controller_config_.MPC_ZMP_cstr_square_offset = config("zmp cstr square offset");
     controller_config_.MPC_ZMP_ref_offset_sg_supp = config("zmp ref offset");
     controller_config_.feet_ditance_ = config("feet distance");
     Configure(controller_config_);
