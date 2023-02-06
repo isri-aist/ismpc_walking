@@ -1106,7 +1106,7 @@ bool ISMPC_Solver::GetWalkingParameters(double Tds, bool stop)
  
   Eigen::MatrixXd M_u = Eigen::MatrixXd::Zero(2*m_C, N_variable);
   M_u.block(0, 0, 2 * m_C, 2 * m_C) = Eigen::MatrixXd::Identity(2 * m_C, 2 * m_C);
-  M_u.block(2*(m_C - 10),2*(m_C - 10),2*10,2*10) *= 1e1;
+  // M_u.block(2*(m_C - 10),2*(m_C - 10),2*10,2*10) *= 1e1;
 
 
   Eigen::MatrixXd M_steps = Eigen::MatrixXd::Zero(2*j_Max_C, N_variable);
