@@ -611,6 +611,8 @@ private:
    */
   void ZMP_Constraints();
 
+  void ZMP_Transition_Constraint(Eigen::MatrixXd & A_out,Eigen::VectorXd & b_out,SupportPolygon PolySS);
+
   void Static_ZMP_Constraints();
 
   void Compute_Stability_Range();

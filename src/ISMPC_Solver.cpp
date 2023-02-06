@@ -320,6 +320,40 @@ void ISMPC_Solver::Static_ZMP_Constraints()
   M_zmp_traj.block(0, 0, b_zmp_traj.rows(), b_zmp_traj.rows()) = Delta.block(0, 0, b_zmp_traj.rows(), b_zmp_traj.rows());
 }
 
+void ISMPC_Solver::ZMP_Transition_Constraint(Eigen::MatrixXd & A_out,Eigen::VectorXd & b_out,SupportPolygon PolySS)
+{
+  const double t_transi_ds_ss = m_Tds - m_tk - m_delta;
+  if(t_transi_ds_ss < 0)
+  {
+    A_out = Eigen::MatrixXd::Zero(1,N_variable);
+    b_out = Eigen::VectorXd::Zero(1);
+    return;
+  }
+  const double dt = m_delta_control/2;
+  const int indx_transi_ds_ss = static_cast<int>(t_transi_ds_ss / m_delta);
+  const int N_integration = static_cast<int>(m_delta/dt);
+  Eigen::MatrixXd A_zmp = Eigen::MatrixXd::Zero(2,N_variable);
+  A_out = Eigen::MatrixXd::Zero(N_integration * PolySS.offsets().rows(),N_variable);
+  b_out = Eigen::VectorXd::Zero(A_out.rows());
+
+  for (int i = 0 ; i < N_integration ; i++)
+  {
+    for(int k = 0 ; k <= indx_transi_ds_ss ; k++)
+    {
+      double t_m_tk = t_transi_ds_ss + static_cast<double>(i) * dt - static_cast<double>(k) * m_delta ;
+      if(k == 0){t_m_tk -= m_delay;}
+      A_zmp.block(0,2 * k , 2,2) = Eigen::Matrix2d::Identity() * (1 - exp(-m_lambda * (t_m_tk)));
+    }
+    A_out.block(i * PolySS.offsets().rows(),0,PolySS.offsets().rows(),N_variable) = PolySS.normals() * A_zmp;
+    b_out.segment(i * PolySS.offsets().rows(),PolySS.offsets().rows()) = PolySS.offsets() - PolySS.normals() * P_z_k_delayed.segment(0,2);
+  }
+  
+
+
+  
+
+}
+
 void ISMPC_Solver::ZMP_Constraints()
 {
   std::chrono::high_resolution_clock::time_point t_clock = std::chrono::high_resolution_clock::now();
@@ -375,6 +409,10 @@ void ISMPC_Solver::ZMP_Constraints()
 
   SupportPolygon S_Support_Poly = SupportPolygon(Rect_j);
   SupportPolygon S_Support_Poly_u = SupportPolygon(Rect_j_u);
+
+  Eigen::MatrixXd Aineq_zmp_transi;
+  Eigen::VectorXd bineq_zmp_transi;
+  ZMP_Transition_Constraint(Aineq_zmp_transi,bineq_zmp_transi,S_Support_Poly);
 
   ZMP_ref_traj.clear();
   ZMP_max_ref_traj.clear();
@@ -656,11 +694,11 @@ void ISMPC_Solver::ZMP_Constraints()
   Eigen::MatrixXd u_Delta = Delta;
   u_Delta.block(0,0,2*m_C,2*m_C) = create_u_matrix();
 
-  Aineq_zmp.resize( ZMP_Cstr.rows(),N_variable);
+  Aineq_zmp.resize( ZMP_Cstr.rows() + Aineq_zmp_transi.rows(),N_variable);
   bineq_zmp.resize(Aineq_zmp.rows());
 
-  Aineq_zmp << ZMP_Cstr * Delta;
-  bineq_zmp << b_zmp;
+  Aineq_zmp << ZMP_Cstr * Delta, Aineq_zmp_transi;
+  bineq_zmp << b_zmp, bineq_zmp_transi;
 
   b_zmp_traj = Eigen::Map<Eigen::VectorXd, Eigen::Unaligned>(ZMP_ref_traj.data(), ZMP_ref_traj.size());
   M_zmp_traj = Eigen::MatrixXd::Zero(b_zmp_traj.rows(), N_variable);
