@@ -80,7 +80,7 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, c
   // solver().addConstraintSet(kinematicsConstraint);
   // solver().addConstraintSet(dynamicsConstraint);
 
-  footcontact_dof << 0, 0, 1, 1, 1, 0;
+  footcontact_dof << 0, 0, 1, 0, 0, 0;
   addContact({robot().name(), "ground", rightFootName_, "AllGround", 0.7, footcontact_dof});
   addContact({robot().name(), "ground", leftFootName_, "AllGround", 0.7, footcontact_dof});
 
