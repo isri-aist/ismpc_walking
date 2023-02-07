@@ -1113,8 +1113,9 @@ bool ISMPC_Solver::GetWalkingParameters(double Tds, bool stop)
 
  
   Eigen::MatrixXd M_u = Eigen::MatrixXd::Zero(2*m_C, N_variable);
-  M_u.block(0, 0, 2 * m_C, 2 * m_C) =  (create_u_matrix() - create_zmp_matrix());
+  // M_u.block(0, 0, 2 * m_C, 2 * m_C) =  (create_u_matrix() - create_zmp_matrix());
   Eigen::VectorXd b_u = Eigen::VectorXd::Zero(M_u.rows());
+  M_u.block(0, 0, 2 * m_C, 2 * m_C) = Eigen::MatrixXd::Identity(2 * m_C , 2 * m_C);
 
   Eigen::MatrixXd M_steps = Eigen::MatrixXd::Zero(2*j_Max_C, N_variable);
   M_steps.block(0, 2 * m_C, 2 * j_Max_C, 2 * j_Max_C) = Eigen::MatrixXd::Identity(2 * j_Max_C, 2 * j_Max_C);
