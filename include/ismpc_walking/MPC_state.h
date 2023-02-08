@@ -162,6 +162,7 @@ struct MPC_state
   Eigen::Vector3d initial_zmp_ = Eigen::Vector3d::Zero();
 
   double t_k = 0;
+  double t;
   Eigen::Vector3d Pck;
   Eigen::Vector3d Vck;
   Eigen::Vector3d Pzk;

@@ -116,12 +116,21 @@ void ISMPC_Solver::init_MPC(const MPC_state & mpc_state,
   P_c_k = mpc_state.Pck;
   V_c_k = mpc_state.Vck;
   P_z_k = mpc_state.Pzk;
-  U_k = mpc_state.Uk;
-  P_z_k_delayed = P_z_k + (1 - exp(-m_lambda * m_delay)) * U_k;
+  
+  m_tk = mpc_state.t_k;
+  m_t_global = mpc_state.t;
+  if( m_t_global - m_t_delay > m_delta)
+  {
+    U_k = mpc_state.Uk;
+    m_t_delay = m_t_global;
+  }
+  m_delay_elapsed = std::min( std::max(m_delay - (m_t_global - m_t_delay) , 0. ) , m_delay);
+
+  P_z_k_delayed = P_z_k + (1 - exp(-m_lambda * m_delay_elapsed)) * U_k;
   m_Tail = Tail;
   
   m_support_foot = mpc_state.input_Support_FootName;
-  m_tk = mpc_state.t_k;
+  
   P_u_k = P_c_k + (V_c_k / m_eta);
   X_0_swing_foot_initial = mpc_state.X_0_Initial_SwingFoot;
 
@@ -181,11 +190,10 @@ Eigen::MatrixXd ISMPC_Solver::create_zmp_matrix()
   Eigen::MatrixXd A_out = Eigen::MatrixXd::Zero(2 * m_C , 2 * m_C );
   for(int i = 0; i < m_C; i++)
   {
-
     for(int k = 0; k <= i; k++)
     {
       double t_m_tk = (1 + i - k) * m_delta;
-      if(k == 0){t_m_tk -= m_delay;}
+      // if(k == 0){t_m_tk -= m_delay;}
       A_out.block(2*i,2*k,2,2) = Eigen::Matrix2d::Identity() * (1-exp( - m_lambda * t_m_tk));
     }
   }
@@ -341,7 +349,7 @@ void ISMPC_Solver::ZMP_Transition_Constraint(Eigen::MatrixXd & A_out,Eigen::Vect
     for(int k = 0 ; k <= indx_transi_ds_ss ; k++)
     {
       double t_m_tk = t_transi_ds_ss + static_cast<double>(i) * dt - static_cast<double>(k) * m_delta ;
-      if(k == 0){t_m_tk -= m_delay;}
+      // if(k == 0){t_m_tk -= m_delay;}
       A_zmp.block(0,2 * k , 2,2) = Eigen::Matrix2d::Identity() * (1 - exp(-m_lambda * (t_m_tk)));
     }
     A_out.block(i * PolySS.offsets().rows(),0,PolySS.offsets().rows(),N_variable) = PolySS.normals() * A_zmp;
@@ -882,7 +890,7 @@ void ISMPC_Solver::Stability_Constraints()
   {
     A_stab.block(0,2*j,2,2) = Eigen::Matrix2d::Identity() * (m_lambda/(m_lambda + m_eta)) * exp(-j * m_eta * m_delta);
   }
-  A_stab.block(0,0,2,2) *= exp(-m_eta * m_delay);
+  A_stab *= exp(-m_eta * m_delay_elapsed);
 
 
   // if(m_Tail == "Periodic")
@@ -916,9 +924,9 @@ void ISMPC_Solver::Stability_Constraints()
     // b_stab(1) = (m_eta / (1 - exp(-m_eta * m_delta))) * (P_u_k.y() - P_z_k.y() + w_k.y()) - Ant_Tail_Y;
     double l_d_w_p_e = (m_lambda/(m_lambda + m_eta)); 
 
-    b_stab = ( P_u_k - ( (P_z_k_delayed - w_k) * exp(-m_eta * m_delay) +
+    b_stab = ( P_u_k - ( (P_z_k_delayed - w_k) * exp(-m_eta * m_delay_elapsed) +
                          (P_z_k - w_k) + l_d_w_p_e * U_k - 
-                         ( (P_z_k_delayed - w_k) + l_d_w_p_e * U_k )* exp(-m_eta * m_delay)) ).segment(0,2) ;
+                         ( (P_z_k_delayed - w_k) + l_d_w_p_e * U_k )* exp(-m_eta * m_delay_elapsed)) ).segment(0,2) ;
 
   // }
 
@@ -988,7 +996,7 @@ void ISMPC_Solver::Integrate()
   m_X_MPC.clear();
   m_Y_MPC.clear();
   int N = (int)(m_delta / m_delta_control);
-  int N_delay = static_cast<int>(m_delay/m_delta_control);
+  int N_delay = static_cast<int>(m_delay_elapsed/m_delta_control);
 
 
   Eigen::Vector3d state_x = Eigen::Vector3d{P_c_k.x(), V_c_k.x(), P_z_k.x() - w_k.x()};
@@ -1023,7 +1031,7 @@ void ISMPC_Solver::Integrate()
     m_admittance_targets.push_back(Eigen::Vector3d{u_x,u_y,0} + Pzi - P_z_k_delayed + P_z_k);
 
 
-    for (int k = 0; k < N - (i == 0 ? N_delay : 0) ; k ++)
+    for (int k = 0; k < N - 0*(i == 0 ? N_delay : 0) ; k ++)
     {    
 
       Compute_Integration_Vector(k+1);
@@ -1049,7 +1057,7 @@ void ISMPC_Solver::Integrate()
 bool ISMPC_Solver::GetWalkingParameters(double Tds, bool stop)
 {
   std::chrono::high_resolution_clock::time_point t_clock = std::chrono::high_resolution_clock::now();
-  // m_tk = t_k;
+
   m_Tds = Tds;
   QPsuccess = false;
   InStabilityRange = false;

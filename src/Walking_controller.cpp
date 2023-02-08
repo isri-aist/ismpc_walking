@@ -479,7 +479,7 @@ bool Walking_controller::run()
   if(!(Stop && Swing_Foot_Contact))
   {
 
-    if(t - t_k >= controller_config_.delta || false )
+    if(t - t_k >= controller_config_.delta || true )
     {
       t_k += t - t_k; 
       compute_trajectory_once.notify_all();
@@ -506,7 +506,7 @@ bool Walking_controller::run()
     
       compute_trajectory_once.notify_all();
     }
-    // compute_trajectory_once.notify_all();
+    compute_trajectory_once.notify_all();
 
     t_k = - controller_config_.delta;
     kfoot = 0;
@@ -668,6 +668,7 @@ void Walking_controller::UpdateInitialVectors()
 {
 
   mpc_state_.t_k = t_k;
+  mpc_state_.t = static_cast<double>(count * controller_timestep);
   // mpc_state_.Pzk = Eigen::Vector3d{0,0,1}.cross( robot().com().cross(robot().mass()*mc_rtc::constants::gravity) ) /
   //                       ( (robot().mass()*(mc_rtc::constants::gravity - robot().comAcceleration())).transpose() *
   //                       Eigen::Vector3d{0,0,1} );

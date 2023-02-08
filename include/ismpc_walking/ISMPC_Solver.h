@@ -701,7 +701,8 @@ private:
   double m_eta; // Prendulum frequency
   double CoM_height = 0.78;
   double g = 9.8; // Gravity acceleration
-  double m_tk;
+  double m_tk; //Represent the initial time in the MPC horizon
+  double m_t_global; //Global time of the control scheme
   double m_Tc;
   double m_Tp; // Control & Preview horizon time
   double m_Tds; // Double Support Duration
@@ -733,7 +734,10 @@ private:
   double m_Beta_stab = 1e5;
   double m_Beta_traj = 0.;
   double m_lambda = 100;
-  double m_delay = 0; //delay ( < m_delta ) during which zmp is constant
+  double m_delay = 0; //delay ( < m_delta ) during which zmp is under previous input Uk
+  double m_delay_elapsed = 0; //Between 0 and m_delay represent the remaining time the delay must be applied
+  double m_t_delay = 0; // represent when the delay has been applied
+
   double m_feet_distance = 0.2; 
   std::string m_support_foot = "LeftFoot";
   int j_Max_C = 0; // Number of footsteps in the Control Horizon
