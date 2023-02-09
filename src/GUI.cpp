@@ -13,6 +13,13 @@ inline void AddStabilizerConfigToGUI(mc_rtc::gui::StateBuilder & gui,
   category.push_back("Main");
   gui.addElement(
       category,
+      mc_rtc::gui::NumberInput(
+          "CoM weight", [&c_]() { return c_.comWeight; },
+          [&c_](double d) { c_.comWeight = d; }),
+      mc_rtc::gui::ArrayInput(
+          "CoM stiffness",{"x","y","z"}, 
+          [&c_]() -> Eigen::Vector3d { return c_.comStiffness; },
+          [&c_](const Eigen::Vector3d & d) { c_.comStiffness = d; }),
       mc_rtc::gui::ArrayInput(
           "Foot admittance", {"CoPx", "CoPy"},
           [&c_]() -> Eigen::Vector2d {
@@ -252,7 +259,7 @@ void Walking_controller::addToGUI()
       mc_rtc::gui::NumberInput(
           "Ts", [this]() -> double { return ts(); }, [this](const double t) { T_Steps = t; }),
       mc_rtc::gui::NumberInput(
-          "Steps", [this]() -> int { return N_Steps_Desired; }, [this](const double n) { N_Steps_Desired = n; }),
+          "Steps", [this]() -> int { return N_Steps_Desired; }, [this](const int n) { N_Steps_Desired = n; }),
 
       mc_rtc::gui::Transform("Steps desired pose",
                            [this]() {
@@ -392,7 +399,7 @@ void Walking_controller::addToGUI()
                     );
 
 
-};
+}
 
 void Walking_controller::add_ISMPC_Config_GUI()
 {
