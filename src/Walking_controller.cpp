@@ -735,7 +735,7 @@ void Walking_controller::UpdateInitialVectors()
 
   // mpc_state_.w = - (stabTask->measuredDCM() - mpc_state_.Pu) + - (stabTask->measuredZMP() - mpc_state_.Pzk);
   filter_gamma_.update(stabTask->comOffsetMeasured());
-  w_ = filter_gamma_.eval();
+  // w_ = filter_gamma_.eval();
   // mpc_state_.w = filter_gamma_.eval();
 
   mpc_state_.Pck.z() = controller_config_.Stab_config.comHeight;
@@ -756,9 +756,9 @@ void Walking_controller::reset(const mc_control::ControllerResetData & reset_dat
   mc_control::fsm::Controller::reset(reset_data);
 
   stabTask->reset();
-  mc_rbdyn::lipm_stabilizer::StabilizerConfiguration config = controller_config_.Stab_config;
-  config.comWeight = 0;
-  stabTask->configure(config);
+  mc_rbdyn::lipm_stabilizer::StabilizerConfiguration config_stab = controller_config_.Stab_config;
+  config_stab.comWeight = 0;
+  stabTask->configure(config_stab);
 
   // if(config()("stabilizer")("robot")(robot().name())("stabilizer").has("external_wrench"))
   // {

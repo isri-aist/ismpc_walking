@@ -229,7 +229,7 @@ void Walking_controller::addToGUI()
             compute_trajectory_once.notify_all();
           }),
       mc_rtc::gui::Checkbox(
-          "Distrubance", [this]() { return Use_w; }, [this]() { Use_w = !Use_w; }),
+          "Disturbance", [this]() { return Use_w; }, [this]() { Use_w = !Use_w; }),
       mc_rtc::gui::ArrayInput(
           "Input Disturbance", [this]() { return w_; }, [this](const Eigen::Vector3d & in) { w_ = in; }),
       mc_rtc::gui::Checkbox(

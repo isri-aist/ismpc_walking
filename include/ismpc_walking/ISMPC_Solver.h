@@ -446,7 +446,7 @@ public:
 
   void Disturbance(const Eigen::Vector3d w) noexcept
   {
-    w_k = w;
+    w_k = w/2;
   }
 
   /**
