@@ -709,8 +709,8 @@ void ISMPC_Solver::ZMP_Constraints()
   Aineq_zmp.resize( ZMP_Cstr.rows() + Aineq_zmp_transi.rows(),N_variable);
   bineq_zmp.resize(Aineq_zmp.rows());
 
-  Aineq_zmp << ZMP_Cstr * Delta, Aineq_zmp_transi;
-  bineq_zmp << b_zmp, bineq_zmp_transi;
+  Aineq_zmp << ZMP_Cstr * Delta, 0*Aineq_zmp_transi;
+  bineq_zmp << b_zmp, 0*bineq_zmp_transi;
 
   b_zmp_traj = Eigen::Map<Eigen::VectorXd, Eigen::Unaligned>(ZMP_ref_traj.data(), ZMP_ref_traj.size());
   M_zmp_traj = Eigen::MatrixXd::Zero(b_zmp_traj.rows(), N_variable);
