@@ -444,6 +444,7 @@ void Walking_controller::CheckStepRecovery()
 
 bool Walking_controller::run()
 {
+  JoystickInputs();
   if(!wait_for_mpc_thread())
   {
     return mc_control::fsm::Controller::run();

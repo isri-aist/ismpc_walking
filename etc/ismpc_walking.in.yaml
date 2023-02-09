@@ -405,7 +405,7 @@ transitions:
   - [Initial,Ok,Initial]
 
 
-Plugins: [footsteps_planner_plugin]
+Plugins: [footsteps_planner_plugin,mc_joystick_plugin]
 
   
   

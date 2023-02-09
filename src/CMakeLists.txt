@@ -6,6 +6,8 @@ set(controller_SRC
   ISMPC_Solver.cpp
   GUI.cpp
   logs.cpp
+  joystick.cpp
+  
   
 )
 

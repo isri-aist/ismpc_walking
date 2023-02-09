@@ -268,6 +268,8 @@ protected:
 
   void CheckStepRecovery();
 
+  void JoystickInputs();
+
   void updateTasks();
 
   void addToGUI();
