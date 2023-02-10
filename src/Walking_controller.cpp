@@ -605,7 +605,7 @@ void Walking_controller::MoveCoM()
 
   admittanceTarget.z() = 0;
 
-  if(DoubleSupport_state && mpc_state_.get_tds() - t_k > 0)
+  if(DoubleSupport_state && mpc_state_.get_tds() - t_k > 0 && mpc_state_.admittance_references().size() != 0)
   {
     int n_indx = static_cast<int>((mpc_state_.get_tds() - t_k) / controller_config_.delta);
     n_indx = std::max(std::min(n_indx,20),1);
