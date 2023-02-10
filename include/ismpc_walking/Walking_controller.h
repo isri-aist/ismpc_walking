@@ -117,6 +117,8 @@ public:
     controller_config_.MPC_ZMP_cstr_square_offset = config("zmp cstr square offset");
     controller_config_.MPC_ZMP_ref_offset_sg_supp = config("zmp ref offset");
     controller_config_.feet_ditance_ = config("feet distance");
+    controller_config_.MPC_ZMP_ref_offset_end_step = config("zmp ref end step");
+    controller_config_.MPC_ZMP_ref_offset_start_step = config("zmp ref start step");
     Configure(controller_config_);
 
   }

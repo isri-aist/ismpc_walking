@@ -74,6 +74,8 @@ void ISMPC_Solver::configure(const ControllerConfiguration & config)
   m_eta = sqrt(mc_rtc::constants::GRAVITY / CoM_height);
   Use_Stability_Task = config.use_stability_task;
   zmp_ref_offset = config.MPC_ZMP_ref_offset_sg_supp;
+  zmp_ref_offset_end_step = config.MPC_ZMP_ref_offset_end_step;
+  zmp_ref_offset_start_step = config.MPC_ZMP_ref_offset_start_step;
 
   Integration_Mat.setZero();
   Integration_Mat(0, 0) = std::cosh(m_eta * m_delta_control);
@@ -373,6 +375,17 @@ void ISMPC_Solver::ZMP_Constraints()
   {
     sgn = 1;
   }
+  Eigen::Vector2d direction = Eigen::Vector2d::Zero();
+  if( (input_steps_[0] * X_0_support_foot.inv()).translation().x() > 0.1 )
+  {
+    direction = Eigen::Vector2d{1.,0};
+    
+  }
+  else if((input_steps_[0] * X_0_support_foot.inv()).translation().x() < -0.1)
+  {
+    direction = Eigen::Vector2d{-1,0};
+  }
+
 
   Eigen::Vector3d rect_offset_support =
       X_0_support_foot.rotation().transpose() * Eigen::Vector3d{rect_pose_offset.x(), sgn * rect_pose_offset.y(), 0};
@@ -382,6 +395,11 @@ void ISMPC_Solver::ZMP_Constraints()
 
   Eigen::Vector3d zmp_ref_offset_sg =
       X_0_support_foot.rotation().transpose() * Eigen::Vector3d{zmp_ref_offset.x(), sgn * zmp_ref_offset.y(), 0};
+
+  Eigen::Vector3d zmp_ref_end_step =
+      X_0_support_foot.rotation().transpose() * Eigen::Vector3d{zmp_ref_offset_end_step.x() * direction.x(), 0, 0};
+  Eigen::Vector3d zmp_ref_start_step =
+      X_0_support_foot.rotation().transpose() * Eigen::Vector3d{zmp_ref_offset_start_step.x() * -direction.x(), 0, 0};
 
   Eigen::Vector3d zmp_ref_offset_swing =
       X_0_support_foot.rotation().transpose() * Eigen::Vector3d{zmp_ref_offset.x(), -sgn * zmp_ref_offset.y(), 0};
@@ -458,6 +476,21 @@ void ISMPC_Solver::ZMP_Constraints()
 
       X_0_step_jm1 = X_0_step_j;
       X_0_step_j = input_steps_[j_f - 1];
+    
+      direction = Eigen::Vector2d::Zero();
+      if( (input_steps_[j_f] * X_0_step_j.inv()).translation().x() > 0.1 )
+      {
+        direction = Eigen::Vector2d{1.,0};
+        
+      }
+      else if((input_steps_[j_f] * X_0_step_j.inv()).translation().x() < -0.1)
+      {
+        direction = Eigen::Vector2d{-1,0};
+      }
+      zmp_ref_end_step =
+      X_0_step_j.rotation().transpose() * Eigen::Vector3d{zmp_ref_offset_end_step.x() * direction.x(), 0, 0};
+      zmp_ref_start_step =
+      X_0_step_j.rotation().transpose() * Eigen::Vector3d{zmp_ref_offset_start_step.x() * -direction.x(), 0, 0};
 
       Eigen::Vector3d offset = rect_offset_swing;
       rect_offset_swing = rect_offset_support;
@@ -557,14 +590,6 @@ void ISMPC_Solver::ZMP_Constraints()
       ZMP_ref_traj.push_back((Rect_j.get_center() + zmp_ref_offset_sg).x() - P_z_k_delayed.x());
       ZMP_ref_traj.push_back((Rect_j.get_center() + zmp_ref_offset_sg).y() - P_z_k_delayed.y());
 
-
-      if(i == 0)
-      {
-        SuppPolyCorners = zmp_cstr_polygons.back().Get_Polygone_Corners();
-        m_support_state = alpha;
-        m_ref_zmp = Eigen::Vector3d{ZMP_ref_traj[0],ZMP_ref_traj[1],0} + P_z_k_delayed ;
-      }
-
       Eigen::MatrixX2d normals(zmp_cstr_polygons.back().normals());
       Eigen::VectorXd offsets(zmp_cstr_polygons.back().offsets());
 
@@ -642,11 +667,9 @@ void ISMPC_Solver::ZMP_Constraints()
     else
     {
 
-      ZMP_ref_traj.push_back( - P_z_k_delayed.x() + alpha * (rect_offset_support + zmp_ref_offset_sg).x());
-      ZMP_ref_traj.push_back( - P_z_k_delayed.y() + alpha * (rect_offset_support + zmp_ref_offset_sg).y());
+      ZMP_ref_traj.push_back( - P_z_k_delayed.x() + (rect_offset_support + zmp_ref_offset_sg).x());
+      ZMP_ref_traj.push_back( - P_z_k_delayed.y() + (rect_offset_support + zmp_ref_offset_sg).y());
 
-
- 
       zmp_cstr_polygons.push_back(Poly_Rect);
       u_cstr_polygons.push_back(Poly_Rect_u);
       
@@ -671,6 +694,22 @@ void ISMPC_Solver::ZMP_Constraints()
       {
         SuppPolyCorners = zmp_cstr_polygons[i].Get_Polygone_Corners();
       }
+    }
+    if(alpha==1)
+    {
+      ZMP_ref_traj[2 * i] += zmp_ref_end_step.x(); 
+      ZMP_ref_traj[2 * i + 1] += zmp_ref_end_step.y(); 
+    }
+    else
+    {
+      ZMP_ref_traj[2 * i] += zmp_ref_start_step.x(); 
+      ZMP_ref_traj[2 * i + 1] += zmp_ref_start_step.y();       
+    }
+    if(i == 0)
+    {
+      SuppPolyCorners = zmp_cstr_polygons.back().Get_Polygone_Corners();
+      m_support_state = alpha;
+      m_ref_zmp = Eigen::Vector3d{ZMP_ref_traj[0],ZMP_ref_traj[1],0} + P_z_k_delayed ;
     }
 
     count_Dstep += 1;

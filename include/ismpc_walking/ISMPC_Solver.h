@@ -722,7 +722,9 @@ private:
   Eigen::Vector2d rect_pose_offset_static; // cstr zone offset in the foot frame for y axis, positive offset is an offset
                                     // toward the other feet;
 
-  Eigen::Vector2d zmp_ref_offset;          
+  Eigen::Vector2d zmp_ref_offset = Eigen::Vector2d::Zero();   
+  Eigen::Vector2d zmp_ref_offset_end_step = Eigen::Vector2d::Zero(); //adds to the zmp_ref_offset and applied in sg supp, x sign depends on step target 
+  Eigen::Vector2d zmp_ref_offset_start_step = Eigen::Vector2d::Zero(); //adds to the zmp_ref_offset and applied in sg supp, x sign depends on step target          
   
   double zmp_cstr_next_stp_ratio = 2;
   double m_dx_f;

@@ -438,6 +438,14 @@ void Walking_controller::add_ISMPC_Config_GUI()
                                       [this]() -> std::array<double, 2> {
                                         return {controller_config_.MPC_ZMP_ref_offset_sg_supp.x(), controller_config_.MPC_ZMP_ref_offset_sg_supp.y()};
                                       }),
+          mc_rtc::gui::FormArrayInput("zmp ref end step", false,
+                                      [this]() -> std::array<double, 2> {
+                                        return {controller_config_.MPC_ZMP_ref_offset_end_step.x(), controller_config_.MPC_ZMP_ref_offset_end_step.y()};
+                                      }),
+          mc_rtc::gui::FormArrayInput("zmp ref start step", false,
+                                      [this]() -> std::array<double, 2> {
+                                        return {controller_config_.MPC_ZMP_ref_offset_start_step.x(), controller_config_.MPC_ZMP_ref_offset_start_step.y()};
+                                      }),
           mc_rtc::gui::FormNumberInput("feet distance", false, [this]() { return controller_config_.feet_ditance_; }))
   );
 
