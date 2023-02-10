@@ -698,28 +698,28 @@ private:
    */
   bool Slide_ZMP_region = false;
 
-  double m_eta; // Prendulum frequency
+  double m_eta = 1; // Prendulum frequency
   double CoM_height = 0.78;
   double g = 9.8; // Gravity acceleration
-  double m_tk; //Represent the initial time in the MPC horizon
-  double m_t_global; //Global time of the control scheme
-  double m_Tc;
-  double m_Tp; // Control & Preview horizon time
-  double m_Tds; // Double Support Duration
+  double m_tk = 0; //Represent the initial time in the MPC horizon
+  double m_t_global = 0; //Global time of the control scheme
+  double m_Tc = 2;
+  double m_Tp = 5; // Control & Preview horizon time
+  double m_Tds = 0.24; // Double Support Duration
   int Tds_offset = 0;
-  double m_Dstep_ratio; // T_DoubleStep/T_Step
-  double m_delta; // t_k - t_k-1
-  double m_delta_control; // Controller timestep
+  double m_Dstep_ratio = 0.3; // T_DoubleStep/T_Step
+  double m_delta = 0.05; // t_k - t_k-1
+  double m_delta_control = 0.005; // Controller timestep
   double N_integration = 1;
-  double m_dx_static;
-  double m_dy_static;
-  double m_dx;
-  double m_dy; // ZMP square size at one timestep
-  double m_dx_u;
-  double m_dy_u; // ZMP square size at one timestep
-  Eigen::Vector2d rect_pose_offset; // cstr zone offset in the foot frame for y axis, positive offset is an offset
+  double m_dx_static = 0.1;
+  double m_dy_static = 0.1;
+  double m_dx = 0.1;
+  double m_dy = 0.1; // ZMP square size at one timestep
+  double m_dx_u = 0.1;
+  double m_dy_u = 0.1; // ZMP square size at one timestep
+  Eigen::Vector2d rect_pose_offset = Eigen::Vector2d::Zero(); // cstr zone offset in the foot frame for y axis, positive offset is an offset
                                     // toward the other feet;
-  Eigen::Vector2d rect_pose_offset_static; // cstr zone offset in the foot frame for y axis, positive offset is an offset
+  Eigen::Vector2d rect_pose_offset_static = Eigen::Vector2d::Zero(); // cstr zone offset in the foot frame for y axis, positive offset is an offset
                                     // toward the other feet;
 
   Eigen::Vector2d zmp_ref_offset = Eigen::Vector2d::Zero();   
@@ -727,10 +727,10 @@ private:
   Eigen::Vector2d zmp_ref_offset_start_step = Eigen::Vector2d::Zero(); //adds to the zmp_ref_offset and applied in sg supp, x sign depends on step target          
   
   double zmp_cstr_next_stp_ratio = 2;
-  double m_dx_f;
-  double m_dy_f; // Step kinematic admissible Region
-  double m_dx_f_rect;
-  double m_dy_f_rect; // Step admissible region
+  double m_dx_f = 0.1;
+  double m_dy_f = 0.1; // Step kinematic admissible Region
+  double m_dx_f_rect = 0.1;
+  double m_dy_f_rect = 0.1; // Step admissible region
   double m_Beta_u = 1;
   double m_Beta_step = 1e1;
   double m_Beta_stab = 1e5;
@@ -743,8 +743,8 @@ private:
   double m_feet_distance = 0.2; 
   std::string m_support_foot = "LeftFoot";
   int j_Max_C = 0; // Number of footsteps in the Control Horizon
-  int j_f; // Index of the actual support foot
-  int j_fm1; // Index of the previous support foot
+  int j_f = 0; // Index of the actual support foot
+  int j_fm1 = 0; // Index of the previous support foot
   double m_support_state = 0;
   Eigen::Vector3d m_ref_zmp = Eigen::Vector3d::Zero(); //first ref zmp in the horizon
   int kfoot = 0;
