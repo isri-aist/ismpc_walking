@@ -42,8 +42,8 @@ robots:
     module: env/ground
   
 ismpc:
-  Tc: 1.5
-  Tp: 4
+  Tc: 3
+  Tp: 5
   delta: 0.05
   beta_u: 1
   beta_step: 1e6
@@ -62,17 +62,17 @@ ismpc:
   # next_stp_cstr_ratio: 0.1
   #hrp2
   u_cstr_square: [0.2,0.13]
-  zmp_cstr_square: [0.12,0.12]
+  zmp_cstr_square: [0.2,0.12]
   zmp_ref_offset: [0.0,0.03]
   offset: [0.0,0.0]
   zmp_cstr_square_static: [0.2,0.1]
   offset_static: [0.0,0]
-  next_stp_cstr_ratio: 0.6
+  next_stp_cstr_ratio: 1
   feet_distance: 0.2
   allow_none_tail: true
   foosteps_kin_cstr: [0.6,0.15]
   footsteps_cstr_square: [0.6,0.1]
-  double_support_ratio: 0.3
+  double_support_ratio: 0.25
   sliding_zmp_cstr_region: false
   use_stability_task: false
   safety_thresholds:
@@ -84,7 +84,7 @@ footsteps_planner:
   Tp: 6
   delta: 0.1
   Ts_limit: [0.6,2]
-  kinematics_cstr: [0.4,0.08]
+  kinematics_cstr: [0.6,0.08]
   feet_distance: 0.2
   mean_speed: 0.1
   robot_height: 150
@@ -328,8 +328,8 @@ stabilizer:
             comdError: 0.
         admittance:
           df: [0.002,0.001,0.0001]
-          cop: [0.01, 0.02]
-          copLambda: [30,30,40]
+          cop: [0.01, 0.01]
+          copLambda: [20,20,20]
           copDelay: 0.015
           maxVel:
             angular: [3., 3., 3.]
@@ -345,7 +345,7 @@ stabilizer:
             stiffness: 2
             weight: 500
           com:
-            stiffness: [10.,10.,10.]
+            stiffness: [100.,100.,100.]
             # active_joints: ["Root", "RLEG_JOINT0", "RLEG_JOINT1", "RLEG_JOINT2", "RLEG_JOINT3", "RLEG_JOINT4", "RLEG_JOINT5",
             #                 "LLEG_JOINT0", "LLEG_JOINT1", "LLEG_JOINT2", "LLEG_JOINT3", "LLEG_JOINT4", "LLEG_JOINT5",
             #                 "LARM_JOINT0", "LARM_JOINT1", "LARM_JOINT2", "LARM_JOINT3", "LARM_JOINT4", "LARM_JOINT5",
@@ -382,7 +382,7 @@ stabilizer:
       stabilizer_sgsupp:
         admittance:
           dfz: 0.0002
-          cop: [0.02, 0.02]
+          cop: [0.015, 0.015]
         tasks:
           torso:
             weight: 500
@@ -391,15 +391,7 @@ stabilizer:
         admittance:
           dfz: 0.0001
           cop: [0.03, 0.03]
-      stabilizer_dblsupp:
-        tasks:
-          torso:
-            weight: 500
-          pelvis:
-            weight: 500
-        admittance:
-          dfz: 0.0002
-          cop: [0.03, 0.03]
+
 
 transitions:
   - [Initial,Ok,Initial]
