@@ -664,16 +664,16 @@ private:
 
   Eigen::Matrix3d R_support_0 = Eigen::Matrix3d::Identity();
   Eigen::Matrix3d R_0_support = Eigen::Matrix3d::Identity();
-  Eigen::VectorXd m_ZMP_u; // Computed ZMP velocity in world frame
+  Eigen::VectorXd m_ZMP_u = Eigen::VectorXd::Zero(0); // Computed ZMP velocity in world frame
   std::vector<double> m_timestamp; // Step TimesStamp Computed at the footStep Generation
 
-  sva::PTransformd X_0_support_foot;
-  sva::PTransformd X_0_swing_foot_initial;
+  sva::PTransformd X_0_support_foot = sva::PTransformd::Identity();
+  sva::PTransformd X_0_swing_foot_initial = sva::PTransformd::Identity();
   std::vector<sva::PTransformd> input_steps_;
   std::vector<sva::PTransformd> corr_steps_;
 
-  Eigen::Vector3d P_u_k_min; // Min initial DCM coordinates in support Foot Frame
-  Eigen::Vector3d P_u_k_max; // Max initial DCM coordinates in support Foot Frame
+  Eigen::Vector3d P_u_k_min = Eigen::Vector3d::Zero(); // Min initial DCM coordinates in support Foot Frame
+  Eigen::Vector3d P_u_k_max = Eigen::Vector3d::Zero(); // Max initial DCM coordinates in support Foot Frame
 
   Eigen::VectorXd QP_Output;
 
