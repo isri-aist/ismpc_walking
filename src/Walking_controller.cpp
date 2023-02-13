@@ -727,6 +727,7 @@ void Walking_controller::UpdateInitialVectors()
   // mpc_state_.w = - (stabTask->measuredDCM() - mpc_state_.Pu) + - (stabTask->measuredZMP() - mpc_state_.Pzk);
   filter_gamma_.update(stabTask->comOffsetMeasured());
   w_ = filter_gamma_.eval();
+  kappa = stabTask->zmpCoeffMeasured();
   //mpc_state_.w = filter_gamma_.eval();
 
   mpc_state_.Pck.z() = controller_config_.Stab_config.comHeight;
