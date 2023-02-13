@@ -38,6 +38,7 @@ ISMPC_Solver::ISMPC_Solver(double delta_controller, double delta, double Tp, dou
                                     1 - std::cosh(m_eta * m_delta_control), m_delta_control};
 
   w_k.setZero();
+  kappa_k = 1;
 }
 
 void ISMPC_Solver::configure(const ControllerConfiguration & config)
@@ -151,7 +152,8 @@ void ISMPC_Solver::init_MPC(const MPC_state & mpc_state,
   R_0_support = X_0_support_foot.rotation();
   R_support_0 = R_0_support.transpose();
 
-  // w_k.setZero();
+  w_k.setZero();
+  kappa_k = 1;
 }
 
 void ISMPC_Solver::create_cstr_matrices(Eigen::MatrixXd & A_out, Eigen::VectorXd & b_out, std::vector<SupportPolygon> & A_in, const std::vector<Eigen::VectorXd> & b_in)
