@@ -605,26 +605,19 @@ void Walking_controller::MoveCoM()
 
   admittanceTarget.z() = 0;
 
-  if(DoubleSupport_state && mpc_state_.get_tds() - t_k > 0 && mpc_state_.admittance_references().size() != 0)
+  if(DoubleSupport_state && mpc_state_.get_tds() - t_k > 0 && mpc_state_.zmp_references().size() != 0)
   {
     int n_indx = static_cast<int>((mpc_state_.get_tds() - t_k) / controller_config_.delta);
     n_indx = std::max(std::min(n_indx,20),1);
-    std::vector<Eigen::Vector2d> u_ref = mpc_state_.admittance_references();
     std::vector<Eigen::Vector2d> zmp_ref = mpc_state_.zmp_references();
-        // Starting and Ending iterators
     auto start_zmp = zmp_ref.begin();
     auto end_zmp = zmp_ref.begin()  + n_indx + 1;
-    auto start_u = u_ref.begin();
-    auto end_u = u_ref.begin()  + n_indx + 1;
  
-    // To store the sliced vector
     std::vector<Eigen::Vector2d> result_zmp(n_indx + 1);
-     std::vector<Eigen::Vector2d> result_u(n_indx + 1);
  
     // Copy vector using copy function()
     std::copy(start_zmp, end_zmp, result_zmp.begin());
-    std::copy(start_u, end_u, result_u.begin());
-    stabTask->horizonReference(result_zmp,result_u, controller_config_.delta);
+    stabTask->horizonReference(result_zmp, controller_config_.delta);
   }
 
 
@@ -694,9 +687,6 @@ void Walking_controller::UpdateInitialVectors()
   if(UseRealRobot)
   {
     
-    // double K = 1;
-    // Pck = Pck * (1 - K) + K * computeInSupportFootFlat(realRobot().com());
-    // Vck = Vck * (1 - K) + K * computeVelocityInSupportFoot(realRobot().comVelocity());
     sva::PTransformd zmpFrame = robot().surfacePose(supportFootName);
     sva::ForceVecd measuredNetWrench_ = robot().netWrench({"LeftFootForceSensor"});
     if(supportFootName == "RightFootCenter")
