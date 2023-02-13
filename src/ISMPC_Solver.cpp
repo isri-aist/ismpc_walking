@@ -924,6 +924,10 @@ void ISMPC_Solver::Stability_Constraints()
   for(int j = 0; j < m_C; j++)
   {
     A_stab.block(0,2*j,2,2) = Eigen::Matrix2d::Identity() * (m_lambda/(m_lambda + m_eta)) * exp(-j * m_eta * m_delta);
+    if(static_cast<double>(j) * m_delta < perturbation_duration)
+    {
+      A_stab.block(0,2*j,2,2) *= kappa_k;
+    }
   }
   A_stab *= exp(-m_eta * m_delay_elapsed);
 
@@ -959,9 +963,10 @@ void ISMPC_Solver::Stability_Constraints()
     // b_stab(1) = (m_eta / (1 - exp(-m_eta * m_delta))) * (P_u_k.y() - P_z_k.y() + w_k.y()) - Ant_Tail_Y;
     double l_d_w_p_e = (m_lambda/(m_lambda + m_eta)); 
 
-    b_stab = ( P_u_k - ( (P_z_k_delayed - w_k) * exp(-m_eta * m_delay_elapsed) +
-                         (P_z_k - w_k) + l_d_w_p_e * U_k - 
-                         ( (P_z_k_delayed - w_k) + l_d_w_p_e * U_k )* exp(-m_eta * m_delay_elapsed)) ).segment(0,2) ;
+    b_stab = ( P_u_k - ( (kappa_k * P_z_k_delayed - w_k) * exp(-m_eta * m_delay_elapsed)
+                         + (kappa_k * P_z_k - w_k) + l_d_w_p_e * U_k
+                         - ( ( kappa_k *P_z_k_delayed - w_k) + l_d_w_p_e * U_k )* exp(-m_eta * m_delay_elapsed))
+                         - w_k * exp(-m_eta * perturbation_duration)).segment(0,2) ;
 
   // }
 
@@ -1032,10 +1037,11 @@ void ISMPC_Solver::Integrate()
   m_Y_MPC.clear();
   int N = (int)(m_delta / m_delta_control);
   int N_delay = static_cast<int>(m_delay_elapsed/m_delta_control);
+  int N_perturbation = static_cast<int>(perturbation_duration/m_delta_control);
 
 
-  Eigen::Vector3d state_x = Eigen::Vector3d{P_c_k.x(), V_c_k.x(), P_z_k.x() - w_k.x()};
-  Eigen::Vector3d state_y = Eigen::Vector3d{P_c_k.y(), V_c_k.y(), P_z_k.y() - w_k.y()};
+  Eigen::Vector3d state_x = Eigen::Vector3d{P_c_k.x(), V_c_k.x(), kappa_k * P_z_k.x() - w_k.x()};
+  Eigen::Vector3d state_y = Eigen::Vector3d{P_c_k.y(), V_c_k.y(), kappa_k * P_z_k.y() - w_k.y()};
 
   for(int k = 1; k < N_delay + 1; k++)
   {
@@ -1070,6 +1076,13 @@ void ISMPC_Solver::Integrate()
     {    
 
       Compute_Integration_Vector(k+1);
+      if( i * N + k > N_perturbation )
+      {
+        Pzi += w_k;
+        Pzi /= kappa_k;
+        N_perturbation = m_C * N;
+      }
+
       state_x(2) = Pzi.x();
       state_y(2) = Pzi.y();
 
@@ -1086,6 +1099,9 @@ void ISMPC_Solver::Integrate()
   {
     m_X_MPC[i].z() += w_k.x();
     m_Y_MPC[i].z() += w_k.y();
+    m_X_MPC[i].z() /= kappa_k;
+    m_Y_MPC[i].z() /= kappa_k;
+
   }
 }
 

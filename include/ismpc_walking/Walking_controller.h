@@ -481,6 +481,7 @@ private:
 
   bool Use_w = false;
   Eigen::Vector3d w_ = Eigen::Vector3d::Zero();
+  double kappa;
   std::string Tail = "Anticipative"; // Velocity tail, either "Periodic" Or "Truncated"
 
   Eigen::Vector3d SupportFootPose; // Initial  Foot Support at the time of computation

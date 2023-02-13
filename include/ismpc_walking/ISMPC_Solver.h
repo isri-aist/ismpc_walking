@@ -444,9 +444,11 @@ public:
     return w_k;
   }
 
-  void Disturbance(const Eigen::Vector3d w) noexcept
+  void Disturbance(const Eigen::Vector3d w, const double k = 1,const double d = 1e3) noexcept
   {
     w_k = w/2;
+    kappa_k = k;
+    perturbation_duration = d;
   }
 
   /**
@@ -649,14 +651,15 @@ private:
 
   Eigen::VectorXd solveQP();
 
-  Eigen::Vector3d P_z_k; // Initial ZMP position
-  Eigen::Vector3d P_z_k_delayed; //ZMP pose after input U_k during input delay
-  Eigen::Vector3d P_c_k; // Initial CoM Position
-  Eigen::Vector3d V_c_k; // Initial CoM Velocity
-  Eigen::Vector3d P_u_k; // Initial Unstable Component/DCM
-  Eigen::Vector3d U_k; //Current input acting on the pendulum
-  Eigen::Vector3d m_Pfm1; // Swing Foot Pose Before Swinging orientation in z
-  Eigen::Vector3d w_k; // Perturbance
+  Eigen::Vector3d P_z_k = Eigen::Vector3d::Zero(); // Initial ZMP position
+  Eigen::Vector3d P_z_k_delayed = Eigen::Vector3d::Zero(); //ZMP pose after input U_k during input delay
+  Eigen::Vector3d P_c_k = Eigen::Vector3d::Zero(); // Initial CoM Position
+  Eigen::Vector3d V_c_k = Eigen::Vector3d::Zero(); // Initial CoM Velocity
+  Eigen::Vector3d P_u_k = Eigen::Vector3d::Zero(); // Initial Unstable Component/DCM
+  Eigen::Vector3d U_k = Eigen::Vector3d::Zero(); //Current input acting on the pendulum
+  Eigen::Vector3d w_k = Eigen::Vector3d::Zero(); // Perturbance
+  double kappa_k = 1; //zmp disturbance coeff;
+  double perturbation_duration = 0;
 
 
   Eigen::Matrix3d R_support_0 = Eigen::Matrix3d::Identity();

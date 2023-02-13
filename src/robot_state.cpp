@@ -76,7 +76,7 @@ void Walking_controller::getTransformations()
   Eigen::Vector3d left_pos;
   Eigen::Vector3d left_force;
   Eigen::Vector3d left_moment;
-  // computeExternalContact("LeftHand",filter_left_hand_wrench_.eval(),left_pos,left_force,left_moment);
+  computeExternalContact(leftHandName_,filter_left_hand_wrench_.eval(),left_pos,left_force,left_moment);
 
 
   sva::ForceVecd right_wrench = robot().frame(rightHandName_).wrench();
@@ -84,7 +84,7 @@ void Walking_controller::getTransformations()
   Eigen::Vector3d right_pos;
   Eigen::Vector3d right_force;
   Eigen::Vector3d right_moment;
-  // computeExternalContact("RightHand",filter_right_hand_wrench_.eval(),right_pos,right_force,right_moment);
+  computeExternalContact(rightHandName_,filter_right_hand_wrench_.eval(),right_pos,right_force,right_moment);
 
   // if(config()("stabilizer")("robot")(robot().name())("stabilizer").has("external_wrench"))
   // {

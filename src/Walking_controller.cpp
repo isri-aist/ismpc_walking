@@ -288,7 +288,7 @@ void Walking_controller::ComputeWalkingTrajectory()
     // MPCSolver.Disturbance( w_.norm()*(
     // (robot().forceSensor("LeftHandForceSensor").worldWrench(robot()).force()/robot().mass())/std::pow(eta(),2) ) );
     // mc_rtc::log::info("Disturbance {}",Eigen::Vector3d{0,15.,0}/robot().mass());
-    MPCSolver.Disturbance(w_);
+    MPCSolver.Disturbance(w_,1);
   }
   else
   {
