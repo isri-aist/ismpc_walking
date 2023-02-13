@@ -197,7 +197,7 @@ Eigen::MatrixXd ISMPC_Solver::create_zmp_matrix()
     for(int k = 0; k <= i; k++)
     {
       double t_m_tk = (1 + i - k) * m_delta;
-      if(k == i){t_m_tk -= m_delay;}
+      if(k == i){t_m_tk -= ( i==0 ? m_delay_elapsed : m_delay);}
       A_out.block(2*i,2*k,2,2) = Eigen::Matrix2d::Identity() * (1-exp( - m_lambda * t_m_tk));
     }
   }
@@ -353,7 +353,7 @@ void ISMPC_Solver::ZMP_Transition_Constraint(Eigen::MatrixXd & A_out,Eigen::Vect
     for(int k = 0 ; k <= indx_transi_ds_ss ; k++)
     {
       double t_m_tk = t_transi_ds_ss + static_cast<double>(i) * dt - static_cast<double>(k) * m_delta ;
-      if(k == i){t_m_tk -= m_delay;}
+      if(k == i){t_m_tk -= ( i==0 ? m_delay_elapsed : m_delay);}
       A_zmp.block(0,2 * k , 2,2) = Eigen::Matrix2d::Identity() * (1 - exp(-m_lambda * (t_m_tk)));
     }
     A_out.block(i * PolySS.offsets().rows(),0,PolySS.offsets().rows(),N_variable) = PolySS.normals() * A_zmp;
