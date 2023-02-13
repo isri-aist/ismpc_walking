@@ -71,8 +71,11 @@ bool Walking_controller::MoveFeet(double t)
 
       Eigen::Vector3d ext_wrench_gain_v = config()("stabilizer")("robot")(robot().name())("stabilizer")("external_wrench")("ext_wrench_gain");
       sva::MotionVecd ext_wrench_gain{ext_wrench_gain_v, ext_wrench_gain_v};
-      stabTask->setExternalWrenches({swingFootName}, {sva::ForceVecd::Zero()},
-                                    {ext_wrench_gain});
+      if(Use_w)
+      {
+        stabTask->setExternalWrenches({swingFootName}, {sva::ForceVecd::Zero()},
+                                      {ext_wrench_gain});
+      }
       
       t_lift = t;
 
