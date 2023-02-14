@@ -287,6 +287,9 @@ void Walking_controller::ComputeWalkingTrajectory()
   {
     // MPCSolver.Disturbance( w_.norm()*(
     // mc_rtc::log::info("Disturbance {}",Eigen::Vector3d{0,15.,0}/robot().mass());
+    mc_filter::utils::clampInPlaceAndWarn(w_.x(),-0.03 , 0.03,"Perturbation (0)");
+    mc_filter::utils::clampInPlaceAndWarn(w_.y(),-0.03 , 0.03,"Perturbation (1)");
+    mc_filter::utils::clampInPlaceAndWarn(eta2_cstr,4, 17,"Omega Perturbation");
     MPCSolver.Disturbance(w_,sqrt(eta2_cstr),0.1);
     // MPCSolver.Disturbance(w_,sqrt(eta2_cstr));
   }
