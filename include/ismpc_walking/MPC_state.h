@@ -174,6 +174,8 @@ struct MPC_state
   Eigen::VectorXd mpc_u_;
   std::vector<Eigen::Vector3d> QP_zmp;
   std::vector<sva::MotionVecd> input_v_;
+  double input_eta = 3.5;
+  double eta = 3.5;
   std::vector<sva::PTransformd> input_steps_;
   std::vector<sva::PTransformd> planned_steps_;
   std::vector<double> input_timesteps_; // Input desired steps timings

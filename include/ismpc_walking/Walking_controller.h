@@ -278,6 +278,8 @@ protected:
 
   void add_ISMPC_Config_GUI();
 
+  void ComputeFeetPerturbances(Eigen::Vector3d & offset, double & eta2);
+
   void AddToLog();
 
   void add_FootSteps_GUI();
@@ -481,7 +483,7 @@ private:
 
   bool Use_w = false;
   Eigen::Vector3d w_ = Eigen::Vector3d::Zero();
-  double kappa;
+  double eta2_cstr;
   std::string Tail = "Anticipative"; // Velocity tail, either "Periodic" Or "Truncated"
 
   Eigen::Vector3d SupportFootPose; // Initial  Foot Support at the time of computation

@@ -175,6 +175,36 @@ void Walking_controller::computeExternalContact(const std::string & surfaceName,
   moment = surfaceWrenchW.moment();
 }
 
+void Walking_controller::ComputeFeetPerturbances(Eigen::Vector3d & offset, double & eta2)
+{
+  const double verticalComAcc = comTask->refAccel()(6) + mc_rtc::constants::gravity.z();
+  const double h = controller_config_.Stab_config.comHeight;
+  offset.setZero();
+  eta2 = verticalComAcc / h;
+  if(!DoubleSupport_state && t - t_lift < 0.1)
+  {
+    double support_vertical_perturbation = (robot().mass() * mc_rtc::constants::GRAVITY - robot().surfaceForceSensor(supportFootName).wrench().force().z());
+
+    sva::PTransformd X_swg_com = sva::PTransformd(Eigen::Matrix3d::Identity(),robot().com()) * X_0_swing.inv();
+    sva::PTransformd X_supp_com = sva::PTransformd(Eigen::Matrix3d::Identity(),robot().com()) * X_0_support.inv();
+    sva::ForceVecd swing_wrench_0 = X_swg_com.dualMul( robot().surfaceWrench(swingFootName));
+    sva::ForceVecd supp_wrench_0 = X_supp_com.dualMul( sva::ForceVecd(Eigen::Vector3d::Zero(),Eigen::Vector3d{0,0,support_vertical_perturbation}));
+
+    eta2 -= (swing_wrench_0.force().z() + support_vertical_perturbation)/(robot().mass() * h);
+    offset.x() += ( swing_wrench_0.force().x() + ((swing_wrench_0  + supp_wrench_0).moment().y()/h))
+                  /(eta2*robot().mass());
+    offset.y() += ( swing_wrench_0.force().y() - ((swing_wrench_0  + supp_wrench_0).moment().x()/h))
+                  /(eta2*robot().mass());
+
+
+  }
+  else
+  {
+    return;
+  }
+
+}
+
 sva::ForceVecd Walking_controller::compute_momentum_contact_point()
 {
   Eigen::Vector3d com = robot().com();

@@ -239,6 +239,8 @@ void Walking_controller::addToGUI()
           "Disturbance", [this]() { return Use_w; }, [this]() { Use_w = !Use_w; }),
       mc_rtc::gui::ArrayInput(
           "Input Disturbance", [this]() { return w_; }, [this](const Eigen::Vector3d & in) { w_ = in; }),
+      mc_rtc::gui::NumberInput(
+          "Input Omega", [this]() -> double { return sqrt(eta2_cstr); }, [this](double w) { eta2_cstr = std::pow(w,2); }),
       mc_rtc::gui::Checkbox(
           "Force Contact Safety", [this]() { return force_contact_safety_; },
           [this]() { force_contact_safety_ = !force_contact_safety_; }),

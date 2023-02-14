@@ -93,8 +93,11 @@ void Walking_controller::AddToLog()
   logger().addLogEntry("ISMPC_ref_zmp", [this]() -> const Eigen::Vector2d {
     return mpc_state_.ref_zmp_;
   });
-  logger().addLogEntry("ISMPC_perturbation", [this]() -> const Eigen::Vector2d  {
+  logger().addLogEntry("ISMPC_perturbation_offset", [this]() -> const Eigen::Vector2d  {
     return w_.segment(0,2);
+  });
+  logger().addLogEntry("ISMPC_perturbation_omega", [this]() -> const double  {
+    return sqrt(eta2_cstr);
   });
   // logger().addLogEntry("ISMPC_State_ZMP_kinmes", [this]() -> const Eigen::Vector3d {
 

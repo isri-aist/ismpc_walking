@@ -286,13 +286,9 @@ void Walking_controller::ComputeWalkingTrajectory()
   if(Use_w)
   {
     // MPCSolver.Disturbance( w_.norm()*(
-    // (robot().forceSensor("LeftHandForceSensor").worldWrench(robot()).force()/robot().mass())/std::pow(eta(),2) ) );
     // mc_rtc::log::info("Disturbance {}",Eigen::Vector3d{0,15.,0}/robot().mass());
-    MPCSolver.Disturbance(w_,1);
-  }
-  else
-  {
-    MPCSolver.Disturbance(Eigen::Vector3d::Zero());
+    MPCSolver.Disturbance(w_,sqrt(eta2_cstr),0.1);
+    // MPCSolver.Disturbance(w_,sqrt(eta2_cstr));
   }
 
   MPCSolver.GetWalkingParameters(tds, mpc_thread_state.stop);
@@ -325,6 +321,7 @@ void Walking_controller::ComputeWalkingTrajectory()
     mpc_thread_state.ref_zmp_ = MPCSolver.zmp_ref().segment(0,2);
     mpc_thread_state.admittance_ref_ = MPCSolver.admittance_references();
     mpc_thread_state.QP_zmp = MPCSolver.QP_zmp();
+    mpc_thread_state.eta = MPCSolver.eta();
     kfoot = 0;
     NewThreadState = true;
     
@@ -396,7 +393,7 @@ void Walking_controller::CheckStepRecovery()
   {
     Eigen::MatrixX2d normals = MPCSolver.standing_feasibility_polygone().normals();
     Eigen::VectorXd offset = MPCSolver.standing_feasibility_polygone().offsets();
-    Eigen::Vector2d dcm = (realRobot().com() + (realRobot().comVelocity()/eta())).segment(0,2) + stabTask->biasDCM();
+    Eigen::Vector2d dcm = (realRobot().com() + (realRobot().comVelocity()/mpc_state_.eta)).segment(0,2) + stabTask->biasDCM();
     Eigen::VectorXd stability_check = normals * dcm - offset;
     bool ok = true;
     for (int i = 0 ; i < stability_check.rows() ; i++ )
@@ -591,7 +588,7 @@ void Walking_controller::MoveCoM()
   // mc_rtc::log::info("//Index : {}, z_y {}",mpc_state_.Index,zmpTarget.y());
 
 
-  Eigen::Vector3d Ac_com = std::pow(eta(), 2) * (Pcom - zmpTarget);
+  Eigen::Vector3d Ac_com = std::pow(mpc_state_.eta, 2) * (Pcom - zmpTarget);
 
   Ac_com.z() = 0;
   admittanceTarget = mpc_state_.initial_zmp_;
@@ -621,14 +618,14 @@ void Walking_controller::MoveCoM()
   }
 
 
-  Eigen::Vector3d Ac_wrench = std::pow(eta(), 2) * (Pcom - admittanceTarget);
+  Eigen::Vector3d Ac_wrench = std::pow(mpc_state_.eta , 2) * (Pcom - admittanceTarget);
   Ac_wrench.z() = 0;
 
   target_force_ = robot().mass() * (Ac_wrench + mc_rtc::constants::gravity);
   target_wrench_ = sva::ForceVecd{realRobot().com().cross(target_force_),target_force_};
 
   Ac_wrench.z() = 0;
-  dcmTarget = Pcom + Vc / eta();
+  dcmTarget = Pcom + Vc / mpc_state_.eta;
 
   stabTask->target(Pcom, Vc, Ac_wrench, admittanceTarget);
   if(!active)
@@ -674,7 +671,7 @@ void Walking_controller::UpdateInitialVectors()
     mpc_state_.Pck = mpc_state_.Get_CoM_planarTarget(mpc_state_.Index);
     mpc_state_.Vck = mpc_state_.Get_CoMVel_planarTarget(mpc_state_.Index);
     mpc_state_.Pzk = mpc_state_.Get_ZMP_planarTarget(mpc_state_.Index);
-    mpc_state_.Pu = mpc_state_.Pck + mpc_state_.Vck / eta();
+    mpc_state_.Pu = mpc_state_.Pck + mpc_state_.Vck / mpc_state_.eta;
     // std::cout << "using MPC" << std::endl;
   }
   else
@@ -682,7 +679,7 @@ void Walking_controller::UpdateInitialVectors()
     mpc_state_.Pck = robot().com();
     mpc_state_.Vck = robot().comVelocity();
     // mpc_state_.Pzk = mpc_state_.Get_ZMP_planarTarget(indx);
-    mpc_state_.Pu = mpc_state_.Pck + mpc_state_.Vck / eta();
+    mpc_state_.Pu = mpc_state_.Pck + mpc_state_.Vck / mpc_state_.eta;
   }
   if(UseRealRobot)
   {
@@ -709,7 +706,7 @@ void Walking_controller::UpdateInitialVectors()
     mpc_state_.ComBias.segment(0,2) = stabTask->biasDCM();
     mpc_state_.Pck = realRobot().com() + mpc_state_.ComBias;
 
-    mpc_state_.Pu = mpc_state_.Pck + mpc_state_.Vck/eta();
+    mpc_state_.Pu = mpc_state_.Pck + mpc_state_.Vck/mpc_state_.eta;
     
 
   }
@@ -724,11 +721,8 @@ void Walking_controller::UpdateInitialVectors()
     mpc_state_.Pzk = mpc_state_.Pck;
   }
 
-  // mpc_state_.w = - (stabTask->measuredDCM() - mpc_state_.Pu) + - (stabTask->measuredZMP() - mpc_state_.Pzk);
-  filter_gamma_.update(stabTask->comOffsetMeasured());
-  w_ = filter_gamma_.eval();
-  kappa = stabTask->zmpCoeffMeasured();
-  //mpc_state_.w = filter_gamma_.eval();
+  ComputeFeetPerturbances(w_,eta2_cstr);
+  // eta2_cstr = (mc_rtc::constants::GRAVITY/controller_config_.Stab_config.comHeight);
 
   mpc_state_.Pck.z() = controller_config_.Stab_config.comHeight;
   mpc_state_.Vck.z() = 0;

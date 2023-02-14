@@ -444,11 +444,17 @@ public:
     return w_k;
   }
 
-  void Disturbance(const Eigen::Vector3d w, const double k = 1,const double d = 1e3) noexcept
+  void Disturbance(const Eigen::Vector3d w, const double eta = 3.5,const double d = 1e3) noexcept
   {
-    w_k = w/2;
-    kappa_k = k;
+    w_k  = w;
+    m_eta = eta;
+    Compute_Integration_Matrix();
     perturbation_duration = d;
+  }
+
+  double eta()
+  {
+    return m_eta;
   }
 
   /**
@@ -636,6 +642,8 @@ private:
   Eigen::MatrixXd create_zmp_matrix();
   Eigen::MatrixXd create_u_matrix();
 
+  void Compute_Integration_Matrix();
+
   /**
    * Integrate The ZMP velocity to compute the CoM, CoMd and ZMP trajectory
    */
@@ -658,7 +666,6 @@ private:
   Eigen::Vector3d P_u_k = Eigen::Vector3d::Zero(); // Initial Unstable Component/DCM
   Eigen::Vector3d U_k = Eigen::Vector3d::Zero(); //Current input acting on the pendulum
   Eigen::Vector3d w_k = Eigen::Vector3d::Zero(); // Perturbance
-  double kappa_k = 1; //zmp disturbance coeff;
   double perturbation_duration = 0;
 
 
