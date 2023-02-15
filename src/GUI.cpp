@@ -261,7 +261,7 @@ void Walking_controller::addToGUI()
       mc_rtc::gui::NumberInput(
           "Ts", [this]() -> double { return ts(); }, [this](const double t) { T_Steps = t; }),
       mc_rtc::gui::NumberInput(
-          "Steps", [this]() -> int { return N_Steps_Desired; }, [this](const int n) { N_Steps_Desired = n; }),
+          "Steps", [this]() -> int { return N_Steps_Desired; }, [this](const double n) { N_Steps_Desired = static_cast<int>(n); }),
 
       mc_rtc::gui::Transform("Steps desired pose",
                            [this]() {
