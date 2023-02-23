@@ -52,7 +52,7 @@ struct MPC_state
   sva::PTransformd & Get_CorrectedFootstep(int indx)
   {
 
-    return opti_steps[indx];
+    return optimal_steps_[indx];
   }
 
   sva::PTransformd & Get_PlannedFootstep(int indx)
@@ -68,7 +68,7 @@ struct MPC_state
 
   const std::vector<sva::PTransformd> & optimal_steps() const noexcept
   {
-    return opti_steps;
+    return optimal_steps_;
   }
 
   std::vector<Eigen::Vector2d> admittance_references()
@@ -93,21 +93,18 @@ struct MPC_state
   {
     return P_traj;
   }
-  const std::vector<int> & getTimeStampIndex()
-  {
-    return TimeStampsIndex;
-  }
+
   const std::vector<double> & getTimeStamp()
   {
-    return TimeStamps;
+    return optimal_timesteps_;
   }
   double get_Ts(int indx)
   {
-    return TimeStamps[indx];
+    return optimal_timesteps_[indx];
   }
   double get_tds()
   {
-    return tds;
+    return optimal_tds;
   }
   void set_input_tds(double t)
   {
@@ -147,8 +144,6 @@ struct MPC_state
   std::vector<Eigen::Vector3d> FeasibilityPolygon;
   Eigen::VectorXd Traj_ant;
   std::vector<Eigen::Vector3d> P_traj; // Vector containing the reference trajectory
-  std::vector<int> TimeStampsIndex; // Index of the timing of each step
-  std::vector<double> TimeStamps; // Timing of each step
   bool Tail = true;
   int kfoot = 0;
   Eigen::Vector2d stab_error;
@@ -163,6 +158,7 @@ struct MPC_state
 
   double t_k = 0;
   double t;
+  double t_lift = 0;
   Eigen::Vector3d Pck;
   Eigen::Vector3d Vck;
   Eigen::Vector3d Pzk;
@@ -176,10 +172,12 @@ struct MPC_state
   std::vector<sva::MotionVecd> input_v_;
   double input_eta = 3.5;
   double eta = 3.5;
-  std::vector<sva::PTransformd> input_steps_;
+  std::vector<sva::PTransformd> input_steps_; // planner reference steps
   std::vector<sva::PTransformd> planned_steps_;
   std::vector<double> input_timesteps_; // Input desired steps timings
-  std::vector<sva::PTransformd> opti_steps;
+  std::vector<double> planned_timesteps_; //planner reference timesteps
+  std::vector<sva::PTransformd> optimal_steps_; //Outputs steps from the
+  std::vector<double> optimal_timesteps_; //Outputs timesteps from the mpc
   std::string input_Support_FootName;
   Eigen::Vector3d input_P_fm1;
   Eigen::Vector3d SupportFootPose;
@@ -188,5 +186,7 @@ struct MPC_state
   
   double tds = 0.25;
   double input_tds = 0.25;
+  double optimal_tds = 0.25;
   bool stop = true;
+  bool doubleSupport = true;
 };

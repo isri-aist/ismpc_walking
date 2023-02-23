@@ -25,6 +25,7 @@ if(NOT TARGET mc_rtc::mc_control)
   find_package(mc_rtc REQUIRED)
 endif()
 
+find_package(pendulum_feasibility_solver)
 
 add_subdirectory(src)
 

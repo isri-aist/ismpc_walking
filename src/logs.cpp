@@ -21,17 +21,11 @@ void Walking_controller::AddToLog()
                        [this]() -> const Eigen::Vector3d & { return robot().bodyAccB(LeftFootLinkName_).linear(); });
   logger().addLogEntry("RealRobot RightFoot Accel",
                        [this]() -> const Eigen::Vector3d & { return robot().bodyAccB(RightFootLinkName_).linear(); });
-  logger().addLogEntry("ISMPC_NextTs", [this]() -> double {
-    std::vector<double> ts(mpc_state_.getTimeStamp());
-    if(ts.size() != 0)
-    {
-      return ts[0];
-    }
-    return 0.;
-  });
+
   logger().addLogEntry("ISMPC_measured_lambda",[this] () -> Eigen::Vector2d {return estimated_lambda();} );
   logger().addLogEntry("ISMPC_measured_zmpvel",[this] () -> Eigen::Vector2d {return zmp_vel_.eval().segment(0,2);} );
   logger().addLogEntry("ISMPC_NextTds", [this]() -> double { return mpc_state_.get_tds(); });
+  logger().addLogEntry("ISMPC_NextTs", [this]() -> double { return mpc_state_.get_Ts(0); });
   logger().addLogEntry("ISMPC_input_tds", [this]() -> double { return mpc_state_.input_tds; });
   logger().addLogEntry("ISMPC_input_ts", [this]() -> double {
     std::vector<double> ts(mpc_state_.input_timesteps_);

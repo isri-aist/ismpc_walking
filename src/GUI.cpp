@@ -199,7 +199,7 @@ void Walking_controller::addToGUI()
       mc_rtc::gui::Label("Double support duration", [this]() { return this->mpc_state_.get_tds(); }),
       mc_rtc::gui::Label("Next Step Timing ",
                          [this]() {
-                           if(this->mpc_state_.TimeStamps.size() != 0)
+                           if(this->mpc_state_.optimal_steps_.size() != 0)
                            {
                              return this->mpc_state_.get_Ts(0);
                            }

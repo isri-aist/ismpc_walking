@@ -3,10 +3,6 @@
 bool Walking_controller::MoveFeet(double t)
 {
 
-  if(mpc_state_.TimeStamps.size() == 0)
-  {
-    return 0;
-  }
 
   PrevStepTiming = 0;
   double NextTimeStep(0);
@@ -20,7 +16,7 @@ bool Walking_controller::MoveFeet(double t)
   // }
 
   sva::PTransformd X_0_SwingFootTarget;
-  if(kfoot < mpc_state_.opti_steps.size())
+  if(kfoot < mpc_state_.optimal_steps_.size())
   {
     X_0_SwingFootTarget = mpc_state_.Get_CorrectedFootstep(kfoot);
   }

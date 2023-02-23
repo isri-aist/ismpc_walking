@@ -165,9 +165,9 @@ public:
   }
   double next_ts()
   {
-    if(mpc_state_.TimeStamps.size() != 0)
+    if(mpc_state_.optimal_timesteps_.size() != 0)
     {
-      return mpc_state_.TimeStamps[0];
+      return mpc_state_.get_Ts(0);
     }
     return 0.;
   }

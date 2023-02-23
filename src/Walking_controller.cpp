@@ -250,20 +250,21 @@ void Walking_controller::ComputeWalkingTrajectory()
   datastore().assign<std::vector<double>>("footsteps_planner::input_time_steps", mpc_thread_state.input_timesteps_);
   datastore().call("footstep_planner::compute_plan");
 
-  std::vector<sva::PTransformd> & planned_steps_ =
-      datastore().get<std::vector<sva::PTransformd>>("footsteps_planner::output_steps");
+  mpc_thread_state.planned_steps_ =
+        datastore().get<std::vector<sva::PTransformd>>("footsteps_planner::output_steps");
   // for (int k = 0 ; k < planned_steps_.size() ; k++)
   // {
   //   std::cout << "step " << k << ": " << planned_steps_[k].translation() << std::endl;
   // }
-  std::vector<double> & timesteps = datastore().get<std::vector<double>>("footsteps_planner::output_time_steps");
+  mpc_thread_state.planned_timesteps_ = datastore().get<std::vector<double>>("footsteps_planner::output_time_steps");
   // mc_rtc::log::info("tds by ratio {}",Tds_by_ratio);
-  double tds = controller_config_.Double_Step_Ratio * timesteps[0];
+  double tds = controller_config_.Double_Step_Ratio * mpc_thread_state.planned_timesteps_[0];
   // if(StepRecoveryState){tds = 0.3;}
   if(!Tds_by_ratio)
   {
     tds = mpc_thread_state.input_tds;
   }
+  mpc_thread_state.tds = tds;
   int Steps = N_Steps;
   int Steps_Desired = N_Steps_Desired;
 
@@ -280,7 +281,7 @@ void Walking_controller::ComputeWalkingTrajectory()
   //   mc_rtc::log::warning("[ISMPC] Approaching Control Horizon, Tail temporary switched to None");
   // }
 
-  MPCSolver.init_MPC(mpc_thread_state, planned_steps_, timesteps, Tail, Steps_Desired, Steps);
+  MPCSolver.init_MPC(mpc_thread_state, Tail, Steps_Desired, Steps);
   // MPCSolver.Puk(mpc_state_.Pu);
 
   if(Use_w)
@@ -294,7 +295,7 @@ void Walking_controller::ComputeWalkingTrajectory()
     // MPCSolver.Disturbance(w_,sqrt(eta2_cstr));
   }
 
-  MPCSolver.GetWalkingParameters(tds, mpc_thread_state.stop);
+  MPCSolver.GetWalkingParameters(mpc_thread_state.stop);
 
   std::chrono::duration<double, std::milli> time_span = mc_rtc::clock::now() - t_clock;
   mpc_thread_process_time = time_span.count();
@@ -302,10 +303,9 @@ void Walking_controller::ComputeWalkingTrajectory()
   if(MPCSolver.QPsucceeded())
   {
     std::lock_guard<std::mutex> lk_copy_state(mutex_mpc_);
-    mpc_thread_state.tds = tds;
-    mpc_thread_state.TimeStamps = timesteps;
-    mpc_thread_state.planned_steps_ = planned_steps_;
-    mpc_thread_state.opti_steps = MPCSolver.optimal_steps();
+    mpc_thread_state.optimal_tds = MPCSolver.Tds();
+    mpc_thread_state.optimal_timesteps_ = MPCSolver.timesteps();
+    mpc_thread_state.optimal_steps_ = MPCSolver.optimal_steps();
     mpc_thread_state.QPSuccess = true;
     mpc_thread_state.X_MPC = MPCSolver.X_MPC();
     mpc_thread_state.Y_MPC = MPCSolver.Y_MPC();
@@ -662,7 +662,9 @@ void Walking_controller::UpdateInitialVectors()
 {
 
   mpc_state_.t_k = t_k;
-  mpc_state_.t = static_cast<double>(count * controller_timestep);
+  mpc_state_.t_lift = t_lift;
+  mpc_state_.doubleSupport = DoubleSupport_state;
+  mpc_state_.t = static_cast<double>(count) * controller_timestep;
   // mpc_state_.Pzk = Eigen::Vector3d{0,0,1}.cross( robot().com().cross(robot().mass()*mc_rtc::constants::gravity) ) /
   //                       ( (robot().mass()*(mc_rtc::constants::gravity - robot().comAcceleration())).transpose() *
   //                       Eigen::Vector3d{0,0,1} );

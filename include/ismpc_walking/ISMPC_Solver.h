@@ -313,8 +313,6 @@ public:
   void Init(double delta_controller, double delta, double Tp, double Tc, double Beta);
 
   void init_MPC(const MPC_state & mpc_state,
-                const std::vector<sva::PTransformd> & steps,
-                const std::vector<double> & timesstp,
                 std::string Tail,
                 int Steps_Desired,
                 int Step);
@@ -338,11 +336,8 @@ public:
 
   /**
    * Compute the CoM, CoMd, ZMP trajectory for previously set Walking parameters
-   * @tparam PrevStepTime, previous footsteps timing
-   * @tparam t_k, time of the computation
-   * @tparam Tds,  double support duration
    */
-  bool GetWalkingParameters(double t_k, bool stop);
+  bool GetWalkingParameters(bool stop);
 
   /**
    * @brief Set The constraints region for the ZMP (during each delta time) and the footsteps in the robot frame
@@ -401,6 +396,16 @@ public:
   const std::vector<sva::PTransformd> & optimal_steps() const noexcept
   {
     return corr_steps_;
+  }
+
+  const std::vector<double> & timesteps()
+  {
+    return m_timestamp;
+  }
+
+  const double Tds()
+  {
+    return m_Tds;
   }
 
   /**
@@ -547,6 +552,10 @@ public:
     }
     else
     {
+      if(m_feasibility_region.size() != 0)
+      {
+        return m_feasibility_region;
+      }
       Eigen::Vector3d p0 =  Puk_min();
       Eigen::Vector3d p2 =  Puk_max();
       Eigen::Vector3d p1 =
@@ -700,6 +709,7 @@ private:
   bool Use_Stability_Task = false;
   bool Allow_None = true;
   bool InStabilityRange = false;
+  bool DoubleSupport = true;
   bool m_stop = true;
 
   /**
@@ -716,6 +726,7 @@ private:
   double m_Tc = 2;
   double m_Tp = 5; // Control & Preview horizon time
   double m_Tds = 0.24; // Double Support Duration
+  double m_input_Tds = 0;
   int Tds_offset = 0;
   double m_Dstep_ratio = 0.3; // T_DoubleStep/T_Step
   double m_delta = 0.05; // t_k - t_k-1
@@ -749,6 +760,7 @@ private:
   double m_delay = 0; //delay ( < m_delta ) during which zmp is under previous input Uk
   double m_delay_elapsed = 0; //Between 0 and m_delay represent the remaining time the delay must be applied
   double m_t_delay = 0; // represent when the delay has been applied
+  double m_t_lift = 0; //time when the foot contact has been released
 
   double m_feet_distance = 0.2; 
   std::string m_support_foot = "LeftFoot";
@@ -792,6 +804,8 @@ private:
 
   SupportPolygon m_double_support_polygon;
   SupportPolygon m_feasibility_standing_region;
+
+  std::vector<Eigen::Vector3d> m_feasibility_region;
 
   std::vector<Eigen::Vector3d> SuppPolyCorners;
 

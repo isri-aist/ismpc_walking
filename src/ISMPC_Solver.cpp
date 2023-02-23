@@ -1,5 +1,7 @@
 #include "../include/ismpc_walking/ISMPC_Solver.h"
 
+#include <pendulum_feasibility_solver/feasibility_solver.h>
+
 // clang-format off
 #include <boost/geometry.hpp>
 #include <boost/geometry/geometries/polygon.hpp>
@@ -86,8 +88,6 @@ void ISMPC_Solver::configure(const ControllerConfiguration & config)
 
 
 void ISMPC_Solver::init_MPC(const MPC_state & mpc_state,
-                            const std::vector<sva::PTransformd> & steps,
-                            const std::vector<double> & timesstp,
                             std::string Tail,
                             int Steps_Desired,
                             int Step)
@@ -95,15 +95,19 @@ void ISMPC_Solver::init_MPC(const MPC_state & mpc_state,
   P_c_k = mpc_state.Pck;
   V_c_k = mpc_state.Vck;
   P_z_k = mpc_state.Pzk;
+
+  DoubleSupport = mpc_state.doubleSupport;
+  m_t_lift = mpc_state.t_lift;
   
   m_tk = mpc_state.t_k;
   m_t_global = mpc_state.t;
-  if( m_t_global - m_t_delay > m_delta)
+  if( m_t_global - m_t_delay > m_delta || m_tk == 0)
   {
     U_k = mpc_state.Uk;
     m_t_delay = m_t_global;
   }
   m_delay_elapsed = std::min( std::max(m_delay - (m_t_global - m_t_delay) , 0. ) , m_delay);
+  // mc_rtc::log::info("delay{}",m_delay_elapsed);
 
   P_z_k_delayed = P_z_k + (1 - exp(-m_lambda * m_delay_elapsed)) * U_k;
   m_Tail = Tail;
@@ -114,8 +118,22 @@ void ISMPC_Solver::init_MPC(const MPC_state & mpc_state,
   X_0_swing_foot_initial = mpc_state.X_0_Initial_SwingFoot;
 
   X_0_support_foot = mpc_state.X_0_SupportFoot;
-  input_steps_ = steps;
-  m_timestamp = timesstp;
+  if(m_timestamp.size() != 0)
+  {  
+    if(m_timestamp[0] - m_tk > 0.1)
+    {
+      input_steps_ = mpc_state.planned_steps_;
+      m_timestamp = mpc_state.planned_timesteps_;
+      m_input_Tds = mpc_state.tds;
+    }
+  }
+  else
+  {
+    input_steps_ = mpc_state.planned_steps_;
+    m_timestamp = mpc_state.planned_timesteps_;
+    m_input_Tds = mpc_state.tds;    
+  }
+
   N_Steps = Step;
   N_Steps_Desired = Steps_Desired;
 
@@ -1093,11 +1111,60 @@ void ISMPC_Solver::Integrate()
   }
 }
 
-bool ISMPC_Solver::GetWalkingParameters(double Tds, bool stop)
+bool ISMPC_Solver::GetWalkingParameters(bool stop)
 {
   std::chrono::high_resolution_clock::time_point t_clock = std::chrono::high_resolution_clock::now();
 
-  m_Tds = Tds;
+  if(m_timestamp[0] - m_tk > 0.1 && m_tk > 0.1 && m_timestamp[0] > 0.7)
+  {
+    feasibility_solver feasibilitySolver;
+    
+    feasibilitySolver.configure(m_eta,
+                                m_delta_control,
+                                Eigen::Vector2d{0.1,0.25},
+                                Eigen::Vector2d{0.55,1},
+                                Eigen::Vector2d{0.8,2},
+                                Eigen::Vector2d{m_dx_f,m_dy_f},
+                                Eigen::Vector2d{m_dx * 0.5 , m_dy},
+                                m_feet_distance,4);
+    std::vector<sva::PTransformd> & stepsRef = corr_steps_.size() != 0 ? corr_steps_ : input_steps_;
+
+    bool feas_res = feasibilitySolver.solve(m_tk,m_t_lift,DoubleSupport,P_u_k.segment(0,2),P_z_k.segment(0,2),
+                                            m_support_foot,
+                                            X_0_support_foot,
+                                            X_0_swing_foot_initial,
+                                            m_input_Tds,input_steps_,
+                                            m_timestamp);
+    
+    std::vector<double> optimalTs = feasibilitySolver.get_optimal_steps_timings() ;
+    std::vector<double> optimalTds = feasibilitySolver.get_optimal_steps_ds_duration() ;
+    std::vector<sva::PTransformd> optimalPf = feasibilitySolver.get_optimal_footsteps();
+    Eigen::VectorXd timings = Eigen::Map<Eigen::VectorXd, Eigen::Unaligned>(optimalTs.data(), optimalTs.size());
+    Eigen::VectorXd timings_ds = Eigen::Map<Eigen::VectorXd, Eigen::Unaligned>(optimalTds.data(), optimalTds.size());
+
+    // mc_rtc::log::info("optimal t {}",timings);
+    // mc_rtc::log::info("optimal tds {}",timings_ds);
+    // if(optimalPf.size() != 0)
+    // {
+    //   mc_rtc::log::info("ref p {}",input_steps_[0].translation());
+    //   mc_rtc::log::info("optimal p {}",optimalPf[0].translation());
+    // }
+    if(feas_res)
+    {
+      m_timestamp = optimalTs;
+      if(DoubleSupport){ m_Tds = optimalTds[0];}
+      input_steps_ = optimalPf;
+      m_feasibility_region = feasibilitySolver.get_feasibility_region();
+    }
+    else
+    {
+      m_timestamp = optimalTs;
+      if(DoubleSupport){ m_Tds = optimalTds[0];}
+      mc_rtc::log::warning("Step feasibility QP fail");
+    }
+    
+  }
+
   QPsuccess = false;
   InStabilityRange = false;
   m_stop = stop;
