@@ -53,6 +53,8 @@ struct ControllerConfiguration
   Eigen::Vector2d MPC_ZMP_cstr_square_offset = Eigen::Vector2d::Zero();
   Eigen::Vector2d MPC_ZMP_static_cstr_square_offset = Eigen::Vector2d::Zero();
   Eigen::Vector2d MPC_ZMP_ref_offset_sg_supp = Eigen::Vector2d::Zero();
+  Eigen::Vector2d MPC_ZMP_ref_offset_end_step = {0.02,0};
+  Eigen::Vector2d MPC_ZMP_ref_offset_start_step = {0.02,0};
   Eigen::Vector2d MPC_Footsteps_Constraint_size{0.1, 0.1};
   Eigen::Vector2d MPC_Footsteps_kin_Constraint_size{0.1, 0.1};
 

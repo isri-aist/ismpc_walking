@@ -114,9 +114,11 @@ public:
     controller_config_.MPC_ZMP_cstr_square_static = config("zmp cstr square static");
     controller_config_.MPC_ZMP_Constraint_size = config("zmp cstr square");
     controller_config_.MPC_U_Constraint_size = config("u cstr square");
-    controller_config_.MPC_ZMP_static_cstr_square_offset = config("zmp cstr square offset");
+    controller_config_.MPC_ZMP_cstr_square_offset = config("zmp cstr square offset");
     controller_config_.MPC_ZMP_ref_offset_sg_supp = config("zmp ref offset");
     controller_config_.feet_ditance_ = config("feet distance");
+    controller_config_.MPC_ZMP_ref_offset_end_step = config("zmp ref end step");
+    controller_config_.MPC_ZMP_ref_offset_start_step = config("zmp ref start step");
     Configure(controller_config_);
 
   }
@@ -163,9 +165,9 @@ public:
   }
   double next_ts()
   {
-    if(mpc_state_.TimeStamps.size() != 0)
+    if(mpc_state_.optimal_timesteps_.size() != 0)
     {
-      return mpc_state_.TimeStamps[0];
+      return mpc_state_.get_Ts(0);
     }
     return 0.;
   }
@@ -268,11 +270,15 @@ protected:
 
   void CheckStepRecovery();
 
+  void JoystickInputs();
+
   void updateTasks();
 
   void addToGUI();
 
   void add_ISMPC_Config_GUI();
+
+  void ComputeFeetPerturbances(Eigen::Vector3d & offset, double & eta2);
 
   void AddToLog();
 
@@ -477,6 +483,7 @@ private:
 
   bool Use_w = false;
   Eigen::Vector3d w_ = Eigen::Vector3d::Zero();
+  double eta2_cstr;
   std::string Tail = "Anticipative"; // Velocity tail, either "Periodic" Or "Truncated"
 
   Eigen::Vector3d SupportFootPose; // Initial  Foot Support at the time of computation

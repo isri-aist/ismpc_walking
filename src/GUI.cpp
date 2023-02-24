@@ -13,12 +13,28 @@ inline void AddStabilizerConfigToGUI(mc_rtc::gui::StateBuilder & gui,
   category.push_back("Main");
   gui.addElement(
       category,
+      mc_rtc::gui::NumberInput(
+          "CoM weight", [&c_]() { return c_.comWeight; },
+          [&c_](double d) { c_.comWeight = d; }),
+      mc_rtc::gui::ArrayInput(
+          "CoM stiffness",{"x","y","z"}, 
+          [&c_]() -> Eigen::Vector3d { return c_.comStiffness; },
+          [&c_](const Eigen::Vector3d & d) { c_.comStiffness = d; }),
       mc_rtc::gui::ArrayInput(
           "Foot admittance", {"CoPx", "CoPy"},
           [&c_]() -> Eigen::Vector2d {
             return {c_.copAdmittance.x(), c_.copAdmittance.y()};
           },
           [&c_](const Eigen::Vector2d & a) { c_.copAdmittance = a; }),
+      mc_rtc::gui::ArrayInput(
+          "Foot CoP lambda", {"CoPx", "CoPy","Fz"},
+          [&c_]() -> Eigen::Vector3d {
+            return {c_.lambdaCoP.x(), c_.lambdaCoP.y(),c_.lambdaCoP.z()};
+          },
+          [&c_](const Eigen::Vector3d & a) { c_.lambdaCoP = a; }),
+      mc_rtc::gui::NumberInput(
+          "Admittance Delay", [&c_]() { return c_.delayCoP; },
+          [&c_](double d) { c_.delayCoP = d; }),
       // mc_rtc::gui::ArrayInput(
       //     "Foot force difference", {"Admittance", "Damping"},
       //     [&c_]() -> Eigen::Vector2d {
@@ -183,7 +199,7 @@ void Walking_controller::addToGUI()
       mc_rtc::gui::Label("Double support duration", [this]() { return this->mpc_state_.get_tds(); }),
       mc_rtc::gui::Label("Next Step Timing ",
                          [this]() {
-                           if(this->mpc_state_.TimeStamps.size() != 0)
+                           if(this->mpc_state_.optimal_steps_.size() != 0)
                            {
                              return this->mpc_state_.get_Ts(0);
                            }
@@ -220,9 +236,11 @@ void Walking_controller::addToGUI()
             compute_trajectory_once.notify_all();
           }),
       mc_rtc::gui::Checkbox(
-          "Distrubance", [this]() { return Use_w; }, [this]() { Use_w = !Use_w; }),
+          "Disturbance", [this]() { return Use_w; }, [this]() { Use_w = !Use_w; }),
       mc_rtc::gui::ArrayInput(
           "Input Disturbance", [this]() { return w_; }, [this](const Eigen::Vector3d & in) { w_ = in; }),
+      mc_rtc::gui::NumberInput(
+          "Input Omega", [this]() -> double { return sqrt(eta2_cstr); }, [this](double w) { eta2_cstr = std::pow(w,2); }),
       mc_rtc::gui::Checkbox(
           "Force Contact Safety", [this]() { return force_contact_safety_; },
           [this]() { force_contact_safety_ = !force_contact_safety_; }),
@@ -243,7 +261,7 @@ void Walking_controller::addToGUI()
       mc_rtc::gui::NumberInput(
           "Ts", [this]() -> double { return ts(); }, [this](const double t) { T_Steps = t; }),
       mc_rtc::gui::NumberInput(
-          "Steps", [this]() -> int { return N_Steps_Desired; }, [this](const double n) { N_Steps_Desired = n; }),
+          "Steps", [this]() -> int { return N_Steps_Desired; }, [this](const double n) { N_Steps_Desired = static_cast<int>(n); }),
 
       mc_rtc::gui::Transform("Steps desired pose",
                            [this]() {
@@ -383,7 +401,7 @@ void Walking_controller::addToGUI()
                     );
 
 
-};
+}
 
 void Walking_controller::add_ISMPC_Config_GUI()
 {
@@ -421,6 +439,14 @@ void Walking_controller::add_ISMPC_Config_GUI()
           mc_rtc::gui::FormArrayInput("zmp ref offset", false,
                                       [this]() -> std::array<double, 2> {
                                         return {controller_config_.MPC_ZMP_ref_offset_sg_supp.x(), controller_config_.MPC_ZMP_ref_offset_sg_supp.y()};
+                                      }),
+          mc_rtc::gui::FormArrayInput("zmp ref end step", false,
+                                      [this]() -> std::array<double, 2> {
+                                        return {controller_config_.MPC_ZMP_ref_offset_end_step.x(), controller_config_.MPC_ZMP_ref_offset_end_step.y()};
+                                      }),
+          mc_rtc::gui::FormArrayInput("zmp ref start step", false,
+                                      [this]() -> std::array<double, 2> {
+                                        return {controller_config_.MPC_ZMP_ref_offset_start_step.x(), controller_config_.MPC_ZMP_ref_offset_start_step.y()};
                                       }),
           mc_rtc::gui::FormNumberInput("feet distance", false, [this]() { return controller_config_.feet_ditance_; }))
   );

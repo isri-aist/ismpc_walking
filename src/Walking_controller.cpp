@@ -250,20 +250,21 @@ void Walking_controller::ComputeWalkingTrajectory()
   datastore().assign<std::vector<double>>("footsteps_planner::input_time_steps", mpc_thread_state.input_timesteps_);
   datastore().call("footstep_planner::compute_plan");
 
-  std::vector<sva::PTransformd> & planned_steps_ =
-      datastore().get<std::vector<sva::PTransformd>>("footsteps_planner::output_steps");
+  mpc_thread_state.planned_steps_ =
+        datastore().get<std::vector<sva::PTransformd>>("footsteps_planner::output_steps");
   // for (int k = 0 ; k < planned_steps_.size() ; k++)
   // {
   //   std::cout << "step " << k << ": " << planned_steps_[k].translation() << std::endl;
   // }
-  std::vector<double> & timesteps = datastore().get<std::vector<double>>("footsteps_planner::output_time_steps");
+  mpc_thread_state.planned_timesteps_ = datastore().get<std::vector<double>>("footsteps_planner::output_time_steps");
   // mc_rtc::log::info("tds by ratio {}",Tds_by_ratio);
-  double tds = controller_config_.Double_Step_Ratio * timesteps[0];
+  double tds = controller_config_.Double_Step_Ratio * mpc_thread_state.planned_timesteps_[0];
   // if(StepRecoveryState){tds = 0.3;}
   if(!Tds_by_ratio)
   {
     tds = mpc_thread_state.input_tds;
   }
+  mpc_thread_state.tds = tds;
   int Steps = N_Steps;
   int Steps_Desired = N_Steps_Desired;
 
@@ -280,22 +281,21 @@ void Walking_controller::ComputeWalkingTrajectory()
   //   mc_rtc::log::warning("[ISMPC] Approaching Control Horizon, Tail temporary switched to None");
   // }
 
-  MPCSolver.init_MPC(mpc_thread_state, planned_steps_, timesteps, Tail, Steps_Desired, Steps);
+  MPCSolver.init_MPC(mpc_thread_state, Tail, Steps_Desired, Steps);
   // MPCSolver.Puk(mpc_state_.Pu);
 
   if(Use_w)
   {
     // MPCSolver.Disturbance( w_.norm()*(
-    // (robot().forceSensor("LeftHandForceSensor").worldWrench(robot()).force()/robot().mass())/std::pow(eta(),2) ) );
     // mc_rtc::log::info("Disturbance {}",Eigen::Vector3d{0,15.,0}/robot().mass());
-    MPCSolver.Disturbance(w_);
-  }
-  else
-  {
-    MPCSolver.Disturbance(Eigen::Vector3d::Zero());
+    mc_filter::utils::clampInPlaceAndWarn(w_.x(),-0.03 , 0.03,"Perturbation (0)");
+    mc_filter::utils::clampInPlaceAndWarn(w_.y(),-0.03 , 0.03,"Perturbation (1)");
+    mc_filter::utils::clampInPlaceAndWarn(eta2_cstr,4, 17,"Omega Perturbation");
+    MPCSolver.Disturbance(w_,sqrt(eta2_cstr),0.1);
+    // MPCSolver.Disturbance(w_,sqrt(eta2_cstr));
   }
 
-  MPCSolver.GetWalkingParameters(tds, mpc_thread_state.stop);
+  MPCSolver.GetWalkingParameters(mpc_thread_state.stop);
 
   std::chrono::duration<double, std::milli> time_span = mc_rtc::clock::now() - t_clock;
   mpc_thread_process_time = time_span.count();
@@ -303,10 +303,9 @@ void Walking_controller::ComputeWalkingTrajectory()
   if(MPCSolver.QPsucceeded())
   {
     std::lock_guard<std::mutex> lk_copy_state(mutex_mpc_);
-    mpc_thread_state.tds = tds;
-    mpc_thread_state.TimeStamps = timesteps;
-    mpc_thread_state.planned_steps_ = planned_steps_;
-    mpc_thread_state.opti_steps = MPCSolver.optimal_steps();
+    mpc_thread_state.optimal_tds = MPCSolver.Tds();
+    mpc_thread_state.optimal_timesteps_ = MPCSolver.timesteps();
+    mpc_thread_state.optimal_steps_ = MPCSolver.optimal_steps();
     mpc_thread_state.QPSuccess = true;
     mpc_thread_state.X_MPC = MPCSolver.X_MPC();
     mpc_thread_state.Y_MPC = MPCSolver.Y_MPC();
@@ -323,6 +322,9 @@ void Walking_controller::ComputeWalkingTrajectory()
     mpc_thread_state.FeasibilityPolygon = MPCSolver.feasibility_region();
     mpc_thread_state.alpha = MPCSolver.support_state();
     mpc_thread_state.ref_zmp_ = MPCSolver.zmp_ref().segment(0,2);
+    mpc_thread_state.admittance_ref_ = MPCSolver.admittance_references();
+    mpc_thread_state.QP_zmp = MPCSolver.QP_zmp();
+    mpc_thread_state.eta = MPCSolver.eta();
     kfoot = 0;
     NewThreadState = true;
     
@@ -394,7 +396,7 @@ void Walking_controller::CheckStepRecovery()
   {
     Eigen::MatrixX2d normals = MPCSolver.standing_feasibility_polygone().normals();
     Eigen::VectorXd offset = MPCSolver.standing_feasibility_polygone().offsets();
-    Eigen::Vector2d dcm = (realRobot().com() + (realRobot().comVelocity()/eta())).segment(0,2) + stabTask->biasDCM();
+    Eigen::Vector2d dcm = (realRobot().com() + (realRobot().comVelocity()/mpc_state_.eta)).segment(0,2) + stabTask->biasDCM();
     Eigen::VectorXd stability_check = normals * dcm - offset;
     bool ok = true;
     for (int i = 0 ; i < stability_check.rows() ; i++ )
@@ -442,6 +444,7 @@ void Walking_controller::CheckStepRecovery()
 
 bool Walking_controller::run()
 {
+  JoystickInputs();
   if(!wait_for_mpc_thread())
   {
     return mc_control::fsm::Controller::run();
@@ -477,7 +480,7 @@ bool Walking_controller::run()
   if(!(Stop && Swing_Foot_Contact))
   {
 
-    if(t - t_k >= controller_config_.delta || false )
+    if(t - t_k >= controller_config_.delta || DoubleSupport_state )
     {
       t_k += t - t_k; 
       compute_trajectory_once.notify_all();
@@ -504,12 +507,12 @@ bool Walking_controller::run()
     
       compute_trajectory_once.notify_all();
     }
-    compute_trajectory_once.notify_all();
+    // compute_trajectory_once.notify_all();
 
-    t_k = 0.;
+    t_k = - controller_config_.delta;
     kfoot = 0;
     N_Steps = 0;
-    countStart = count - 1;
+    countStart = count + 1;
 
     Robot_Walking = false;
   }
@@ -588,7 +591,7 @@ void Walking_controller::MoveCoM()
   // mc_rtc::log::info("//Index : {}, z_y {}",mpc_state_.Index,zmpTarget.y());
 
 
-  Eigen::Vector3d Ac_com = std::pow(eta(), 2) * (Pcom - zmpTarget);
+  Eigen::Vector3d Ac_com = std::pow(mpc_state_.eta, 2) * (Pcom - zmpTarget);
 
   Ac_com.z() = 0;
   admittanceTarget = mpc_state_.initial_zmp_;
@@ -602,14 +605,30 @@ void Walking_controller::MoveCoM()
 
   admittanceTarget.z() = 0;
 
-  Eigen::Vector3d Ac_wrench = std::pow(eta(), 2) * (Pcom - admittanceTarget);
+  if(DoubleSupport_state && mpc_state_.get_tds() - t_k > 0 && mpc_state_.zmp_references().size() != 0)
+  {
+    int n_indx = static_cast<int>((mpc_state_.get_tds() - t_k) / controller_config_.delta);
+    n_indx = std::max(std::min(n_indx,20),1);
+    std::vector<Eigen::Vector2d> zmp_ref = mpc_state_.zmp_references();
+    auto start_zmp = zmp_ref.begin();
+    auto end_zmp = zmp_ref.begin()  + n_indx + 1;
+ 
+    std::vector<Eigen::Vector2d> result_zmp(n_indx + 1);
+ 
+    // Copy vector using copy function()
+    std::copy(start_zmp, end_zmp, result_zmp.begin());
+    stabTask->horizonReference(result_zmp, controller_config_.delta);
+  }
+
+
+  Eigen::Vector3d Ac_wrench = std::pow(mpc_state_.eta , 2) * (Pcom - admittanceTarget);
   Ac_wrench.z() = 0;
 
   target_force_ = robot().mass() * (Ac_wrench + mc_rtc::constants::gravity);
   target_wrench_ = sva::ForceVecd{realRobot().com().cross(target_force_),target_force_};
 
   Ac_wrench.z() = 0;
-  dcmTarget = Pcom + Vc / eta();
+  dcmTarget = Pcom + Vc / mpc_state_.eta;
 
   stabTask->target(Pcom, Vc, Ac_wrench, admittanceTarget);
   if(!active)
@@ -643,6 +662,9 @@ void Walking_controller::UpdateInitialVectors()
 {
 
   mpc_state_.t_k = t_k;
+  mpc_state_.t_lift = t_lift;
+  mpc_state_.doubleSupport = DoubleSupport_state;
+  mpc_state_.t = static_cast<double>(count) * controller_timestep;
   // mpc_state_.Pzk = Eigen::Vector3d{0,0,1}.cross( robot().com().cross(robot().mass()*mc_rtc::constants::gravity) ) /
   //                       ( (robot().mass()*(mc_rtc::constants::gravity - robot().comAcceleration())).transpose() *
   //                       Eigen::Vector3d{0,0,1} );
@@ -654,7 +676,7 @@ void Walking_controller::UpdateInitialVectors()
     mpc_state_.Pck = mpc_state_.Get_CoM_planarTarget(mpc_state_.Index);
     mpc_state_.Vck = mpc_state_.Get_CoMVel_planarTarget(mpc_state_.Index);
     mpc_state_.Pzk = mpc_state_.Get_ZMP_planarTarget(mpc_state_.Index);
-    mpc_state_.Pu = mpc_state_.Pck + mpc_state_.Vck / eta();
+    mpc_state_.Pu = mpc_state_.Pck + mpc_state_.Vck / mpc_state_.eta;
     // std::cout << "using MPC" << std::endl;
   }
   else
@@ -662,14 +684,11 @@ void Walking_controller::UpdateInitialVectors()
     mpc_state_.Pck = robot().com();
     mpc_state_.Vck = robot().comVelocity();
     // mpc_state_.Pzk = mpc_state_.Get_ZMP_planarTarget(indx);
-    mpc_state_.Pu = mpc_state_.Pck + mpc_state_.Vck / eta();
+    mpc_state_.Pu = mpc_state_.Pck + mpc_state_.Vck / mpc_state_.eta;
   }
   if(UseRealRobot)
   {
     
-    // double K = 1;
-    // Pck = Pck * (1 - K) + K * computeInSupportFootFlat(realRobot().com());
-    // Vck = Vck * (1 - K) + K * computeVelocityInSupportFoot(realRobot().comVelocity());
     sva::PTransformd zmpFrame = robot().surfacePose(supportFootName);
     sva::ForceVecd measuredNetWrench_ = robot().netWrench({"LeftFootForceSensor"});
     if(supportFootName == "RightFootCenter")
@@ -692,7 +711,7 @@ void Walking_controller::UpdateInitialVectors()
     mpc_state_.ComBias.segment(0,2) = stabTask->biasDCM();
     mpc_state_.Pck = realRobot().com() + mpc_state_.ComBias;
 
-    mpc_state_.Pu = mpc_state_.Pck + mpc_state_.Vck/eta();
+    mpc_state_.Pu = mpc_state_.Pck + mpc_state_.Vck/mpc_state_.eta;
     
 
   }
@@ -707,10 +726,8 @@ void Walking_controller::UpdateInitialVectors()
     mpc_state_.Pzk = mpc_state_.Pck;
   }
 
-  // mpc_state_.w = - (stabTask->measuredDCM() - mpc_state_.Pu) + - (stabTask->measuredZMP() - mpc_state_.Pzk);
-  filter_gamma_.update(stabTask->comOffsetMeasured());
-  w_ = filter_gamma_.eval();
-  // mpc_state_.w = filter_gamma_.eval();
+  ComputeFeetPerturbances(w_,eta2_cstr);
+  // eta2_cstr = (mc_rtc::constants::GRAVITY/controller_config_.Stab_config.comHeight);
 
   mpc_state_.Pck.z() = controller_config_.Stab_config.comHeight;
   mpc_state_.Vck.z() = 0;
@@ -730,9 +747,9 @@ void Walking_controller::reset(const mc_control::ControllerResetData & reset_dat
   mc_control::fsm::Controller::reset(reset_data);
 
   stabTask->reset();
-  mc_rbdyn::lipm_stabilizer::StabilizerConfiguration config = controller_config_.Stab_config;
-  config.comWeight = 0;
-  stabTask->configure(config);
+  mc_rbdyn::lipm_stabilizer::StabilizerConfiguration config_stab = controller_config_.Stab_config;
+  config_stab.comWeight = 0;
+  stabTask->configure(config_stab);
 
   // if(config()("stabilizer")("robot")(robot().name())("stabilizer").has("external_wrench"))
   // {

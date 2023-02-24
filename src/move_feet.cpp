@@ -3,10 +3,6 @@
 bool Walking_controller::MoveFeet(double t)
 {
 
-  if(mpc_state_.TimeStamps.size() == 0)
-  {
-    return 0;
-  }
 
   PrevStepTiming = 0;
   double NextTimeStep(0);
@@ -20,7 +16,7 @@ bool Walking_controller::MoveFeet(double t)
   // }
 
   sva::PTransformd X_0_SwingFootTarget;
-  if(kfoot < mpc_state_.opti_steps.size())
+  if(kfoot < mpc_state_.optimal_steps_.size())
   {
     X_0_SwingFootTarget = mpc_state_.Get_CorrectedFootstep(kfoot);
   }
@@ -69,6 +65,13 @@ bool Walking_controller::MoveFeet(double t)
 
       removeContact({robot().name(), "ground", swingFootName, "AllGround", 0.7, footcontact_dof});
 
+      Eigen::Vector3d ext_wrench_gain_v = config()("stabilizer")("robot")(robot().name())("stabilizer")("external_wrench")("ext_wrench_gain");
+      sva::MotionVecd ext_wrench_gain{ext_wrench_gain_v, ext_wrench_gain_v};
+      // if(Use_w)
+      // {
+      //   stabTask->setExternalWrenches({swingFootName}, {sva::ForceVecd::Zero()}, {ext_wrench_gain});
+      // }
+      
       t_lift = t;
 
       DoubleSupport_state = false;
@@ -154,6 +157,7 @@ bool Walking_controller::MoveFeet(double t)
             {{mc_tasks::lipm_stabilizer::ContactState::Left, sva::PTransformd(sva::RotZ(swing_yaw), swing_pose)},
              {mc_tasks::lipm_stabilizer::ContactState::Right, sva::PTransformd(sva::RotZ(supp_yaw), supp_pose)}});
       }
+      
 
       DoubleSupport_state = true;
       mc_rtc::log::info("height : {} ", swing_foot_height);
@@ -190,8 +194,7 @@ bool Walking_controller::MoveFeet(double t)
         Stop = true;
       }
       t_k = -controller_config_.delta;
-      t_k = 0;
-      countStart = count - 1;
+      countStart = count + 1;
     }
   }
 
@@ -209,6 +212,8 @@ bool Walking_controller::MoveFeet(double t)
 
     vertical_force_measure_.clear();
 
+    // stabTask->setExternalWrenches({},{},{});
+    filter_gamma_.reset(Eigen::Vector3d::Zero());
     solver().removeTask(leftSwingFootTask);
     solver().removeTask(rightSwingFootTask);
 

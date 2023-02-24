@@ -6,6 +6,8 @@ set(controller_SRC
   ISMPC_Solver.cpp
   GUI.cpp
   logs.cpp
+  joystick.cpp
+  
   
 )
 
@@ -22,6 +24,7 @@ add_library(${CONTROLLER_NAME} SHARED ${controller_SRC} ${controller_HDR})
 
 target_include_directories(${CONTROLLER_NAME} PUBLIC $<INSTALL_INTERFACE:include> $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>)
 target_link_libraries(${CONTROLLER_NAME} PUBLIC mc_rtc::mc_control_fsm mc_rtc::mc_rtc_ros)
+target_link_libraries(${CONTROLLER_NAME} PUBLIC pendulum_feasibility_solver)
 
 install(TARGETS ${CONTROLLER_NAME} DESTINATION ${MC_RTC_LIBDIR})
 
