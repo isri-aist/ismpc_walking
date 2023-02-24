@@ -1115,7 +1115,7 @@ bool ISMPC_Solver::GetWalkingParameters(bool stop)
 {
   std::chrono::high_resolution_clock::time_point t_clock = std::chrono::high_resolution_clock::now();
 
-  if(m_timestamp[0] - m_tk > 0.1 && m_tk > 0.1 && m_timestamp[0] > 0.7)
+  if(m_timestamp[0] - m_tk > 0.1 && m_tk > 0.1 && m_timestamp[0] > 0.7 && AutoFootstepPlacement)
   {
     feasibility_solver feasibilitySolver;
     
