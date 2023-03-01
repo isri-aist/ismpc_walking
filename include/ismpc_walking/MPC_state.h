@@ -100,7 +100,11 @@ struct MPC_state
   }
   double get_Ts(int indx)
   {
-    return optimal_timesteps_[indx];
+    if (indx < optimal_timesteps_.size())
+    {
+      return optimal_timesteps_[indx];
+    }
+    return 1;
   }
   double get_tds()
   {
