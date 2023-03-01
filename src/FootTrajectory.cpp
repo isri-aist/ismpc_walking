@@ -1,6 +1,6 @@
 #include "../include/ismpc_walking/FootTrajectory.h"
 
-FootTrajectory::FootTrajectory(){};
+FootTrajectory::FootTrajectory(){}
 
 // std::vector<Eigen::Vector3d> FootTrajectory::TrajGUI(){
 //   int N = 100;

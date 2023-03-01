@@ -399,6 +399,16 @@ void Walking_controller::addToGUI()
                     
                     
                     );
+      gui()->addElement({"Walking","Debug"},
+                 mc_rtc::gui::Checkbox("Active",[this]()-> bool {return DebugMode;}, 
+                                                [this](){DebugMode = !DebugMode;}),
+                 mc_rtc::gui::Point3D("CoM",[this]() -> const Eigen::Vector3d & {return debugCoM;},
+                                            [this](const Eigen::Vector3d & p) {debugCoM = p;}),
+                 mc_rtc::gui::Point3D("ZMP",[this]() -> const Eigen::Vector3d & {return debugZMP;},
+                                            [this](const Eigen::Vector3d & p) {debugZMP = p;}),
+                 mc_rtc::gui::NumberInput("t_k",[this]() -> const double {return debugTk;},
+                                            [this](const double p) {debugTk = p;})
+      );  
 
 
 }

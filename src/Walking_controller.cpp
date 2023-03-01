@@ -388,6 +388,7 @@ void Walking_controller::UpdatePlanner_input()
   Pf_m1.z() = SupportFootPose.z();
   mpc_state_.input_P_fm1 = Pf_m1;
   mpc_state_.stop = !Robot_Walking;
+  if(DebugMode){mpc_state_.stop = false;}
 }
 
 void Walking_controller::CheckStepRecovery()
@@ -413,7 +414,7 @@ void Walking_controller::CheckStepRecovery()
       mc_rtc::log::warning("Can't Stop, stepping");
       // mc_rtc::log::info("Pu {} ; Pu max {}",stabTask->measuredDCM(),MPCSolver.Puk_max());
       // mc_rtc::log::info("Pu {} ; Pu min {}",stabTask->measuredDCM(),MPCSolver.Puk_min());      
-      N_Steps_Desired = 1;   
+      N_Steps_Desired = 2;   
    
       sva::PTransformd ff = robot().posW();
       if( (ff.rotation() * stabTask->measuredCoMd()).x() < 0 && !StepRecoveryState)
@@ -492,8 +493,10 @@ bool Walking_controller::run()
   }
   else
   {
-
-    MoveFeet(0);
+    if(active)
+    {
+      MoveFeet(0);
+    }
     updateTasks();
 
     t_stop = (count - count_stop) * controller_timestep;
@@ -583,7 +586,7 @@ void Walking_controller::MoveCoM()
   }
 
   Eigen::Vector3d Pcom(mpc_state_.Get_CoM_planarTarget(mpc_state_.Index));
-  Pcom.z() = controller_config_.Stab_config.comHeight + 0 * X_0_support.translation().z();
+  Pcom.z() = controller_config_.Stab_config.comHeight + 0*X_0_support.translation().z();
   Eigen::Vector3d Vc(mpc_state_.Get_CoMVel_planarTarget(mpc_state_.Index));
   Vc.z() = 0;
   zmpTarget = mpc_state_.Get_ZMP_planarTarget(mpc_state_.Index);
@@ -631,7 +634,7 @@ void Walking_controller::MoveCoM()
   dcmTarget = Pcom + Vc / mpc_state_.eta;
 
   stabTask->target(Pcom, Vc, Ac_wrench, admittanceTarget);
-  if(!active)
+  if(!active || DebugMode)
   {
     Pcom.segment(0,2) = sva::interpolate(robot().surfacePose(leftFootName_),robot().surfacePose(rightFootName_),0.5).translation().segment(0,2);
     Vc.setZero();
@@ -668,6 +671,18 @@ void Walking_controller::UpdateInitialVectors()
   // mpc_state_.Pzk = Eigen::Vector3d{0,0,1}.cross( robot().com().cross(robot().mass()*mc_rtc::constants::gravity) ) /
   //                       ( (robot().mass()*(mc_rtc::constants::gravity - robot().comAcceleration())).transpose() *
   //                       Eigen::Vector3d{0,0,1} );
+
+  if(DebugMode)
+  {
+    debugCoM.z() = controller_config_.Stab_config.comHeight;
+    debugZMP.z() = 0;
+    mpc_state_.Vck = Eigen::Vector3d::Zero();
+    mpc_state_.Pck = debugCoM;
+    mpc_state_.Pzk = debugZMP;
+    mpc_state_.Pu = mpc_state_.Pck + mpc_state_.Vck / mpc_state_.eta;
+    mpc_state_.t_k = debugTk;
+    return;
+  }
 
 
 

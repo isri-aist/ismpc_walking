@@ -648,7 +648,7 @@ private:
 
   void create_cstr_matrices(Eigen::MatrixXd & A_out, Eigen::VectorXd & b_out, std::vector<Eigen::MatrixX2d> & A_in, const std::vector<Eigen::VectorXd> & b_in);
   
-  Eigen::MatrixXd create_zmp_matrix();
+  Eigen::MatrixXd create_zmp_matrix(bool addDelay  );
   Eigen::MatrixXd create_u_matrix();
 
   void Compute_Integration_Matrix();

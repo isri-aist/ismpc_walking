@@ -184,7 +184,7 @@ void ISMPC_Solver::create_cstr_matrices(Eigen::MatrixXd & A_out, Eigen::VectorXd
   }
 }
 
-Eigen::MatrixXd ISMPC_Solver::create_zmp_matrix()
+Eigen::MatrixXd ISMPC_Solver::create_zmp_matrix(bool addDelay )
 {
   Eigen::MatrixXd A_out = Eigen::MatrixXd::Zero(2 * m_C , 2 * m_C );
   for(int i = 0; i < m_C; i++)
@@ -192,7 +192,7 @@ Eigen::MatrixXd ISMPC_Solver::create_zmp_matrix()
     for(int k = 0; k <= i; k++)
     {
       double t_m_tk = (1 + i - k) * m_delta;
-      if(k == i){t_m_tk -= ( i==0 ? m_delay_elapsed : m_delay);}
+      // if(k == i && addDelay){t_m_tk -= ( i==0 ? m_delay_elapsed : m_delay);}
       A_out.block(2*i,2*k,2,2) = Eigen::Matrix2d::Identity() * (1-exp( - m_lambda * t_m_tk));
     }
   }
@@ -263,8 +263,10 @@ void ISMPC_Solver::Static_ZMP_Constraints()
   All_poly.clear();
 
   Eigen::MatrixXd Delta = Eigen::MatrixXd::Zero(N_variable, N_variable); // Matrix to derive the ZMP position from u
+  Eigen::MatrixXd DeltaNoDelay = Eigen::MatrixXd::Zero(N_variable, N_variable); // Matrix to derive the ZMP position from u
   Eigen::MatrixXd u_Delta = Delta;
-  Delta.block(0,0,2*m_C,2*m_C) = create_zmp_matrix(); 
+  Delta.block(0,0,2*m_C,2*m_C) = create_zmp_matrix(true); 
+  DeltaNoDelay.block(0,0,2*m_C,2*m_C) = create_zmp_matrix(false); 
   u_Delta.block(0,0,2*m_C,2*m_C) = create_u_matrix(); 
 
   P_u_k_max = m_eta * m_delta * R_0_support * P_z_k;
@@ -330,11 +332,11 @@ void ISMPC_Solver::Static_ZMP_Constraints()
 
 
 
-  Aineq_zmp.resize(ZMP_Cstr.rows(),N_variable);
+  Aineq_zmp.resize(2 * ZMP_Cstr.rows(),N_variable);
   bineq_zmp.resize(Aineq_zmp.rows());
 
-  Aineq_zmp << ZMP_Cstr * Delta;
-  bineq_zmp << b_zmp;
+  Aineq_zmp << ZMP_Cstr * Delta , ZMP_Cstr * DeltaNoDelay;
+  bineq_zmp << b_zmp , b_zmp;
   A_zmp = Delta;
   b_zmp_traj = Eigen::Map<Eigen::VectorXd, Eigen::Unaligned>(ZMP_ref_traj.data(), ZMP_ref_traj.size());
   M_zmp_traj = Eigen::MatrixXd::Zero(b_zmp_traj.rows(), N_variable);
@@ -453,8 +455,7 @@ void ISMPC_Solver::ZMP_Constraints()
   All_poly.clear();
 
   Eigen::MatrixXd Delta = Eigen::MatrixXd::Zero(N_variable, N_variable);
-  
-  Delta.block(0,0,2 * m_C , 2 * m_C) = create_zmp_matrix();
+  Delta.block(0,0,2 * m_C , 2 * m_C) = create_zmp_matrix(true);
   Eigen::MatrixXd Delta_zmp_ref = Delta;
 
   P_u_k_max = m_eta * m_delta * R_0_support * P_z_k;
@@ -755,12 +756,14 @@ void ISMPC_Solver::ZMP_Constraints()
 
   Eigen::MatrixXd u_Delta = Delta;
   u_Delta.block(0,0,2*m_C,2*m_C) = create_u_matrix();
+  Eigen::MatrixXd DeltaNoDelay = Delta;
+  DeltaNoDelay.block(0,0,2*m_C,2*m_C) = create_zmp_matrix(false);
 
-  Aineq_zmp.resize( ZMP_Cstr.rows() + Aineq_zmp_transi.rows(),N_variable);
+  Aineq_zmp.resize(  ZMP_Cstr.rows(),N_variable);
   bineq_zmp.resize(Aineq_zmp.rows());
 
-  Aineq_zmp << ZMP_Cstr * Delta, 0*Aineq_zmp_transi;
-  bineq_zmp << b_zmp, 0*bineq_zmp_transi;
+  Aineq_zmp << ZMP_Cstr * Delta;
+  bineq_zmp << b_zmp;
 
   b_zmp_traj = Eigen::Map<Eigen::VectorXd, Eigen::Unaligned>(ZMP_ref_traj.data(), ZMP_ref_traj.size());
   M_zmp_traj = Eigen::MatrixXd::Zero(b_zmp_traj.rows(), N_variable);
@@ -975,6 +978,18 @@ void ISMPC_Solver::Stability_Constraints()
                          + (P_z_k - w_k) + l_d_w_p_e * U_k
                          - ( (P_z_k_delayed - w_k) + l_d_w_p_e * U_k )* exp(-m_eta * m_delay_elapsed))
                          - w_k * exp(-m_eta * perturbation_duration)).segment(0,2) ;
+    
+
+    Eigen::Vector2d b_stan_alt = ( 
+               P_u_k 
+               - (1 - exp(-m_eta * m_delay_elapsed)) * (U_k * l_d_w_p_e + (P_z_k - w_k))
+               - (P_z_k_delayed - w_k )* exp(-m_eta * m_delay_elapsed)
+               - w_k * exp(-m_eta * perturbation_duration) 
+               ).segment(0,2);
+    
+    // mc_rtc::log::info(b_stab - b_stan_alt);
+    b_stab = b_stan_alt;
+
 
   // }
 
@@ -996,7 +1011,7 @@ void ISMPC_Solver::Compute_Stability_Range()
   Eigen::VectorXd PzM = Eigen::VectorXd::Zero(2*m_C);
   Eigen::VectorXd Pzm = Eigen::VectorXd::Zero(2*m_C);
   Eigen::VectorXd Pz0 = Eigen::VectorXd::Zero(2*m_C);
-  Delta = create_zmp_matrix();
+  Delta = create_zmp_matrix(true);
 
   //mc_rtc::log::info("ZMP boundrie size {}\nControl size {}",ZMP_max_ref_traj.size(),m_C);
   for(size_t k = 1; k < ZMP_max_ref_traj.size(); k++)
@@ -1082,7 +1097,7 @@ void ISMPC_Solver::Integrate()
     m_admittance_targets.push_back(Eigen::Vector3d{u_x,u_y,0} + Pzi - P_z_k_delayed + P_z_k);
 
 
-    for (int k = 0; k < N - 0*(i == 0 ? N_delay : 0) ; k ++)
+    for (int k = 0; k < N  ; k ++)
     {    
 
       Compute_Integration_Vector(k+1);
@@ -1115,18 +1130,17 @@ bool ISMPC_Solver::GetWalkingParameters(bool stop)
 {
   std::chrono::high_resolution_clock::time_point t_clock = std::chrono::high_resolution_clock::now();
 
-  if(m_timestamp[0] - m_tk > 0.1 && m_tk > 0.1 && m_timestamp[0] > 0.7 && AutoFootstepPlacement)
-  {
+ 
     feasibility_solver feasibilitySolver;
     
     feasibilitySolver.configure(m_eta,
                                 m_delta_control,
-                                Eigen::Vector2d{0.1,0.25},
-                                Eigen::Vector2d{0.55,1},
-                                Eigen::Vector2d{0.8,2},
+                                Eigen::Vector2d{0.15,0.4},
+                                Eigen::Vector2d{0.45,1},
+                                Eigen::Vector2d{0.7,2},
                                 Eigen::Vector2d{m_dx_f,m_dy_f},
-                                Eigen::Vector2d{m_dx * 0.5 , m_dy},
-                                m_feet_distance,4);
+                                Eigen::Vector2d{m_dx * 0.75  , m_dy},
+                                m_feet_distance,8);
     std::vector<sva::PTransformd> & stepsRef = corr_steps_.size() != 0 ? corr_steps_ : input_steps_;
 
     bool feas_res = feasibilitySolver.solve(m_tk,m_t_lift,DoubleSupport,P_u_k.segment(0,2),P_z_k.segment(0,2),
@@ -1160,10 +1174,10 @@ bool ISMPC_Solver::GetWalkingParameters(bool stop)
     {
       m_timestamp = optimalTs;
       if(DoubleSupport){ m_Tds = optimalTds[0];}
-      mc_rtc::log::warning("Step feasibility QP fail");
+      mc_rtc::log::warning("[ISMPC {}] Step feasibility QP fail",m_t_global);
     }
     
-  }
+  
 
   QPsuccess = false;
   InStabilityRange = false;
