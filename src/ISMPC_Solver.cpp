@@ -1375,43 +1375,7 @@ bool ISMPC_Solver::GetWalkingParameters(bool stop)
 
     if(m_Tail == "None" || Use_Stability_Task)
     {
-      // double l_d_w_p_e = m_lambda / (m_lambda + m_eta);
-      // Eigen::Vector3d P_u_k_2 = (P_z_k_delayed - w_k) * exp(-m_eta * m_delay) + 
-      //                           (P_z_k - w_k) + l_d_w_p_e * U_k  - 
-      //                           ( ( (P_z_k_delayed - w_k) + l_d_w_p_e * U_k ) ) * exp(-m_eta * m_delay) ;
-      // // if(m_Tail_save == "Periodic")
-      // //   for(int k = 0; k < m_C; k++)
-      // //   {
-      // //     P_u_k_2 += ((1 - exp(-m_eta * m_delta)) / (m_eta * (1 - exp(-m_eta * m_Tc)))) * exp(-k * m_eta * m_delta) * exp(-m_eta * m_delay)
-      // //                * Eigen::Vector3d{m_ZMP_u[k], m_ZMP_u[k + m_C], 0};
-      // //   }
-      // // else if(m_Tail_save == "Truncated")
-      // // {
-      // //   for(int k = 0; k < m_C; k++)
-      // //   {
-      // //     P_u_k_2 += (m_lambda/(m_lambda + m_eta)) * exp(-k * m_eta * m_delta) * exp(-m_eta * m_delay)
-      // //                * Eigen::Vector3d{m_ZMP_u[k], m_ZMP_u[k + m_C], 0};
-      // //   }
-      // // }
-      // // else
-      // // {
-
-      //   for(int k = 0; k < m_C; k++)
-      //   {
-      //     if(k == 0)
-      //     {
-      //       P_u_k_2 += (m_lambda/(m_lambda + m_eta)) * exp(- m_eta * m_delay)
-      //                             * Eigen::Vector3d{m_ZMP_u[k], m_ZMP_u[k + m_C], 0};
-      //     }
-      //     else
-      //     {
-      //       P_u_k_2 += (m_lambda/(m_lambda + m_eta)) * exp(-k * m_eta * m_delta)
-      //                             * Eigen::Vector3d{m_ZMP_u[k], m_ZMP_u[k + m_C], 0};
-      //     }
-      //   }
-
-      //   //P_u_k_2 += ((1 - exp(-m_eta * m_delta)) / (m_eta)) * Eigen::Vector3d{Ant_Tail_X, Ant_Tail_Y, 0};
-      // // }
+ 
 
       Eigen::Vector2d P_u_k_2 = P_u_k.segment(0,2) + stab_error;
       V_c_k.segment(0,2) = m_eta * (P_u_k_2 - P_c_k.segment(0,2));
