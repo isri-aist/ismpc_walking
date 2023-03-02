@@ -101,15 +101,16 @@ void ISMPC_Solver::init_MPC(const MPC_state & mpc_state,
   
   m_tk = mpc_state.t_k;
   m_t_global = mpc_state.t;
-  if( m_t_global - m_t_delay > m_delta || m_tk == 0)
+  m_delay_elapsed = std::min( m_delay - (m_t_global - m_t_delay) , m_delay);
+  if( m_t_global - m_t_delay > m_delta || m_tk == 0 || m_delay_elapsed < 0)
   {
     U_k = mpc_state.Uk;
     m_t_delay = m_t_global;
+    m_delay_elapsed = m_delay;
   }
-  m_delay_elapsed = std::min( std::max(m_delay - (m_t_global - m_t_delay) , 0. ) , m_delay);
-  // mc_rtc::log::info("delay{}",m_delay_elapsed);
 
-  P_z_k_delayed = P_z_k + (1 - exp(-m_lambda * m_delay_elapsed)) * U_k;
+
+  P_z_k_delayed = P_z_k + (1 - exp(-m_lambda * m_delay_elapsed)) * (U_k - P_z_k);
   m_Tail = Tail;
   
   m_support_foot = mpc_state.input_Support_FootName;
@@ -935,6 +936,7 @@ void ISMPC_Solver::Stability_Constraints()
   A_stab.resize(2, N_variable);
   A_stab.setZero();
   b_stab = Eigen::VectorXd::Zero(2);
+  Eigen::Vector3d u_delay = U_k - P_z_k;
   for(int j = 0; j < m_C; j++)
   {
     A_stab.block(0,2*j,2,2) = Eigen::Matrix2d::Identity() * (m_lambda/(m_lambda + m_eta)) * exp(-j * m_eta * m_delta);
@@ -975,14 +977,14 @@ void ISMPC_Solver::Stability_Constraints()
     double l_d_w_p_e = (m_lambda/(m_lambda + m_eta)); 
     P_u_k = P_c_k + (V_c_k / m_eta);
     b_stab = ( P_u_k - ( (P_z_k_delayed - w_k) * exp(-m_eta * m_delay_elapsed)
-                         + (P_z_k - w_k) + l_d_w_p_e * U_k
-                         - ( (P_z_k_delayed - w_k) + l_d_w_p_e * U_k )* exp(-m_eta * m_delay_elapsed))
+                         + (P_z_k - w_k) + l_d_w_p_e * u_delay
+                         - ( (P_z_k_delayed - w_k) + l_d_w_p_e * u_delay )* exp(-m_eta * m_delay_elapsed))
                          - w_k * exp(-m_eta * perturbation_duration)).segment(0,2) ;
     
 
     Eigen::Vector2d b_stan_alt = ( 
                P_u_k 
-               - (1 - exp(-m_eta * m_delay_elapsed)) * (U_k * l_d_w_p_e + (P_z_k - w_k))
+               - (1 - exp(-m_eta * m_delay_elapsed)) * (u_delay * l_d_w_p_e + (P_z_k - w_k))
                - (P_z_k_delayed - w_k )* exp(-m_eta * m_delay_elapsed)
                - w_k * exp(-m_eta * perturbation_duration) 
                ).segment(0,2);
@@ -1074,8 +1076,8 @@ void ISMPC_Solver::Integrate()
     state_x(2) = Pzi.x();
     state_y(2) = Pzi.y();
 
-    state_x = Integration_Mat * state_x + Integration_Vec * (U_k-w_k).x();
-    state_y = Integration_Mat * state_y + Integration_Vec * (U_k-w_k).y();
+    state_x = Integration_Mat * state_x + Integration_Vec * (U_k - P_z_k - w_k).x();
+    state_y = Integration_Mat * state_y + Integration_Vec * (U_k - P_z_k - w_k).y();
     
     m_X_MPC.push_back(state_x);
     m_Y_MPC.push_back(state_y);

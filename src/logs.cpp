@@ -72,7 +72,7 @@ void Walking_controller::AddToLog()
     return admittanceTarget;
   });
   logger().addLogEntry("ISMPC_Target_u_delay", [this]() -> const Eigen::Vector3d {
-    return MPCSolver.Initial_ZMP() + MPCSolver.Uk();
+    return MPCSolver.Uk();
   });
   logger().addLogEntry("ISMPC_Target_Index", [this]() -> const double {
     if(MPC_thread_on)

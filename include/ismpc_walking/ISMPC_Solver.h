@@ -673,7 +673,7 @@ private:
   Eigen::Vector3d P_c_k = Eigen::Vector3d::Zero(); // Initial CoM Position
   Eigen::Vector3d V_c_k = Eigen::Vector3d::Zero(); // Initial CoM Velocity
   Eigen::Vector3d P_u_k = Eigen::Vector3d::Zero(); // Initial Unstable Component/DCM
-  Eigen::Vector3d U_k = Eigen::Vector3d::Zero(); //Current input acting on the pendulum
+  Eigen::Vector3d U_k = Eigen::Vector3d::Zero(); //Current admittance acting on the pendulum (z_0 + u_0)
   Eigen::Vector3d w_k = Eigen::Vector3d::Zero(); // Perturbance
   double perturbation_duration = 0;
 

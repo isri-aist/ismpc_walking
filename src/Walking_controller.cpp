@@ -751,7 +751,7 @@ void Walking_controller::UpdateInitialVectors()
   mpc_state_.Uk.setZero();
   if(mpc_state_.X_MPC.size() != 0)
   {
-    mpc_state_.Uk = stabTask->distribZMP() - mpc_state_.Pzk;
+    mpc_state_.Uk = stabTask->distribZMP();
     
   }
 
