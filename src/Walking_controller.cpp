@@ -680,6 +680,7 @@ void Walking_controller::UpdateInitialVectors()
     mpc_state_.Pzk = debugZMP;
     mpc_state_.Pu = mpc_state_.Pck + mpc_state_.Vck / mpc_state_.eta;
     mpc_state_.t_k = debugTk;
+    mpc_state_.doubleSupport = debugDblSupp;
     return;
   }
 
