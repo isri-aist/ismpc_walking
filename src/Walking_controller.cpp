@@ -343,12 +343,6 @@ void Walking_controller::UpdatePlanner_input()
   Eigen::Vector3d step_velocity = reference_velocity;
   double step_time = T_Steps;
 
-  if(StepRecoveryState)
-  {
-    step_velocity = Eigen::Vector3d{0,0,0};
-    step_time = 0.6;
-    
-  }
   // if(supportFootName == leftFootName_)
   // {
   //   step_velocity.y() = mc_filter::utils::clamp(step_velocity.y(), -0.07, 0.0);
