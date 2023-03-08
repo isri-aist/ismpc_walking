@@ -583,4 +583,5 @@ private:
   Eigen::Vector3d debugCoM;
   Eigen::Vector3d debugZMP;
   double debugTk = 0;
+  bool debugDblSupp = true;
 };
