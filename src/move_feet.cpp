@@ -127,8 +127,8 @@ bool Walking_controller::MoveFeet(double t)
                       > controller_config_.impact_threshold);
     // TouchDown = false;
 
-    if( ((Step_Time > SingleSupportDuration * 0.5 && TouchDown)
-        || Step_Time >= SingleSupportDuration - 0*controller_config_.delta)
+    if( ((Step_Time > 0.2 && TouchDown)
+        || Step_Time >= SingleSupportDuration + controller_config_.delta)
        && !DoubleSupport_state)
 
     {
