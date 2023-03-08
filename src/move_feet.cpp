@@ -112,7 +112,7 @@ bool Walking_controller::MoveFeet(double t)
       vertical_force_measure_.push_back((float)SwingFootTask->frame().forceSensor().force().z());
       const int size = vertical_force_measure_.size();
       Eigen::VectorXd force_measure =
-          Eigen::Map<Eigen::VectorXd, Eigen::Unaligned>(vertical_force_measure_.data(), vertical_force_measure_.size());
+          Eigen::Map<Eigen::VectorXd>(vertical_force_measure_.data(), vertical_force_measure_.size());
       vertical_force_offset_ = force_measure.mean();
     }
 
@@ -127,8 +127,8 @@ bool Walking_controller::MoveFeet(double t)
                       > controller_config_.impact_threshold);
     // TouchDown = false;
 
-    if( ((Step_Time > SingleSupportDuration * 0.5 && TouchDown)
-        || Step_Time >= SingleSupportDuration - 0*controller_config_.delta)
+    if( ((Step_Time > 0.2 && TouchDown)
+        || Step_Time >= SingleSupportDuration + controller_config_.delta)
        && !DoubleSupport_state)
 
     {

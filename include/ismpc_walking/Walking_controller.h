@@ -578,4 +578,10 @@ private:
   // For Joystick }
 
   std::vector<Eigen::Vector3d> SupPolygon;
+
+  bool DebugMode = false;
+  Eigen::Vector3d debugCoM;
+  Eigen::Vector3d debugZMP;
+  double debugTk = 0;
+  bool debugDblSupp = true;
 };

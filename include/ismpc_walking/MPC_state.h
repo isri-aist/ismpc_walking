@@ -5,7 +5,7 @@
 struct MPC_state
 {
 
-  Eigen::Vector3d Get_CoM_planarTarget(int indx)
+  Eigen::Vector3d Get_CoM_planarTarget(const size_t indx)
   {
     if(indx < X_MPC.size())
     {
@@ -15,7 +15,7 @@ struct MPC_state
     return Eigen::Vector3d::Zero();
   }
 
-  Eigen::Vector3d Get_CoMVel_planarTarget(int indx)
+  Eigen::Vector3d Get_CoMVel_planarTarget(const size_t indx)
   {
     if(indx < X_MPC.size())
     {
@@ -25,7 +25,7 @@ struct MPC_state
     return Eigen::Vector3d::Zero();
   }
 
-  Eigen::Vector3d Get_ZMP_planarTarget(int indx)
+  Eigen::Vector3d Get_ZMP_planarTarget(const size_t indx)
   {
     if(indx < X_MPC.size())
     {
@@ -98,9 +98,13 @@ struct MPC_state
   {
     return optimal_timesteps_;
   }
-  double get_Ts(int indx)
+  double get_Ts(size_t indx)
   {
-    return optimal_timesteps_[indx];
+    if (indx < optimal_timesteps_.size())
+    {
+      return optimal_timesteps_[indx];
+    }
+    return 1.;
   }
   double get_tds()
   {
@@ -188,5 +192,6 @@ struct MPC_state
   double input_tds = 0.25;
   double optimal_tds = 0.25;
   bool stop = true;
+  bool standing_mode = true;
   bool doubleSupport = true;
 };

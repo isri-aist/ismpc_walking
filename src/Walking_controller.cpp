@@ -227,7 +227,7 @@ void Walking_controller::ComputeWalkingTrajectory()
 
   {
     std::lock_guard<std::mutex> lk_copy_state(mutex_mpc_);
-    //UpdateInitialVectors();
+    UpdateInitialVectors();
     mpc_thread_state = mpc_state_;
   }
   if(NewConfigState)
@@ -259,7 +259,6 @@ void Walking_controller::ComputeWalkingTrajectory()
   mpc_thread_state.planned_timesteps_ = datastore().get<std::vector<double>>("footsteps_planner::output_time_steps");
   // mc_rtc::log::info("tds by ratio {}",Tds_by_ratio);
   double tds = controller_config_.Double_Step_Ratio * mpc_thread_state.planned_timesteps_[0];
-  // if(StepRecoveryState){tds = 0.3;}
   if(!Tds_by_ratio)
   {
     tds = mpc_thread_state.input_tds;
@@ -318,7 +317,7 @@ void Walking_controller::ComputeWalkingTrajectory()
     mpc_thread_state.Pu_min = MPCSolver.Puk_min().segment(0, 2);
     mpc_thread_state.mpc_u_ = MPCSolver.ZMP_vel();
     mpc_thread_state.initial_zmp_ = MPCSolver.Initial_ZMP();
-    mpc_thread_state.stop = MPCSolver.stop();
+    mpc_thread_state.standing_mode = MPCSolver.stop();
     mpc_thread_state.FeasibilityPolygon = MPCSolver.feasibility_region();
     mpc_thread_state.alpha = MPCSolver.support_state();
     mpc_thread_state.ref_zmp_ = MPCSolver.zmp_ref().segment(0,2);
@@ -344,12 +343,6 @@ void Walking_controller::UpdatePlanner_input()
   Eigen::Vector3d step_velocity = reference_velocity;
   double step_time = T_Steps;
 
-  if(StepRecoveryState)
-  {
-    step_velocity = Eigen::Vector3d{0,0,0};
-    step_time = 0.6;
-    
-  }
   // if(supportFootName == leftFootName_)
   // {
   //   step_velocity.y() = mc_filter::utils::clamp(step_velocity.y(), -0.07, 0.0);
@@ -364,7 +357,16 @@ void Walking_controller::UpdatePlanner_input()
                                                   Eigen::Vector3d{step_velocity.x(), step_velocity.y(), 0}));
   }
 
-  mpc_state_.input_timesteps_ = {step_time, 2 * step_time};
+  mpc_state_.input_timesteps_ = {step_time};
+  while(mpc_state_.input_timesteps_.back() <= controller_config_.Tp)
+  {
+    mpc_state_.input_timesteps_.push_back( static_cast<double>(( static_cast<int>(mpc_state_.input_timesteps_.size()) + 1) * step_time ));
+  }
+  // std::cout << "//" << std::endl;
+  // for (int k = 0 ; k < mpc_state_.input_timesteps_.size() ; k++ )
+  // {
+  //   std::cout << mpc_state_.input_timesteps_[k] << std::endl;
+  // }
   // mpc_state_.input_v_.clear();
   //mpc_state_.input_timesteps_.clear();
   mpc_state_.set_input_tds(input_tds);
@@ -388,6 +390,7 @@ void Walking_controller::UpdatePlanner_input()
   Pf_m1.z() = SupportFootPose.z();
   mpc_state_.input_P_fm1 = Pf_m1;
   mpc_state_.stop = !Robot_Walking;
+  if(DebugMode){mpc_state_.stop = false;}
 }
 
 void Walking_controller::CheckStepRecovery()
@@ -413,7 +416,7 @@ void Walking_controller::CheckStepRecovery()
       mc_rtc::log::warning("Can't Stop, stepping");
       // mc_rtc::log::info("Pu {} ; Pu max {}",stabTask->measuredDCM(),MPCSolver.Puk_max());
       // mc_rtc::log::info("Pu {} ; Pu min {}",stabTask->measuredDCM(),MPCSolver.Puk_min());      
-      N_Steps_Desired = 1;   
+      N_Steps_Desired = 2;   
    
       sva::PTransformd ff = robot().posW();
       if( (ff.rotation() * stabTask->measuredCoMd()).x() < 0 && !StepRecoveryState)
@@ -492,22 +495,25 @@ bool Walking_controller::run()
   }
   else
   {
-
-    MoveFeet(0);
+    if(active)
+    {
+      MoveFeet(0);
+    }
     updateTasks();
 
     t_stop = (count - count_stop) * controller_timestep;
-    if(t_stop > controller_config_.delta )
+    if(UseRealRobot && mpc_state_.standing_mode)
     {
-      if(UseRealRobot && MPCSolver.stop())
-      {
-        if(UseStepRecovery){CheckStepRecovery();}
-      }
+      if(UseStepRecovery){CheckStepRecovery();}
+    }
+    if(t_stop > controller_config_.delta || StepRecoveryState )
+    {
       count_stop = count;
     
       compute_trajectory_once.notify_all();
     }
     // compute_trajectory_once.notify_all();
+
 
     t_k = - controller_config_.delta;
     kfoot = 0;
@@ -583,7 +589,7 @@ void Walking_controller::MoveCoM()
   }
 
   Eigen::Vector3d Pcom(mpc_state_.Get_CoM_planarTarget(mpc_state_.Index));
-  Pcom.z() = controller_config_.Stab_config.comHeight + 0 * X_0_support.translation().z();
+  Pcom.z() = controller_config_.Stab_config.comHeight + 0*X_0_support.translation().z();
   Eigen::Vector3d Vc(mpc_state_.Get_CoMVel_planarTarget(mpc_state_.Index));
   Vc.z() = 0;
   zmpTarget = mpc_state_.Get_ZMP_planarTarget(mpc_state_.Index);
@@ -631,7 +637,7 @@ void Walking_controller::MoveCoM()
   dcmTarget = Pcom + Vc / mpc_state_.eta;
 
   stabTask->target(Pcom, Vc, Ac_wrench, admittanceTarget);
-  if(!active)
+  if(!active || DebugMode)
   {
     Pcom.segment(0,2) = sva::interpolate(robot().surfacePose(leftFootName_),robot().surfacePose(rightFootName_),0.5).translation().segment(0,2);
     Vc.setZero();
@@ -668,6 +674,19 @@ void Walking_controller::UpdateInitialVectors()
   // mpc_state_.Pzk = Eigen::Vector3d{0,0,1}.cross( robot().com().cross(robot().mass()*mc_rtc::constants::gravity) ) /
   //                       ( (robot().mass()*(mc_rtc::constants::gravity - robot().comAcceleration())).transpose() *
   //                       Eigen::Vector3d{0,0,1} );
+
+  if(DebugMode)
+  {
+    debugCoM.z() = controller_config_.Stab_config.comHeight;
+    debugZMP.z() = 0;
+    mpc_state_.Vck = Eigen::Vector3d::Zero();
+    mpc_state_.Pck = debugCoM;
+    mpc_state_.Pzk = debugZMP;
+    mpc_state_.Pu = mpc_state_.Pck + mpc_state_.Vck / mpc_state_.eta;
+    mpc_state_.t_k = debugTk;
+    mpc_state_.doubleSupport = debugDblSupp;
+    return;
+  }
 
 
 
@@ -736,7 +755,7 @@ void Walking_controller::UpdateInitialVectors()
   mpc_state_.Uk.setZero();
   if(mpc_state_.X_MPC.size() != 0)
   {
-    mpc_state_.Uk = stabTask->distribZMP() - mpc_state_.Pzk;
+    mpc_state_.Uk = stabTask->distribZMP();
     
   }
 

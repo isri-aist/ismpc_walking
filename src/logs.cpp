@@ -72,7 +72,7 @@ void Walking_controller::AddToLog()
     return admittanceTarget;
   });
   logger().addLogEntry("ISMPC_Target_u_delay", [this]() -> const Eigen::Vector3d {
-    return MPCSolver.Initial_ZMP() + MPCSolver.Uk();
+    return MPCSolver.Uk();
   });
   logger().addLogEntry("ISMPC_Target_Index", [this]() -> const double {
     if(MPC_thread_on)
@@ -122,8 +122,18 @@ void Walking_controller::AddToLog()
   });
   logger().addLogEntry("ISMPC_Feasibility_min", [this]() -> const Eigen::Vector2d & { return mpc_state_.Pu_min; });
   logger().addLogEntry("ISMPC_Feasibility_max", [this]() -> const Eigen::Vector2d & { return mpc_state_.Pu_max; });
-  logger().addLogEntry("ISMPC_StopPhase", [this]() -> double {
+  logger().addLogEntry("ISMPC_ControllerStop", [this]() -> double {
     if(Stop)
+    {
+      return 1.0;
+    }
+    else
+    {
+      return 0.;
+    }
+  });
+  logger().addLogEntry("ISMPC_Standing", [this]() -> double {
+    if(mpc_state_.standing_mode)
     {
       return 1.0;
     }
@@ -154,6 +164,16 @@ void Walking_controller::AddToLog()
   });
   logger().addLogEntry("ISMPC_active", [this]() -> double {
     if(active)
+    {
+      return 1.0;
+    }
+    else
+    {
+      return 0.;
+    }
+  });
+  logger().addLogEntry("ISMPC_DoubleSupport", [this]() -> double {
+    if(mpc_state_.doubleSupport)
     {
       return 1.0;
     }

@@ -1,6 +1,7 @@
 #pragma once
 #include <mc_control/api.h>
 #include <mc_control/mc_controller.h>
+#include <pendulum_feasibility_solver/feasibility_solver.h>
 #include "ControllerConfiguration.h"
 #include "MPC_state.h"
 #include "eigen-quadprog/QuadProg.h"
@@ -13,7 +14,7 @@ struct Rectangle
 {
 
 public:
-  Rectangle(double ori, const Eigen::Vector2d & size, const Eigen::Vector3d & offset = Eigen::Vector3d::Zero())
+  Rectangle(double ori, const Eigen::Vector2d size, const Eigen::Vector3d offset = Eigen::Vector3d::Zero())
   {
     _center = offset;
     _angle = ori;
@@ -23,7 +24,7 @@ public:
 
   Rectangle(const sva::PTransformd & pose,
             const Eigen::Vector2d & size,
-            const Eigen::Vector3d & offset = Eigen::Vector3d::Zero())
+            const Eigen::Vector3d offset = Eigen::Vector3d::Zero())
   {
     _center = pose.translation() + offset;
     _center.z() = 0;
@@ -34,7 +35,7 @@ public:
 
   Rectangle(const Eigen::Vector3d & center,
             const Eigen::Vector2d & size,
-            const Eigen::Vector3d & offset = Eigen::Vector3d::Zero())
+            const Eigen::Vector3d offset = Eigen::Vector3d::Zero())
   {
     _center = center + offset;
     _angle = _center.z();
@@ -63,7 +64,7 @@ public:
     corners.clear();
     _center.setZero();
     _size.setZero();
-    _angle = 0;;
+    _angle = 0.;
     R = Eigen::Matrix3d::Identity();
     upper_left_corner.setZero();
     upper_right_corner.setZero();
@@ -127,14 +128,21 @@ struct SupportPolygon
 
 public:
   SupportPolygon() = default;
+  SupportPolygon(const std::vector<Eigen::Vector3d> & corners)
+  {
+    SupportPolygone_Corners = corners;
+    Compute_polygone();
+  }
   SupportPolygon(const Rectangle Rect1, const Rectangle Rect2)
   {
     _Rectangles = {Rect1, Rect2};
+    Get_corners();
     Compute_polygone();
   }
   SupportPolygon(const Rectangle Rect1)
   {
     _Rectangles = {Rect1};
+    Get_corners();
     Compute_polygone();
   }
   SupportPolygon(const Eigen::MatrixX2d normals, Eigen::VectorXd offsets)
@@ -182,9 +190,9 @@ public:
 
   Rectangle & get_Rectangle(int indx)
   {
-    if(indx < _Rectangles.size() - 1)
+    if(indx < static_cast<int>(_Rectangles.size()) - 1)
     {
-      return _Rectangles[indx];
+      return _Rectangles[static_cast<size_t>(indx)];
     }
     else
     {
@@ -193,7 +201,8 @@ public:
   }
 
 private:
-  void Compute_polygone()
+
+  void Get_corners()
   {
     if(_Rectangles.size() > 1)
     {
@@ -209,6 +218,11 @@ private:
     {
       SupportPolygone_Corners = _Rectangles[0].Get_corners();
     }
+  }
+
+  void Compute_polygone()
+  {
+
     SupportPolygone_Normals.resize(SupportPolygone_Corners.size(), 2);
     SupportPolygone_Edges_Center.resize(SupportPolygone_Corners.size(), 2);
     SupportPolygone_Vertices.resize(SupportPolygone_Corners.size(), 2);
@@ -239,24 +253,24 @@ private:
   {
 
     std::vector<int> vertices_indx;
-    for(size_t i = 0 ; i < SupportPolygone_Normals.rows() ; i++)
+    for(Eigen::Index i = 0 ; i < SupportPolygone_Normals.rows() ; i++)
     {
-      int end_indx = (i + 1) % SupportPolygone_Normals.rows();
+      Eigen::Index end_indx = (i + 1) % SupportPolygone_Normals.rows();
       Eigen::Vector2d ni = SupportPolygone_Normals.block(i,0,1,2).normalized();
       Eigen::Vector2d nip1 = SupportPolygone_Normals.block(end_indx,0,1,2).normalized();
       // mc_rtc::log::info("normal {}\n{}\nnext_normal{}\ndot prod {}",i,ni,nip1,ni.transpose() * nip1);
       if( std::abs( ni.transpose() * nip1 - 1) > 1e-4  )
       {
 
-        vertices_indx.push_back(i);
+        vertices_indx.push_back( static_cast<int>(i));
         // mc_rtc::log::info("selected");
       }
     }
     // mc_rtc::log::info("corner {} selected {}",SupportPolygone_Normals.rows(),normals.size());
     for(size_t i = 0 ; i < vertices_indx.size() ; i++)
     {
-      int start_indx = vertices_indx[i];
-      int end_indx = vertices_indx[(i + 1) % vertices_indx.size()];
+      Eigen::Index start_indx = vertices_indx[i];
+      Eigen::Index end_indx = vertices_indx[(i + 1) % vertices_indx.size()];
       Eigen::Matrix2d R = Eigen::Matrix2d::Zero();
       Eigen::Vector2d o = Eigen::Vector2d::Zero(); 
       R.block(0,0,1,2) = SupportPolygone_Normals.block(start_indx,0,1,2);
@@ -398,12 +412,12 @@ public:
     return corr_steps_;
   }
 
-  const std::vector<double> & timesteps()
+  const std::vector<double> timesteps()
   {
     return m_timestamp;
   }
 
-  const double Tds()
+  double Tds()
   {
     return m_Tds;
   }
@@ -514,12 +528,12 @@ public:
     return P_z_k;
   }
 
-  const double get_lambda()
+  double get_lambda()
   {
     return m_lambda;
   }
 
-  const double support_state()
+  double support_state()
   {
     return m_support_state;
   }
@@ -648,7 +662,7 @@ private:
 
   void create_cstr_matrices(Eigen::MatrixXd & A_out, Eigen::VectorXd & b_out, std::vector<Eigen::MatrixX2d> & A_in, const std::vector<Eigen::VectorXd> & b_in);
   
-  Eigen::MatrixXd create_zmp_matrix();
+  Eigen::MatrixXd create_zmp_matrix(bool addDelay  );
   Eigen::MatrixXd create_u_matrix();
 
   void Compute_Integration_Matrix();
@@ -673,7 +687,7 @@ private:
   Eigen::Vector3d P_c_k = Eigen::Vector3d::Zero(); // Initial CoM Position
   Eigen::Vector3d V_c_k = Eigen::Vector3d::Zero(); // Initial CoM Velocity
   Eigen::Vector3d P_u_k = Eigen::Vector3d::Zero(); // Initial Unstable Component/DCM
-  Eigen::Vector3d U_k = Eigen::Vector3d::Zero(); //Current input acting on the pendulum
+  Eigen::Vector3d U_k = Eigen::Vector3d::Zero(); //Current admittance acting on the pendulum (z_0 + u_0)
   Eigen::Vector3d w_k = Eigen::Vector3d::Zero(); // Perturbance
   double perturbation_duration = 0;
 
@@ -833,4 +847,6 @@ private:
 
   Eigen::MatrixXd Aineq; // Inequality Matrix
   Eigen::VectorXd bineq; // Inequality Vector
+
+  feasibility_solver m_feasibilitySolver;
 };

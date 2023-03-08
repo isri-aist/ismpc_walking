@@ -194,7 +194,7 @@ void Walking_controller::addToGUI()
             Tail = str;
             compute_trajectory_once.notify_all();
           }),
-      mc_rtc::gui::Label("Velocity Tail used", [this]() { return this->MPCSolver.Tail(); }),
+      mc_rtc::gui::Label("Velocity Tail used", [this]() { return this->mpc_state_.Tail; }),
       mc_rtc::gui::Label("Timing", [this]() { return t; }),
       mc_rtc::gui::Label("Double support duration", [this]() { return this->mpc_state_.get_tds(); }),
       mc_rtc::gui::Label("Next Step Timing ",
@@ -224,10 +224,10 @@ void Walking_controller::addToGUI()
             UseStepRecovery = !UseStepRecovery;
           }),
       mc_rtc::gui::NumberInput(
-          "lambda", [this]() -> double { return MPCSolver.get_lambda(); }, [this](const double n) { controller_config_.lambda_ = n; NewConfigState = true; }),
+          "lambda", [this]() -> double { return controller_config_.lambda_; }, [this](const double n) { controller_config_.lambda_ = n; NewConfigState = true; }),
       mc_rtc::gui::Label("Measured Lambda", [this]() { return estimated_lambda(); }),
       mc_rtc::gui::NumberInput(
-          "zmp delay", [this]() -> double { return MPCSolver.zmp_delay(); }, [this](const double n) { controller_config_.zmp_delay = n; NewConfigState = true; }),
+          "zmp delay", [this]() -> double { return controller_config_.zmp_delay; }, [this](const double n) { controller_config_.zmp_delay = n; NewConfigState = true; }),
       mc_rtc::gui::Checkbox(
           "MPC state feedback", [this]() { return UseMPCState; },
           [this]() {
@@ -246,7 +246,7 @@ void Walking_controller::addToGUI()
           [this]() { force_contact_safety_ = !force_contact_safety_; }),
       // mc_rtc::gui::Checkbox("ZMP_Corr", [this](){return ZMP_correction;}, [this](){ZMP_correction =
       // !ZMP_correction;}),
-      mc_rtc::gui::Label("Stab Error (m)", [this]() { return this->MPCSolver.stability_error(); }),
+      mc_rtc::gui::Label("Stab Error (m)", [this]() { return this->mpc_state_.stab_error; }),
       mc_rtc::gui::Label("MPC Processing Time (ms)", [this]() { return this->mpc_thread_process_time; }),
       mc_rtc::gui::Label("Run Loop Processing Time (ms)", [this]() { return this->ControllerLoopTime; })
       // mc_rtc::gui::Label("ZMP box range x",[this](){return this->MPCSolver.ZMP_dx;}),
@@ -274,8 +274,12 @@ void Walking_controller::addToGUI()
       mc_rtc::gui::Polygon(
           "Feasibility Region", mc_rtc::gui::Color(1., 0., 1.),
           [this]() -> std::vector<Eigen::Vector3d> {
-
-              return mpc_state_.FeasibilityPolygon;
+              std::vector<Eigen::Vector3d> output = mpc_state_.FeasibilityPolygon;
+              for (auto & p : output)
+              {
+                p.z() = mpc_state_.getPck().z();
+              }
+              return output;
             
           })
 
@@ -312,34 +316,34 @@ void Walking_controller::addToGUI()
       mc_rtc::gui::Trajectory("Predicted ZMP Trajectory", mc_rtc::gui::LineConfig(mc_rtc::gui::Color(0., 0., 1.),0.02,mc_rtc::gui::LineStyle::Dotted) ,
                               [this]() -> std::vector<Eigen::Vector3d> {
                                 std::vector<Eigen::Vector3d> Output;
-                                for(int k = 0; k < mpc_state_.X_MPC.size(); k++)
+                                for(size_t k = 0; k < mpc_state_.X_MPC.size(); k++)
                                 {
                                   Output.push_back(mpc_state_.Get_ZMP_planarTarget(k));
                                 }
                                 return Output;
                               }),
-      mc_rtc::gui::Trajectory("ZMP Ref Trajectory", mc_rtc::gui::LineConfig(mc_rtc::gui::Color(0., 1., 1.),0.02,mc_rtc::gui::LineStyle::Dotted),
-                              [this]() -> std::vector<Eigen::Vector3d> {
-                                std::vector<Eigen::Vector3d> ref_traj = this->MPCSolver.zmp_ref_traj();                   
-                                return ref_traj;
-                              }),
-
-      // mc_rtc::gui::Trajectory("ZMP QP Trajectory", mc_rtc::gui::LineConfig(mc_rtc::gui::Color(0., 1., 0.6),0.02,mc_rtc::gui::LineStyle::Dotted),
+      // mc_rtc::gui::Trajectory("ZMP Ref Trajectory", mc_rtc::gui::LineConfig(mc_rtc::gui::Color(0., 1., 1.),0.02,mc_rtc::gui::LineStyle::Dotted),
       //                         [this]() -> std::vector<Eigen::Vector3d> {
-                                
-      //                           std::vector<Eigen::Vector3d> ref_traj = this->MPCSolver.QP_zmp();                   
+      //                           std::vector<Eigen::Vector3d> ref_traj = this->mpc_state_.zmp_ref_traj();                   
       //                           return ref_traj;
       //                         }),
 
+      mc_rtc::gui::Trajectory("ZMP QP Trajectory", mc_rtc::gui::LineConfig(mc_rtc::gui::Color(0., 1., 0.6),0.02,mc_rtc::gui::LineStyle::Dotted),
+                              [this]() -> std::vector<Eigen::Vector3d> {
+                                
+                                std::vector<Eigen::Vector3d> ref_traj = mpc_state_.QP_zmp;                   
+                                return ref_traj;
+                              }),
+
       mc_rtc::gui::Trajectory("Admittance ref Trajectory", mc_rtc::gui::LineConfig(mc_rtc::gui::Color(0., 1., 0.6),0.02,mc_rtc::gui::LineStyle::Dotted),
                               [this]() -> const std::vector<Eigen::Vector3d> & {                                
-                                return MPCSolver.admittance_references();
+                                return mpc_state_.admittance_ref_;
                               }),
 
       mc_rtc::gui::Trajectory("Predicted CoM Trajectory", mc_rtc::gui::Color(1., 0., 0.),
                               [this]() -> std::vector<Eigen::Vector3d> {
                                 std::vector<Eigen::Vector3d> Output;
-                                for(int k = 0; k < mpc_state_.X_MPC.size(); k++)
+                                for(size_t k = 0; k < mpc_state_.X_MPC.size(); k++)
                                 {
                                   Output.push_back(mpc_state_.Get_CoM_planarTarget(k)
                                                    + Eigen::Vector3d{0, 0, controller_config_.Stab_config.comHeight});
@@ -360,9 +364,9 @@ void Walking_controller::addToGUI()
       //                           return Output;
       //                         }),
 
-      mc_rtc::gui::Polygon(
-          "AllPoly", mc_rtc::gui::Color(1., 0.3, 0.),
-          [this]() -> const std::vector<std::vector<Eigen::Vector3d>> & { return this->MPCSolver.get_allpolys(); }),
+      // mc_rtc::gui::Polygon(
+      //     "AllPoly", mc_rtc::gui::Color(1., 0.3, 0.),
+      //     [this]() -> const std::vector<std::vector<Eigen::Vector3d>> & { return this->MPCSolver.get_allpolys(); }),
       mc_rtc::gui::Polygon("SupportPolygon", mc_rtc::gui::Color(1., 1., 0.),
                            [this]() -> const std::vector<Eigen::Vector3d> & { return mpc_state_.get_SupPolygon(); }));
       
@@ -399,6 +403,18 @@ void Walking_controller::addToGUI()
                     
                     
                     );
+      gui()->addElement({"Walking","Debug"},
+                 mc_rtc::gui::Checkbox("Active",[this]()-> bool {return DebugMode;}, 
+                                                [this](){DebugMode = !DebugMode;}),
+                 mc_rtc::gui::Point3D("CoM",[this]() -> const Eigen::Vector3d & {return debugCoM;},
+                                            [this](const Eigen::Vector3d & p) {debugCoM = p;}),
+                 mc_rtc::gui::Point3D("ZMP",[this]() -> const Eigen::Vector3d & {return debugZMP;},
+                                            [this](const Eigen::Vector3d & p) {debugZMP = p;}),
+                 mc_rtc::gui::NumberInput("t_k",[this]() -> const double {return debugTk;},
+                                            [this](const double p) {debugTk = p;}),
+                 mc_rtc::gui::Checkbox("Double Support",[this]()-> bool {return debugDblSupp;}, 
+                                                [this](){debugDblSupp = !debugDblSupp;})
+      );  
 
 
 }
@@ -484,7 +500,7 @@ void Walking_controller::add_FootSteps_GUI()
                              const std::vector<sva::PTransformd> & steps = mpc_state_.planned_steps();
                              //  mc_rtc::log::info("step {}",steps.size());
                              std::vector<std::vector<Eigen::Vector3d>> Output;
-                             for(int k = 0; k < steps.size(); k++)
+                             for(size_t k = 0; k < steps.size(); k++)
                              {
                                if(k % 2 == 1)
                                {
@@ -506,7 +522,7 @@ void Walking_controller::add_FootSteps_GUI()
                           std::vector<std::vector<Eigen::Vector3d>> Output;
                           //  mc_rtc::log::info("step opti {}",steps_opti.size());
 
-                          for(int k = 0; k < steps_opti.size(); k++)
+                          for(size_t k = 0; k < steps_opti.size(); k++)
                           {
 
                             if(k % 2 == 1)
