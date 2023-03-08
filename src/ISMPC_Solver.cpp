@@ -97,7 +97,7 @@ void ISMPC_Solver::init_MPC(const MPC_state & mpc_state,
   DoubleSupport = mpc_state.doubleSupport;
   m_t_lift = mpc_state.t_lift;
   
-  m_tk = mpc_state.t_k;
+  m_tk = std::max(0., mpc_state.t_k);
   m_t_global = mpc_state.t;
   m_delay_elapsed = std::min( m_delay - (m_t_global - m_t_delay) , m_delay);
   if( m_t_global - m_t_delay > m_delta || m_tk == 0 || m_delay_elapsed < 0)
@@ -117,21 +117,12 @@ void ISMPC_Solver::init_MPC(const MPC_state & mpc_state,
   X_0_swing_foot_initial = mpc_state.X_0_Initial_SwingFoot;
 
   X_0_support_foot = mpc_state.X_0_SupportFoot;
-  if(m_timestamp.size() != 0)
-  {  
-    if(m_timestamp[0] - m_tk > 0.1)
-    {
-      input_steps_ = mpc_state.planned_steps_;
-      m_timestamp = mpc_state.planned_timesteps_;
-      m_input_Tds = mpc_state.tds;
-    }
-  }
-  else
-  {
-    input_steps_ = mpc_state.planned_steps_;
-    m_timestamp = mpc_state.planned_timesteps_;
-    m_input_Tds = mpc_state.tds;    
-  }
+ 
+
+  input_steps_ = mpc_state.planned_steps_;
+  m_timestamp = mpc_state.planned_timesteps_;
+  m_input_Tds = mpc_state.tds;
+
 
   N_Steps = Step;
   N_Steps_Desired = Steps_Desired;
@@ -562,7 +553,9 @@ void ISMPC_Solver::ZMP_Constraints()
         sva::PTransformd X_0_step_stop_j =
             sva::PTransformd(X_0_step_j.rotation(), (X_0_step_j.translation() + X_0_step_jm1.translation()) * 0.5);
         Rect_j = Rectangle(X_0_step_stop_j, Eigen::Vector2d{m_dx, m_dy});
+        Rect_j_u = Rectangle(X_0_step_stop_j, Eigen::Vector2d{m_dx_u, m_dy_u});
         SuppPoly = SupportPolygon(Rect_jm1, Rect_j);
+        SuppPoly_u = SupportPolygon(Rect_jm1_u, Rect_j_u);
       }
 
       sva::PTransformd ZMP_Zone =
@@ -904,7 +897,7 @@ void ISMPC_Solver::AntTailTrajectory()
       X_0_step_j = sva::PTransformd(X_0_step_j.rotation(), (X_0_step_j.translation() + X_0_step_jm1.translation()) / 2);
     }
   
-    int n = std::max(0., std::min( static_cast<double>(m_D) + 1, count_Dstep));
+    int n = std::max(0., std::min( static_cast<double>(m_D) + 1., count_Dstep));
 
     double alpha = std::min(1.0,std::max(0., static_cast<double>(n) / (static_cast<double>(m_D))));
 
@@ -1193,8 +1186,9 @@ bool ISMPC_Solver::GetWalkingParameters(bool stop)
   InStabilityRange = false;
   m_stop = stop;
 
-  size_t tstep_indx(0);
+  
   double tc = m_tk + m_Tc;
+  size_t tstep_indx = 0;
 
   j_Max_C = 0;
   if(m_timestamp.size() != 0)
@@ -1208,7 +1202,6 @@ bool ISMPC_Solver::GetWalkingParameters(bool stop)
         break;
       }
     }
-    j_Max_C += tstep_indx + 1;
   }
   j_Max_C = static_cast<int>(tstep_indx) ;
   j_f = 0;
@@ -1217,7 +1210,11 @@ bool ISMPC_Solver::GetWalkingParameters(bool stop)
   N_variable = 2 * (m_C + j_Max_C);
 
   m_D = static_cast<int>(m_Tds / m_delta) - Tds_offset;
-  count_Dstep = (std::min((m_tk / m_delta) + 1, static_cast<double>(m_D)));
+  count_Dstep = (std::min((m_tk / m_delta) , static_cast<double>(m_D)));
+  if(!DoubleSupport)
+  {
+    count_Dstep = static_cast<double>(m_D);
+  }
   std::chrono::duration<double, std::milli> time_span = std::chrono::high_resolution_clock::now() - t_clock;
 
   // mc_rtc::log::info("countD {}, m_D {} ,t_k : {}; Tc : {} ; Ts {} ; Tds {} ; j_f_max : {}",count_Dstep,m_D,m_tk,
@@ -1317,6 +1314,7 @@ bool ISMPC_Solver::GetWalkingParameters(bool stop)
 
     mc_rtc::log::warning("[ISMPC] nan");
     QPsuccess = false;
+    return true;
   }
 
   // time_span = std::chrono::high_resolution_clock::now() - t_clock;
