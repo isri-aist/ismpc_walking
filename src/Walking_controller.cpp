@@ -259,7 +259,6 @@ void Walking_controller::ComputeWalkingTrajectory()
   mpc_thread_state.planned_timesteps_ = datastore().get<std::vector<double>>("footsteps_planner::output_time_steps");
   // mc_rtc::log::info("tds by ratio {}",Tds_by_ratio);
   double tds = controller_config_.Double_Step_Ratio * mpc_thread_state.planned_timesteps_[0];
-  // if(StepRecoveryState){tds = 0.3;}
   if(!Tds_by_ratio)
   {
     tds = mpc_thread_state.input_tds;
@@ -318,7 +317,7 @@ void Walking_controller::ComputeWalkingTrajectory()
     mpc_thread_state.Pu_min = MPCSolver.Puk_min().segment(0, 2);
     mpc_thread_state.mpc_u_ = MPCSolver.ZMP_vel();
     mpc_thread_state.initial_zmp_ = MPCSolver.Initial_ZMP();
-    mpc_thread_state.stop = MPCSolver.stop();
+    mpc_thread_state.standing_mode = MPCSolver.stop();
     mpc_thread_state.FeasibilityPolygon = MPCSolver.feasibility_region();
     mpc_thread_state.alpha = MPCSolver.support_state();
     mpc_thread_state.ref_zmp_ = MPCSolver.zmp_ref().segment(0,2);
@@ -502,7 +501,7 @@ bool Walking_controller::run()
     t_stop = (count - count_stop) * controller_timestep;
     if(t_stop > controller_config_.delta )
     {
-      if(UseRealRobot && MPCSolver.stop())
+      if(UseRealRobot && mpc_state_.standing_mode)
       {
         if(UseStepRecovery){CheckStepRecovery();}
       }

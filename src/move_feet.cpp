@@ -112,7 +112,7 @@ bool Walking_controller::MoveFeet(double t)
       vertical_force_measure_.push_back((float)SwingFootTask->frame().forceSensor().force().z());
       const int size = vertical_force_measure_.size();
       Eigen::VectorXd force_measure =
-          Eigen::Map<Eigen::VectorXd, Eigen::Unaligned>(vertical_force_measure_.data(), vertical_force_measure_.size());
+          Eigen::Map<Eigen::VectorXd>(vertical_force_measure_.data(), vertical_force_measure_.size());
       vertical_force_offset_ = force_measure.mean();
     }
 

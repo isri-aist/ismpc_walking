@@ -1,7 +1,5 @@
 #include "../include/ismpc_walking/ISMPC_Solver.h"
 
-#include <pendulum_feasibility_solver/feasibility_solver.h>
-
 // clang-format off
 #include <boost/geometry.hpp>
 #include <boost/geometry/geometries/polygon.hpp>
@@ -154,11 +152,11 @@ void ISMPC_Solver::init_MPC(const MPC_state & mpc_state,
 
 void ISMPC_Solver::create_cstr_matrices(Eigen::MatrixXd & A_out, Eigen::VectorXd & b_out, std::vector<SupportPolygon> & A_in, const std::vector<Eigen::VectorXd> & b_in)
 {
-  int k = 0;
-  int cstr_index = 0;
+  Eigen::Index k = 0;
+  Eigen::Index cstr_index = 0;
   for(size_t i_ineq = 0; i_ineq < A_in.size(); i_ineq++)
   {
-    double n_vertice = (A_in[i_ineq].normals().rows());
+    Eigen::Index n_vertice = (A_in[i_ineq].normals().rows());
 
     A_out.block(cstr_index, k, n_vertice, 2) = A_in[i_ineq].normals();
     b_out.segment(cstr_index, n_vertice) = b_in[i_ineq];
@@ -170,9 +168,9 @@ void ISMPC_Solver::create_cstr_matrices(Eigen::MatrixXd & A_out, Eigen::VectorXd
 
 void ISMPC_Solver::create_cstr_matrices(Eigen::MatrixXd & A_out, Eigen::VectorXd & b_out, std::vector<Eigen::MatrixX2d> & A_in, const std::vector<Eigen::VectorXd> & b_in)
 {
-  int step = 0;
-  int cstr_index = 0;
-  for(int i_ineq = 0; i_ineq < A_in.size(); i_ineq++)
+  Eigen::Index step = 0;
+  Eigen::Index cstr_index = 0;
+  for(Eigen::Index i_ineq = 0; i_ineq < static_cast<Eigen::Index>(A_in.size()); i_ineq++)
   {
 
     Eigen::MatrixX2d ineq = A_in[i_ineq];
@@ -339,7 +337,7 @@ void ISMPC_Solver::Static_ZMP_Constraints()
   Aineq_zmp << ZMP_Cstr * Delta , ZMP_Cstr * DeltaNoDelay;
   bineq_zmp << b_zmp , b_zmp;
   A_zmp = Delta;
-  b_zmp_traj = Eigen::Map<Eigen::VectorXd, Eigen::Unaligned>(ZMP_ref_traj.data(), ZMP_ref_traj.size());
+  b_zmp_traj = Eigen::Map<Eigen::VectorXd>(ZMP_ref_traj.data(), ZMP_ref_traj.size());
   M_zmp_traj = Eigen::MatrixXd::Zero(b_zmp_traj.rows(), N_variable);
   M_zmp_traj.block(0, 0, b_zmp_traj.rows(), b_zmp_traj.rows()) = Delta.block(0, 0, b_zmp_traj.rows(), b_zmp_traj.rows());
 }
@@ -349,23 +347,27 @@ void ISMPC_Solver::ZMP_Transition_Constraint(Eigen::MatrixXd & A_out,Eigen::Vect
   const double t_transi_ds_ss = m_Tds - m_tk - m_delta;
   if(t_transi_ds_ss < 0)
   {
-    A_out = Eigen::MatrixXd::Zero(1,N_variable);
-    b_out = Eigen::VectorXd::Zero(1);
+    A_out.resize(1,N_variable);
+    A_out.setZero();
+    b_out.resize(1);
+    b_out.setZero();
     return;
   }
   const double dt = m_delta_control/2;
-  const int indx_transi_ds_ss = static_cast<int>(t_transi_ds_ss / m_delta);
-  const int N_integration = static_cast<int>(m_delta/dt);
+  const Eigen::Index indx_transi_ds_ss = static_cast<Eigen::Index>(t_transi_ds_ss / m_delta);
+  const Eigen::Index N_integration = static_cast<Eigen::Index>(m_delta/dt);
   Eigen::MatrixXd A_zmp = Eigen::MatrixXd::Zero(2,N_variable);
-  A_out = Eigen::MatrixXd::Zero(N_integration * PolySS.offsets().rows(),N_variable);
-  b_out = Eigen::VectorXd::Zero(A_out.rows());
+  A_out.resize(N_integration * PolySS.offsets().rows(),N_variable);
+  A_out.setZero();
+  b_out.resize(A_out.rows());
+  b_out.setZero();
 
-  for (int i = 0 ; i < N_integration ; i++)
+  for (Eigen::Index i = 0 ; i < N_integration ; i++)
   {
-    for(int k = 0 ; k <= indx_transi_ds_ss ; k++)
+    for(Eigen::Index k = 0 ; k <= indx_transi_ds_ss ; k++)
     {
       double t_m_tk = t_transi_ds_ss + static_cast<double>(i) * dt - static_cast<double>(k) * m_delta ;
-      if(k == i){t_m_tk -= ( i==0 ? m_delay_elapsed : m_delay);}
+      // if(k == i){t_m_tk -= ( i==0 ? m_delay_elapsed : m_delay);}
       A_zmp.block(0,2 * k , 2,2) = Eigen::Matrix2d::Identity() * (1 - exp(-m_lambda * (t_m_tk)));
     }
     A_out.block(i * PolySS.offsets().rows(),0,PolySS.offsets().rows(),N_variable) = PolySS.normals() * A_zmp;
@@ -383,7 +385,7 @@ void ISMPC_Solver::ZMP_Constraints()
   std::vector<Eigen::VectorXd> b_zmp_ineq = std::vector<Eigen::VectorXd>{} ;
   std::vector<Eigen::VectorXd> b_u_ineq = std::vector<Eigen::VectorXd>{} ;
   zmp_cstr_polygons = std::vector<SupportPolygon>{};
-  std::vector<SupportPolygon> u_cstr_polygons;
+  std::vector<SupportPolygon> u_cstr_polygons = std::vector<SupportPolygon>{};
   double sgn = -1; //change between 1 and -1 depending of support foot (1 if right)
   if(m_support_foot == "RightFoot") // Right Support
   {
@@ -446,9 +448,10 @@ void ISMPC_Solver::ZMP_Constraints()
   SupportPolygon S_Support_Poly = SupportPolygon(Rect_j);
   SupportPolygon S_Support_Poly_u = SupportPolygon(Rect_j_u);
 
-  Eigen::MatrixXd Aineq_zmp_transi;
-  Eigen::VectorXd bineq_zmp_transi;
-  ZMP_Transition_Constraint(Aineq_zmp_transi,bineq_zmp_transi,S_Support_Poly);
+  // TOFIX Make the controller crash when robot is falling
+  // Eigen::MatrixXd Aineq_zmp_transi = Eigen::MatrixXd::Zero(0,N_variable);
+  // Eigen::VectorXd bineq_zmp_transi = Eigen::VectorXd::Zero(0);
+  // ZMP_Transition_Constraint(Aineq_zmp_transi,bineq_zmp_transi,S_Support_Poly);
 
   ZMP_ref_traj.clear();
   ZMP_max_ref_traj.clear();
@@ -465,6 +468,7 @@ void ISMPC_Solver::ZMP_Constraints()
   if(m_timestamp.size() != 0)
   {
     NextStepTiming = m_timestamp[j_f];
+    // std::cout << "Ts " << NextStepTiming << std::endl;
   }
   double PrevStepTime = 0;
 
@@ -473,8 +477,8 @@ void ISMPC_Solver::ZMP_Constraints()
 
   for(int i = 0; i < m_C; i++)
   {
-
-    if(m_tk + static_cast<double>(i) * m_delta >= NextStepTiming && j_f + 1 < m_timestamp.size())
+    
+    if(m_tk + static_cast<double>(i) * m_delta >= NextStepTiming && j_f + 1 < static_cast<int>(m_timestamp.size()) )
     {
       m_D = static_cast<int>(m_Tds / m_delta) - Tds_offset;
 
@@ -531,11 +535,14 @@ void ISMPC_Solver::ZMP_Constraints()
     
     }
 
-    double n = std::max(0., std::min(static_cast<double>(m_D ), count_Dstep));
+    const double n = std::max(0., std::min(static_cast<double>(m_D ), count_Dstep));
 
-    double alpha = std::min(1.0,std::max(0., n / (static_cast<double>(m_D))));
+    const double alpha = std::min(1.0,std::max(0., n / (static_cast<double>(m_D))));
+
+    // mc_rtc::log::info("i {} jf {} alpha {},D {}, Ts {}",i,j_f,alpha,m_D,NextStepTiming);
+
     
-    // mc_rtc::log::info("i {} jf {} alpha {}",i,j_f,alpha);
+    
     if(j_f == 0 || !AutoFootstepPlacement)
     {
       // t_clock_0 = std::chrono::high_resolution_clock::now();
@@ -593,8 +600,9 @@ void ISMPC_Solver::ZMP_Constraints()
       }
       else
       {
-        zmp_cstr_polygons.push_back(SuppPoly);
         u_cstr_polygons.push_back(SuppPoly_u);
+        zmp_cstr_polygons.push_back(SuppPoly);
+        
         ZMP_max_ref_traj.push_back(ZMP_rect.get_center() + R_support_0 * Eigen::Vector3d{m_dx / 2, m_dy / 2, 0});
         ZMP_min_ref_traj.push_back(ZMP_rect.get_center() - R_support_0 * Eigen::Vector3d{m_dx / 2, m_dy / 2, 0});
       }
@@ -728,8 +736,7 @@ void ISMPC_Solver::ZMP_Constraints()
     count_Dstep += 1;
   }
 
-  // time_span = std::chrono::high_resolution_clock::now() - t_clock;
-  // mc_rtc::log::info("[ZMP cstr] gen time {} ms", time_span.count());
+  // std::cout << ("[ZMP cstr] generated") << std::endl;
 
   // t_clock = std::chrono::high_resolution_clock::now();
 
@@ -766,7 +773,7 @@ void ISMPC_Solver::ZMP_Constraints()
   Aineq_zmp << ZMP_Cstr * Delta;
   bineq_zmp << b_zmp;
 
-  b_zmp_traj = Eigen::Map<Eigen::VectorXd, Eigen::Unaligned>(ZMP_ref_traj.data(), ZMP_ref_traj.size());
+  b_zmp_traj = Eigen::Map<Eigen::VectorXd>(ZMP_ref_traj.data(), ZMP_ref_traj.size());
   M_zmp_traj = Eigen::MatrixXd::Zero(b_zmp_traj.rows(), N_variable);
   M_zmp_traj.block(0, 0, b_zmp_traj.rows(), N_variable) = Delta_zmp_ref.block(0, 0, b_zmp_traj.rows(), N_variable);
   A_zmp = Delta.block(0,0,2 * m_C,N_variable);
@@ -774,6 +781,7 @@ void ISMPC_Solver::ZMP_Constraints()
 
   // time_span = std::chrono::high_resolution_clock::now() - t_clock;
   // mc_rtc::log::info("[ZMP cstr] matrix gen time {} ms", time_span.count());
+  // std::cout << ("[ZMP cstr] matrix built") << std::endl;
 }
 
 void ISMPC_Solver::FootSteps_Constraints()
@@ -864,7 +872,7 @@ void ISMPC_Solver::AntTailTrajectory()
       if(N_Steps + j_f + 1 <= N_Steps_Desired || N_Steps_Desired < 0)
       {
         j_f += 1;
-        if(j_f - 1 >= input_steps_.size())
+        if(j_f - 1 >= static_cast<int>(input_steps_.size()))
         {
           j_f -= 1;
           count_Dstep = (static_cast<double>(m_D) / 2) + 1;
@@ -910,7 +918,7 @@ void ISMPC_Solver::AntTailTrajectory()
     ZMP_min_ref_traj.push_back(R_0_support * StepZone);
 
     count_Dstep += 1;
-    if(j_f - 1 == input_steps_.size() && alpha > 0.5)
+    if(j_f - 1 == static_cast<int>(input_steps_.size()) && alpha > 0.5)
     {
       count_Dstep = static_cast<double>(m_D) / 2 + 1;
     }
@@ -1202,6 +1210,7 @@ bool ISMPC_Solver::GetWalkingParameters(bool stop)
     }
     j_Max_C += tstep_indx + 1;
   }
+  j_Max_C = static_cast<int>(tstep_indx) ;
   j_f = 0;
   j_fm1 = j_f - 1;
 
@@ -1211,8 +1220,9 @@ bool ISMPC_Solver::GetWalkingParameters(bool stop)
   count_Dstep = (std::min((m_tk / m_delta) + 1, static_cast<double>(m_D)));
   std::chrono::duration<double, std::milli> time_span = std::chrono::high_resolution_clock::now() - t_clock;
 
-  // mc_rtc::log::info("countD {}, m_D {} ,t_k : {}; Tc : {} ; Tds {} ; j_f_max : {}",count_Dstep,m_D,m_tk,
-  // m_Tc,m_Tds,j_Max_C); mc_rtc::log::info("m_C {}",m_C); t_clock = std::chrono::high_resolution_clock::now();
+  // mc_rtc::log::info("countD {}, m_D {} ,t_k : {}; Tc : {} ; Ts {} ; Tds {} ; j_f_max : {}",count_Dstep,m_D,m_tk,
+  // m_Tc,m_timestamp[0],m_Tds,j_Max_C); 
+  // mc_rtc::log::info("m_C {}",m_C); t_clock = std::chrono::high_resolution_clock::now();
   if(m_stop)
   {
     Static_ZMP_Constraints();
@@ -1394,9 +1404,9 @@ bool ISMPC_Solver::GetWalkingParameters(bool stop)
 Eigen::VectorXd ISMPC_Solver::solveQP()
 {
 
-  int Nvar = m_Q.rows();
-  int NIneqConstr = Aineq.rows();
-  int NEqConstr = Aeq.rows();
+  int Nvar = static_cast<int>(m_Q.rows());
+  int NIneqConstr = static_cast<int>(Aineq.rows());
+  int NEqConstr = static_cast<int>(Aeq.rows());
   // QP.tolerance(1e-3);
   QP.problem(Nvar, NEqConstr, NIneqConstr);
   QPsuccess = QP.solve(m_Q, m_p, Aeq, beq, Aineq, bineq);
@@ -1463,7 +1473,7 @@ void SupportPolygon::jarvis_march()
       }
     }
     l = q;
-    if(l == index)
+    if(l == static_cast<size_t>(index))
     {
       break;
     }
