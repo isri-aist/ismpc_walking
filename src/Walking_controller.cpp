@@ -357,7 +357,16 @@ void Walking_controller::UpdatePlanner_input()
                                                   Eigen::Vector3d{step_velocity.x(), step_velocity.y(), 0}));
   }
 
-  mpc_state_.input_timesteps_ = {step_time, 2 * step_time};
+  mpc_state_.input_timesteps_ = {step_time};
+  while(mpc_state_.input_timesteps_.back() <= controller_config_.Tp)
+  {
+    mpc_state_.input_timesteps_.push_back( static_cast<double>(( static_cast<int>(mpc_state_.input_timesteps_.size()) + 1) * step_time ));
+  }
+  // std::cout << "//" << std::endl;
+  // for (int k = 0 ; k < mpc_state_.input_timesteps_.size() ; k++ )
+  // {
+  //   std::cout << mpc_state_.input_timesteps_[k] << std::endl;
+  // }
   // mpc_state_.input_v_.clear();
   //mpc_state_.input_timesteps_.clear();
   mpc_state_.set_input_tds(input_tds);
