@@ -1132,10 +1132,7 @@ void ISMPC_Solver::Integrate()
 bool ISMPC_Solver::GetWalkingParameters(bool stop)
 {
   std::chrono::high_resolution_clock::time_point t_clock = std::chrono::high_resolution_clock::now();
-
  
- 
-  
   m_feasibilitySolver.configure(m_eta,
                               m_delta_control,
                               Eigen::Vector2d{0.15,0.4},
@@ -1168,6 +1165,7 @@ bool ISMPC_Solver::GetWalkingParameters(bool stop)
   {
     m_timestamp = optimalTs;
     if(DoubleSupport){ m_Tds = optimalTds[0];}
+    else if(optimalTds.size() > 1){m_Tds = optimalTds[1];}
     input_steps_ = optimalPf;
     m_feasibility_region = m_feasibilitySolver.get_feasibility_region();
   }
@@ -1175,11 +1173,10 @@ bool ISMPC_Solver::GetWalkingParameters(bool stop)
   {
     m_timestamp = optimalTs;
     if(DoubleSupport){ m_Tds = optimalTds[0];}
+    else if(optimalTds.size() > 1){m_Tds = optimalTds[1];}
     mc_rtc::log::warning("[ISMPC {}] Step feasibility QP fail",m_t_global);
   }
   
-
-
   QPsuccess = false;
   InStabilityRange = false;
   m_stop = stop;

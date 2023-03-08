@@ -227,7 +227,7 @@ void Walking_controller::ComputeWalkingTrajectory()
 
   {
     std::lock_guard<std::mutex> lk_copy_state(mutex_mpc_);
-    //UpdateInitialVectors();
+    UpdateInitialVectors();
     mpc_thread_state = mpc_state_;
   }
   if(NewConfigState)
@@ -502,17 +502,18 @@ bool Walking_controller::run()
     updateTasks();
 
     t_stop = (count - count_stop) * controller_timestep;
-    if(t_stop > controller_config_.delta )
+    if(UseRealRobot && mpc_state_.standing_mode)
     {
-      if(UseRealRobot && mpc_state_.standing_mode)
-      {
-        if(UseStepRecovery){CheckStepRecovery();}
-      }
+      if(UseStepRecovery){CheckStepRecovery();}
+    }
+    if(t_stop > controller_config_.delta || StepRecoveryState )
+    {
       count_stop = count;
     
       compute_trajectory_once.notify_all();
     }
     // compute_trajectory_once.notify_all();
+
 
     t_k = - controller_config_.delta;
     kfoot = 0;
