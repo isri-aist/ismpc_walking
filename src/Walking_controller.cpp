@@ -522,39 +522,45 @@ bool Walking_controller::run()
 
     Robot_Walking = false;
   }
- 
+  
 
   if(!Swing_Foot_Contact && stabilizer_state_ != StabilizerState::SingleSupport && active)
   {
     stabilizer_state_ = StabilizerState::SingleSupport;
     mc_rbdyn::lipm_stabilizer::StabilizerConfiguration config = controller_config_.Stab_config_sg_supp;
+    controller_config_.lambda_ = controller_config_.lambda_sg_supp;
     comTask->weight(config.comWeight);
     comTask->stiffness(config.comStiffness);
     comTask->selectActiveJoints(solver(),config.comActiveJoints);
     config.comWeight = 0.;
     stabTask->configure(config);
+    Configure(controller_config_);
     mc_rtc::log::info("configure sg");
   }
   else if(Robot_Walking && Swing_Foot_Contact && stabilizer_state_ != StabilizerState::DoubleSupport && active)
   {
     stabilizer_state_ = StabilizerState::DoubleSupport;
     mc_rbdyn::lipm_stabilizer::StabilizerConfiguration config = controller_config_.Stab_config_dbl_supp;
+    controller_config_.lambda_ = controller_config_.lambda_dbl_supp;
     comTask->weight(config.comWeight);
     comTask->stiffness(config.comStiffness);
     comTask->selectActiveJoints(solver(),config.comActiveJoints);
     config.comWeight = 0.;
     stabTask->configure(config);
+    Configure(controller_config_);
     mc_rtc::log::info("configure dbl");
   }
   else if(!Robot_Walking && stabilizer_active_ && stabilizer_state_ != StabilizerState::Standing && active)
   {
     stabilizer_state_ = StabilizerState::Standing;
     mc_rbdyn::lipm_stabilizer::StabilizerConfiguration config = controller_config_.Stab_config_standing;
+    controller_config_.lambda_ = controller_config_.lambda_dbl_supp;
     comTask->weight(config.comWeight);
     comTask->stiffness(config.comStiffness);
     comTask->selectActiveJoints(solver(),config.comActiveJoints);
     config.comWeight = 0.;
     stabTask->configure(config);
+    Configure(controller_config_);
     mc_rtc::log::info("configure std");
   }
   controller_config_.Stab_config = stabTask->config();

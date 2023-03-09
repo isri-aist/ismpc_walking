@@ -75,7 +75,12 @@ public:
     controller_config_.use_stability_task = config("ismpc")("use_stability_task");
     controller_config_.Beta_stab = config("ismpc")("beta_stab");
     controller_config_.Beta_traj = config("ismpc")("beta_traj");
-    controller_config_.lambda_ = config("ismpc")("lambda");
+    controller_config_.lambda_sg_supp = config("ismpc")("lambda");
+    controller_config_.lambda_dbl_supp = controller_config_.lambda_sg_supp;
+    if(config("ismpc").has("lambda_dbl_supp"))
+    {
+      controller_config_.lambda_dbl_supp = config("ismpc")("lambda_dbl_supp");
+    }
     controller_config_.zmp_delay = config("ismpc")("zmp_delay");
     controller_config_.feet_ditance_ = config("ismpc")("feet_distance");
 
@@ -125,7 +130,7 @@ public:
   void Configure(const ControllerConfiguration & config)
   {
     controller_config_ = config;
-    controller_config_.Stab_config_sg_supp.lambdaCoP = controller_config_.lambda_ * Eigen::Vector3d::Ones();
+    controller_config_.Stab_config_sg_supp.lambdaCoP = controller_config_.lambda_sg_supp * Eigen::Vector3d::Ones();
 
     controller_config_.Beta_step =
         std::min(controller_config_.Beta_range(1), std::max(controller_config_.Beta_range(0), controller_config_.Beta_step));

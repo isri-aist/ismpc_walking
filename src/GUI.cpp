@@ -224,10 +224,11 @@ void Walking_controller::addToGUI()
             UseStepRecovery = !UseStepRecovery;
           }),
       mc_rtc::gui::NumberInput(
-          "lambda", [this]() -> double { return controller_config_.lambda_; }, [this](const double n) { controller_config_.lambda_ = n; NewConfigState = true; }),
-      mc_rtc::gui::Label("Measured Lambda", [this]() { return estimated_lambda(); }),
+          "lambda sg support", [this]() -> double { return controller_config_.lambda_sg_supp; }, [this](const double n) { controller_config_.lambda_sg_supp = n; }),
       mc_rtc::gui::NumberInput(
-          "zmp delay", [this]() -> double { return controller_config_.zmp_delay; }, [this](const double n) { controller_config_.zmp_delay = n; NewConfigState = true; }),
+          "lambda dbl support", [this]() -> double { return controller_config_.lambda_dbl_supp; }, [this](const double n) { controller_config_.lambda_dbl_supp = n;  }),
+      mc_rtc::gui::NumberInput(
+          "zmp delay", [this]() -> double { return controller_config_.zmp_delay; }, [this](const double n) { controller_config_.zmp_delay = n; }),
       mc_rtc::gui::Checkbox(
           "MPC state feedback", [this]() { return UseMPCState; },
           [this]() {
