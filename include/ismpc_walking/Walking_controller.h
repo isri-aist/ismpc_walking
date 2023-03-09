@@ -101,8 +101,7 @@ public:
 
   void reconfigure(const mc_rtc::Configuration & config)
   {
-    controller_config_.lambda_ = MPCSolver.get_lambda();
-    controller_config_.zmp_delay = MPCSolver.zmp_delay();
+
     std::vector<double> qp_weight = config("QP Weight (u ; step ; zmp traj ; stab)");
     controller_config_.Beta_u = qp_weight[0]; 
     controller_config_.Beta_step = qp_weight[1]; 
@@ -126,7 +125,7 @@ public:
   void Configure(const ControllerConfiguration & config)
   {
     controller_config_ = config;
-    // controller_config_.update_config();
+    controller_config_.Stab_config_sg_supp.lambdaCoP = controller_config_.lambda_ * Eigen::Vector3d::Ones();
 
     controller_config_.Beta_step =
         std::min(controller_config_.Beta_range(1), std::max(controller_config_.Beta_range(0), controller_config_.Beta_step));
