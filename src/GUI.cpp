@@ -282,6 +282,17 @@ void Walking_controller::addToGUI()
               }
               return output;
             
+          }),
+      mc_rtc::gui::Polygon(
+          "Feasibility Region Switch", mc_rtc::gui::Color(1., 0., 0.5),
+          [this]() -> std::vector<Eigen::Vector3d> {
+              std::vector<Eigen::Vector3d> output = mpc_state_.FeasibilityPolygonStandingSwitch.Get_Polygone_Corners();
+              for (auto & p : output)
+              {
+                p.z() = mpc_state_.getPck().z();
+              }
+              return output;
+            
           })
 
   );

@@ -1,6 +1,7 @@
 #pragma once
 #include <eigen3/Eigen/Dense>
 #include <vector>
+#include "Polygon.h"
 
 struct MPC_state
 {
@@ -146,6 +147,7 @@ struct MPC_state
       Y_MPC; // Contain 3d vectors that represents in that order the CoM the CoMd and the ZMP for each timestep
   std::vector<Eigen::Vector3d> SupPolygon;
   std::vector<Eigen::Vector3d> FeasibilityPolygon;
+  SupportPolygon FeasibilityPolygonStandingSwitch; //standing feasibility region if support foot is switched
   Eigen::VectorXd Traj_ant;
   std::vector<Eigen::Vector3d> P_traj; // Vector containing the reference trajectory
   bool Tail = true;

@@ -306,6 +306,7 @@ void Walking_controller::ComputeWalkingTrajectory()
     mpc_thread_state.optimal_timesteps_ = MPCSolver.timesteps();
     mpc_thread_state.optimal_steps_ = MPCSolver.optimal_steps();
     mpc_thread_state.QPSuccess = true;
+    mpc_thread_state.FeasibilityPolygonStandingSwitch = MPCSolver.feasibility_region_switched();
     mpc_thread_state.X_MPC = MPCSolver.X_MPC();
     mpc_thread_state.Y_MPC = MPCSolver.Y_MPC();
     mpc_thread_state.Index = static_cast<int>(mpc_thread_process_time * 1e-3 / controller_timestep);
@@ -411,9 +412,28 @@ void Walking_controller::CheckStepRecovery()
         break;
       }
     }
-    if(!ok)
+    normals = mpc_state_.FeasibilityPolygonStandingSwitch.normals();
+    offset = mpc_state_.FeasibilityPolygonStandingSwitch.offsets();
+    stability_check = normals * dcm - offset;
+    bool ok_switch = true;
+    for (int i = 0 ; i < stability_check.rows() ; i++ )
+    {
+      if(stability_check[i] > 1e-3)
+      {
+        ok_switch = false;
+        mc_rtc::log::info("[Support foot switch] break on cstr {}\nstabi check\n{}",i,stability_check);
+        break;
+      }
+    }
+    if(!ok || !ok_switch)
     {
       mc_rtc::log::warning("Can't Stop, stepping");
+      if(ok_switch)
+      {
+        SwitchFootSupport_manual();
+        return;
+      }
+
       // mc_rtc::log::info("Pu {} ; Pu max {}",stabTask->measuredDCM(),MPCSolver.Puk_max());
       // mc_rtc::log::info("Pu {} ; Pu min {}",stabTask->measuredDCM(),MPCSolver.Puk_min());      
       N_Steps_Desired = 2;   

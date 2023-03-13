@@ -7,8 +7,7 @@ set(controller_SRC
   GUI.cpp
   logs.cpp
   joystick.cpp
-  
-  
+  Polygon.cpp
 )
 
 set(controller_HDR
@@ -17,6 +16,7 @@ set(controller_HDR
   ../include/ismpc_walking/ISMPC_Solver.h
   ../include/ismpc_walking/ControllerConfiguration.h
   ../include/ismpc_walking/MPC_state.h
+  ../include/ismpc_walking/Polygon.h
 )
 
 set(CONTROLLER_NAME ismpc_walking)
