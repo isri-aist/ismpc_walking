@@ -160,7 +160,7 @@ std::vector<Eigen::Vector3d> FootTrajectory::getSwingFootTrajectory(const sva::P
       New_traj = true;
     }
 
-    if((m_t < duration_Z + delta && m_t > duration_Z) && !Z_up)
+    if(m_t >= duration_Z && !Z_up)
     {
       New_traj = true;
       Z_up = true;
