@@ -795,7 +795,9 @@ void ISMPC_Solver::FootSteps_Constraints()
     }
     Eigen::Matrix3d R_Theta_i_0 = X_0_step_im1.rotation().transpose();
 
-    Rectangle Kinematic_Rectangle = Rectangle(theta_i, Eigen::Vector2d{m_dx_f, m_dy_f}, R_Theta_i_0 * Eigen::Vector3d{0,l + (l/std::abs(l)) * m_dy_f/2,0});
+    Eigen::Vector3d offset =  R_Theta_i_0 * Eigen::Vector3d{0,l + (l/std::abs(l)) * m_dy_f/2,0};
+
+    Rectangle Kinematic_Rectangle = Rectangle(theta_i, Eigen::Vector2d{m_dx_f, m_dy_f},offset);
     
   
     if(i > 0)
@@ -804,7 +806,7 @@ void ISMPC_Solver::FootSteps_Constraints()
     }
     else
     {
-      Kinematic_Rectangle = Rectangle(X_0_support_foot, Eigen::Vector2d{m_dx_f, m_dy_f}, R_Theta_i_0 * Eigen::Vector3d{0,l + (l/std::abs(l)) * m_dy_f/2,0});
+      Kinematic_Rectangle = Rectangle(X_0_support_foot, Eigen::Vector2d{m_dx_f, m_dy_f}, offset);
 
       // Rectangle step_admissible_region_rect = Rectangle(X_0_step_i, Eigen::Vector2d{m_dx_f_rect, m_dy_f_rect});
       // SupportPolygon step_admissible_region_poly = SupportPolygon(step_admissible_region_rect);
