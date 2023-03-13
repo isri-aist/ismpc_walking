@@ -76,11 +76,9 @@ std::vector<Eigen::Vector3d> FootTrajectory::getSwingFootTrajectory(const sva::P
 
   t -= (t0);
 
-  double tinit = 0;
-
   std::vector<Eigen::Vector3d> Output;
 
-  if(t < 0)
+  if(t <= 0)
   {
     duration = dur;
     prev_dur = dur;
