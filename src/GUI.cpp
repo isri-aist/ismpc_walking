@@ -386,7 +386,7 @@ void Walking_controller::addToGUI()
                     mc_rtc::gui::Button("Plot ZMP Tracking (x)",
                             [this]() {
                               gui()->addPlot(
-                                  "DCM-ZMP Tracking (x)", mc_rtc::gui::plot::X("t", [this]() { return static_cast<double>(count) * controller_timestep; }),
+                                  "ZMP Model Tracking (x)", mc_rtc::gui::plot::X("t", [this]() { return static_cast<double>(count) * controller_timestep; }),
                                   mc_rtc::gui::plot::Y(
                                       "u", [this]() { return admittanceTarget.x(); }, mc_rtc::gui::Color::Red),
                                   mc_rtc::gui::plot::Y(
@@ -402,7 +402,7 @@ void Walking_controller::addToGUI()
                     mc_rtc::gui::Button("Plot ZMP Tracking (y)",
                             [this]() {
                               gui()->addPlot(
-                                  "DCM-ZMP Tracking (y)", mc_rtc::gui::plot::X("t", [this]() { return static_cast<double>(count) * controller_timestep; }),
+                                  "ZMP Model Tracking (y)", mc_rtc::gui::plot::X("t", [this]() { return static_cast<double>(count) * controller_timestep; }),
                                   mc_rtc::gui::plot::Y(
                                       "u", [this]() { return admittanceTarget.y(); }, mc_rtc::gui::Color::Red),
                                   mc_rtc::gui::plot::Y(
