@@ -65,6 +65,9 @@ void Walking_controller::AddToLog()
     }
     return Eigen::Vector3d::Zero();
   });
+  logger().addLogEntry("ISMPC_State_Ld", [this]() -> const Eigen::Vector3d {
+    return Ldot;
+  });
   logger().addLogEntry("ISMPC_Target_ZMP", [this]() -> const Eigen::Vector3d {
     return zmpTarget;
   });
@@ -93,6 +96,10 @@ void Walking_controller::AddToLog()
   logger().addLogEntry("ISMPC_perturbation_omega", [this]() -> const double  {
     return sqrt(eta2_cstr);
   });
+  logger().addLogEntry("ISMPC_perturbation_Ldot/mH", [this]() -> const  Eigen::Vector3d & {
+    return Ldot_offset;
+  });
+
   // logger().addLogEntry("ISMPC_State_ZMP_kinmes", [this]() -> const Eigen::Vector3d {
 
   //   return Eigen::Vector3d{0,0,1}.cross( robot().com().cross(robot().mass()*mc_rtc::constants::gravity) ) /

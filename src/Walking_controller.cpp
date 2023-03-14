@@ -757,7 +757,8 @@ void Walking_controller::UpdateInitialVectors()
     mpc_state_.Pck = realRobot().com() + mpc_state_.ComBias;
 
     mpc_state_.Pu = mpc_state_.Pck + mpc_state_.Vck/mpc_state_.eta;
-    
+
+    Ldot = rbd::computeCentroidalMomentumDot(realRobot().mb(), realRobot().mbc(), mpc_state_.Pck ,mpc_state_.Vck).moment(); 
 
   }
 
@@ -772,6 +773,9 @@ void Walking_controller::UpdateInitialVectors()
   }
 
   ComputeFeetPerturbances(w_,eta2_cstr);
+  Ldot_offset = Eigen::Vector3d{-Ldot.y(),Ldot.x(),0.};
+  Ldot_offset /= (robot().mass() * controller_config_.Stab_config.comHeight * eta2_cstr);
+  w_ += Ldot_offset;
   // eta2_cstr = (mc_rtc::constants::GRAVITY/controller_config_.Stab_config.comHeight);
 
   mpc_state_.Pck.z() = controller_config_.Stab_config.comHeight;
