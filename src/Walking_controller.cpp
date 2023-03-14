@@ -770,6 +770,11 @@ void Walking_controller::UpdateInitialVectors()
     mpc_state_.Pck = realRobot().com() + mpc_state_.ComBias;
 
     mpc_state_.Pu = mpc_state_.Pck + mpc_state_.Vck/mpc_state_.eta;
+    if(controller_config_.Stab_config.dcmBias.withDCMFilter)
+    {
+      mpc_state_.Pu.segment(0,2) = stabTask->filteredDCM();
+      mpc_state_.Vck = (mpc_state_.Pu - mpc_state_.Pck) * stabTask->omega();
+    }
 
     Ldot = rbd::computeCentroidalMomentumDot(realRobot().mb(), realRobot().mbc(), mpc_state_.Pck ,mpc_state_.Vck).moment(); 
 
