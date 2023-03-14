@@ -25,7 +25,8 @@ if(NOT TARGET mc_rtc::mc_control)
   find_package(mc_rtc REQUIRED)
 endif()
 
-find_package(pendulum_feasibility_solver)
+find_package(pendulum_feasibility_solver REQUIRED)
+# find_package(FootStepsPlannerPlugin REQUIRED)
 
 add_subdirectory(src)
 
