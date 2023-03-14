@@ -69,7 +69,17 @@ void Walking_controller::getTransformations()
   const auto & X_0_torso_link = robot().bodyPosW(torsoBodyName_);
   const auto & X_0_torso_reference = ReferenceFrame_Origin_Offset * X_0_torso_link;
 
-  LeftFootRatio = mc_filter::utils::clamp(stabTask->leftFootRatio(), LeftFootRatio - 0.019, LeftFootRatio + 0.019);
+  double ratio_target = 0.;
+  if(supportFootName == rightFootName_)
+  {
+    ratio_target = 1;
+  }
+  if(!Robot_Walking)
+  {
+    ratio_target = 0.5;
+  }
+
+  LeftFootRatio = mc_filter::utils::clamp(ratio_target, LeftFootRatio - maxRatioDelta, LeftFootRatio + maxRatioDelta);
 
   sva::ForceVecd left_wrench = robot().frame(leftHandName_).wrench();
   filter_left_hand_wrench_.update(left_wrench);
@@ -195,8 +205,7 @@ void Walking_controller::ComputeFeetPerturbances(Eigen::Vector3d & offset, doubl
                   /(eta2*robot().mass());
     offset.y() += ( swing_wrench_0.force().y() - ((swing_wrench_0  + supp_wrench_0).moment().x()/h))
                   /(eta2*robot().mass());
-
-
+    
   }
   else
   {

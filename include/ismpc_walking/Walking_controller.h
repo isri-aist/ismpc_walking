@@ -434,6 +434,7 @@ private:
   bool force_contact_safety_ = true;
 
   double LeftFootRatio = 0.5;
+  double maxRatioDelta = 0.2;
   double PrevLeftFootRatio = 0.5;
   double Ratio_target = 0.5; // A left foot ratio that set a zmp target when Stop
   double t = 0; // General timing in a step

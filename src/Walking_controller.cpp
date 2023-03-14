@@ -75,6 +75,19 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, c
     return sva::interpolate(robot.surfacePose(leftFootName_), robot.surfacePose(rightFootName_), LeftFootRatio);
   });
 
+  const auto oConfig = config("ObserverPipelines")("observers");
+  for (auto conf : oConfig)
+  {
+    
+    if (conf("type") == "KinematicInertial")
+    {
+      std::cout << (conf("config").dump()) << std::endl;
+      const auto conf_obs = conf("config")("anchorFrame");
+      conf_obs("maxAnchorFrameDiscontinuity",maxRatioDelta);
+    }
+  }
+  
+
   // solver().addConstraintSet(*constraint);
   // solver().addConstraintSet(contactConstraint);
   // solver().addConstraintSet(kinematicsConstraint);
