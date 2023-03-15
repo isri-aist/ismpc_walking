@@ -78,11 +78,8 @@ void Walking_controller::getTransformations()
   {
     ratio_target = 0.5;
   }
+
   LeftFootRatio = mc_filter::utils::clamp(ratio_target, LeftFootRatio - maxRatioDelta, LeftFootRatio + maxRatioDelta);
-  if(!DoubleSupport_state)
-  {
-    LeftFootRatio = ratio_target;
-  }
 
   sva::ForceVecd left_wrench = robot().frame(leftHandName_).wrench();
   filter_left_hand_wrench_.update(left_wrench);
