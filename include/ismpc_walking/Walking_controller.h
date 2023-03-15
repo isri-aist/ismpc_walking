@@ -81,6 +81,22 @@ public:
     {
       controller_config_.lambda_dbl_supp = config("ismpc")("lambda_dbl_supp");
     }
+    if(config("ismpc").has("ts"))
+    {
+      ts(config("ismpc")("ts"));
+    }
+    if(config("ismpc").has("tds_ratio"))
+    {
+      controller_config_.Double_Step_Ratio = config("ismpc")("tds_ratio");
+    }
+    if(config("ismpc").has("zmp_ref_start_step"))
+    {
+      controller_config_.MPC_ZMP_ref_offset_start_step = config("ismpc")("zmp_ref_start_step");
+    }
+    if(config("ismpc").has("zmp_ref_end_step"))
+    {
+      controller_config_.MPC_ZMP_ref_offset_end_step = config("ismpc")("zmp_ref_end_step");
+    }
     controller_config_.zmp_delay = config("ismpc")("zmp_delay");
     controller_config_.feet_ditance_ = config("ismpc")("feet_distance");
 
