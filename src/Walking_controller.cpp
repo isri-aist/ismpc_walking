@@ -747,19 +747,19 @@ void Walking_controller::UpdateInitialVectors()
   if(UseRealRobot)
   {
     
-    sva::PTransformd zmpFrame = robot().surfacePose(supportFootName);
-    sva::ForceVecd measuredNetWrench_ = robot().netWrench({"LeftFootForceSensor"});
+    sva::PTransformd zmpFrame = realRobot().surfacePose(supportFootName);
+    sva::ForceVecd measuredNetWrench_ = realRobot().netWrench({"LeftFootForceSensor"});
     if(supportFootName == "RightFootCenter")
     {
-      measuredNetWrench_ = robot().netWrench({"RightFootForceSensor"});
+      measuredNetWrench_ = realRobot().netWrench({"RightFootForceSensor"});
     }
     if(DoubleSupport_state)
     {
-      measuredNetWrench_ = robot().netWrench({"RightFootForceSensor","LeftFootForceSensor"});
-      zmpFrame = sva::interpolate(robot().surfacePose(supportFootName),robot().surfacePose(swingFootName), 0.5);
+      measuredNetWrench_ = realRobot().netWrench({"RightFootForceSensor","LeftFootForceSensor"});
+      zmpFrame = sva::interpolate(realRobot().surfacePose(supportFootName),realRobot().surfacePose(swingFootName), 0.5);
     }
     Eigen::Vector3d zmp_vel = mpc_state_.Pzk;
-    robot().zmp(mpc_state_.Pzk,measuredNetWrench_,zmpFrame);
+    realRobot().zmp(mpc_state_.Pzk,measuredNetWrench_,zmpFrame);
     zmp_vel = (mpc_state_.Pzk - zmp_vel) / controller_timestep;
     zmp_vel_.append(zmp_vel);
 
