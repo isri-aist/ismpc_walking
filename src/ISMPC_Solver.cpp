@@ -1,4 +1,5 @@
 #include "../include/ismpc_walking/ISMPC_Solver.h"
+#include <mc_rtc/io_utils.h>
 
 
 
@@ -100,6 +101,10 @@ void ISMPC_Solver::init_MPC(const MPC_state & mpc_state,
     U_k = mpc_state.Uk;
     m_t_delay = m_t_global;
     m_delay_elapsed = m_delay;
+  }
+  if(mpc_state.stop)
+  {
+    m_delay_elapsed = 0;
   }
 
 
@@ -466,13 +471,19 @@ void ISMPC_Solver::ZMP_Constraints()
     
     if(m_tk + static_cast<double>(i) * m_delta >= NextStepTiming && j_f + 1 < static_cast<int>(m_timestamp.size()) )
     {
-      m_D = static_cast<int>(m_Tds / m_delta) - Tds_offset;
 
       // j_f = std::min(j_f + 1, (int)input_steps_.size() - 1);
       j_f += 1;
       j_fm1 = j_f - 1;
       count_Dstep = 1;
       sgn *= -1;
+    
+      double tds = m_Tds;
+      if(UsePendulumSolver)
+      {
+        tds = m_feasibilitySolver.get_optimal_steps_ds_duration()[j_f];
+      }
+      m_D = static_cast<int>(tds / m_delta) - Tds_offset;
 
       NextStepTiming = m_timestamp[j_f];
       PrevStepTime = m_timestamp[j_fm1];
@@ -1129,49 +1140,62 @@ void ISMPC_Solver::Integrate()
 bool ISMPC_Solver::GetWalkingParameters(bool stop)
 {
   std::chrono::high_resolution_clock::time_point t_clock = std::chrono::high_resolution_clock::now();
- 
-  m_feasibilitySolver.configure(m_eta,
-                              m_delta_control,
-                              Eigen::Vector2d{0.15,0.4},
-                              Eigen::Vector2d{0.55,4},
-                              Eigen::Vector2d{0.7,5},
-                              Eigen::Vector2d{m_dx_f,m_dy_f},
-                              Eigen::Vector2d{m_dx * 0.7  , m_dy},
-                              m_feet_distance,8);
-  std::vector<sva::PTransformd> & stepsRef = corr_steps_.size() != 0 ? corr_steps_ : input_steps_;
-
-  bool feas_res = m_feasibilitySolver.solve(m_tk,m_t_lift,DoubleSupport,P_u_k.segment(0,2),P_z_k.segment(0,2),
-                                          m_support_foot,
-                                          X_0_support_foot,
-                                          X_0_swing_foot_initial,
-                                          m_input_Tds,input_steps_,
-                                          m_timestamp);
-  
-  std::vector<double> optimalTs = m_feasibilitySolver.get_optimal_steps_timings() ;
-  std::vector<double> optimalTds = m_feasibilitySolver.get_optimal_steps_ds_duration() ;
-  std::vector<sva::PTransformd> optimalPf = m_feasibilitySolver.get_optimal_footsteps();
-  
-  // mc_rtc::log::info("optimal t {}",timings);
-  // mc_rtc::log::info("optimal tds {}",timings_ds);
-  // if(optimalPf.size() != 0)
-  // {
-  //   mc_rtc::log::info("ref p {}",input_steps_[0].translation());
-  //   mc_rtc::log::info("optimal p {}",optimalPf[0].translation());
-  // }
-  if(feas_res)
+  if(UsePendulumSolver)
   {
-    m_timestamp = optimalTs;
-    if(DoubleSupport){ m_Tds = optimalTds[0];}
-    else if(optimalTds.size() > 1){m_Tds = optimalTds[1];}
-    input_steps_ = optimalPf;
-    m_feasibility_region = m_feasibilitySolver.get_feasibility_region();
+    double Ts = m_timestamp[0];
+    m_feasibilitySolver.configure(m_eta,
+                                m_delta_control,
+                                Eigen::Vector2d{0.1,0.4},
+                                Eigen::Vector2d{0.4,4},
+                                Eigen::Vector2d{0.5,5},
+                                Eigen::Vector2d{m_dx_f,m_dy_f},
+                                Eigen::Vector2d{m_dx * 0.7  , m_dy},
+                                m_feet_distance,8);
+    std::vector<sva::PTransformd> & stepsRef = corr_steps_.size() != 0 ? corr_steps_ : input_steps_;
+
+    bool feas_res = m_feasibilitySolver.solve(m_tk,m_t_lift,DoubleSupport,P_u_k.segment(0,2),P_z_k.segment(0,2),
+                                            m_support_foot,
+                                            X_0_support_foot,
+                                            X_0_swing_foot_initial,
+                                            m_input_Tds,input_steps_,
+                                            m_timestamp);
+    
+    std::vector<double> optimalTs = m_feasibilitySolver.get_optimal_steps_timings() ;
+    std::vector<double> optimalTds = m_feasibilitySolver.get_optimal_steps_ds_duration() ;
+    // for (int k = 1 ; k < optimalTs.size() ; k++)
+    // {
+    //   optimalTs[k] = optimalTs[0] + k * Ts;
+    //   optimalTds[k] = m_input_Tds;
+    // }
+
+    // mc_rtc::log::info("Ts {}",mc_rtc::io::to_string(optimalTs));
+    // mc_rtc::log::info("Tds {}",mc_rtc::io::to_string(optimalTds));
+    std::vector<sva::PTransformd> optimalPf = m_feasibilitySolver.get_optimal_footsteps();
+    
+    // mc_rtc::log::info("optimal t {}",timings);
+    // mc_rtc::log::info("optimal tds {}",timings_ds);
+    // if(optimalPf.size() != 0)
+    // {
+    //   mc_rtc::log::info("ref p {}",input_steps_[0].translation());
+    //   mc_rtc::log::info("optimal p {}",optimalPf[0].translation());
+    // }
+    if(feas_res)
+    {
+      m_timestamp = optimalTs;
+      if(DoubleSupport){ m_Tds = optimalTds[0];}
+      input_steps_ = optimalPf;
+      m_feasibility_region = m_feasibilitySolver.get_feasibility_region();
+    }
+    else
+    {
+      mc_rtc::log::warning("[ISMPC {}] Step feasibility QP fail",m_t_global);
+      m_Tds = m_input_Tds;
+
+    }
   }
   else
   {
-    m_timestamp = optimalTs;
-    if(DoubleSupport){ m_Tds = optimalTds[0];}
-    else if(optimalTds.size() > 1){m_Tds = optimalTds[1];}
-    mc_rtc::log::warning("[ISMPC {}] Step feasibility QP fail",m_t_global);
+    m_Tds = m_input_Tds;
   }
   
   QPsuccess = false;
@@ -1215,8 +1239,11 @@ bool ISMPC_Solver::GetWalkingParameters(bool stop)
   if(m_stop)
   {
     Static_ZMP_Constraints();
-    m_feasibility_standing_region = SupportPolygon( m_feasibilitySolver.get_feasibility_region());
-    m_feasibility_standing_region_swing = SupportPolygon(m_feasibilitySolver.get_feasibility_region(X_0_swing_foot_initial,X_0_support_foot) );
+    if(UsePendulumSolver)
+    {
+      m_feasibility_standing_region = SupportPolygon( m_feasibilitySolver.get_feasibility_region());
+      m_feasibility_standing_region_swing = SupportPolygon(m_feasibilitySolver.get_feasibility_region(X_0_swing_foot_initial,X_0_support_foot) );
+    }
     // Compute_Standing_Stability_Range();
   }
   else

@@ -249,6 +249,7 @@ void Walking_controller::ComputeWalkingTrajectory()
     NewConfigState = false;
   }
   MPCSolver.AutoFootstepPlacement = AutoFootstepPlacement;
+  MPCSolver.UsePendulumSolver = UsePendulumSolver;
 
   if(mpc_thread_state.input_steps_.size() != 0)
   {

@@ -445,7 +445,8 @@ private:
   std::condition_variable compute_trajectory_once;
   std::atomic<bool> WalkingTrajectory_Computing = false;
   bool emergencyFlag = false; // Stop controller run loop
-  bool AutoFootstepPlacement = false; // To enable the Autofootstep placement MPC
+  bool AutoFootstepPlacement = true; // To enable the Autofootstep placement MPC
+  bool UsePendulumSolver = true;
   bool Tds_by_ratio = true;
   bool force_contact_safety_ = true;
 
@@ -501,8 +502,7 @@ private:
   bool StepRecoveryState = false;
 
   
-
-  bool Use_w = false;
+  bool Use_w = true;
   Eigen::Vector3d w_ = Eigen::Vector3d::Zero();
   double eta2_cstr;
   Eigen::Vector3d Ldot_offset = Eigen::Vector3d::Zero(); //offset due to angular momentum

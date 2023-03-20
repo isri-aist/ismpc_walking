@@ -212,6 +212,9 @@ void Walking_controller::addToGUI()
           "Automatic FootStep Placement", [this]() { return AutoFootstepPlacement; },
           [this]() { AutoFootstepPlacement = !AutoFootstepPlacement; }),
       mc_rtc::gui::Checkbox(
+          "Timing/Steps optimization", [this]() { return UsePendulumSolver; },
+          [this]() { UsePendulumSolver = !UsePendulumSolver; }),
+      mc_rtc::gui::Checkbox(
           "Real Robot Data feedback", [this]() { return UseRealRobot; },
           [this]() {
             UseRealRobot = !UseRealRobot;
