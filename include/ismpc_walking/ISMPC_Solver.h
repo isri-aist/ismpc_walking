@@ -327,6 +327,7 @@ public:
   }
 
   bool AutoFootstepPlacement = false;
+  bool UsePendulumSolver = false;
 
   std::vector<std::vector<Eigen::Vector3d>> All_poly;
 
