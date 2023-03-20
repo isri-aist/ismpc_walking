@@ -382,7 +382,6 @@ protected:
 
   std::shared_ptr<mc_tasks::lipm_stabilizer::StabilizerTask> stabTask;
 
-  std::shared_ptr<mc_tasks::OrientationTask> left_foot_ori;
   std::shared_ptr<mc_tasks::SurfaceTransformTask> SwingFootTask;
   std::shared_ptr<mc_tasks::SurfaceTransformTask> SupportFootTask;
   std::shared_ptr<mc_tasks::SurfaceTransformTask> leftSwingFootTask;
@@ -402,14 +401,14 @@ private:
   bool stabilizer_active_ = true;
   std::thread WalkingTrajectoryThread;
 
-  Eigen::Vector3d dcmTarget;
-  Eigen::Vector3d dcmMeasured;
-  Eigen::Vector3d zmpCorr;
-  Eigen::Vector3d zmpTarget;
-  Eigen::Vector3d admittanceTarget;
-  Eigen::Vector3d zmpMeasured;
-  Eigen::Vector2d supportMin;
-  Eigen::Vector2d supportMax;
+  Eigen::Vector3d dcmTarget = Eigen::Vector3d::Zero();
+  Eigen::Vector3d dcmMeasured= Eigen::Vector3d::Zero();
+  Eigen::Vector3d zmpCorr = Eigen::Vector3d::Zero();
+  Eigen::Vector3d zmpTarget = Eigen::Vector3d::Zero();
+  Eigen::Vector3d admittanceTarget = Eigen::Vector3d::Zero();
+  Eigen::Vector3d zmpMeasured = Eigen::Vector3d::Zero();
+  Eigen::Vector2d supportMin = Eigen::Vector2d::Zero();
+  Eigen::Vector2d supportMax = Eigen::Vector2d::Zero();
   std::string torsoBodyName_ = "";
   std::string LeftFootLinkName_ = "";
   std::string RightFootLinkName_ = "";
@@ -483,12 +482,12 @@ private:
   double vertical_force_offset_ = 0;
   std::vector<double> vertical_force_measure_; // measure the vertical force values during swing foot phase;
 
-  Eigen::Vector3d SwingFootAcc;
-  Eigen::Vector3d SwingFootVel;
-  sva::PTransformd X_0_SwingFootInitial; // Swing Foot Pose Before Swinging
-  sva::PTransformd X_0_SwingFootInitial_real;
+  Eigen::Vector3d SwingFootAcc = Eigen::Vector3d::Zero();
+  Eigen::Vector3d SwingFootVel = Eigen::Vector3d::Zero();
+  sva::PTransformd X_0_SwingFootInitial = sva::PTransformd::Identity(); // Swing Foot Pose Before Swinging
+  sva::PTransformd X_0_SwingFootInitial_real = sva::PTransformd::Identity();
 
-  Eigen::Vector3d SwingFootInitialPose; // Previous Swing Foot pose at the time of the MPC computation
+  Eigen::Vector3d SwingFootInitialPose = Eigen::Vector3d::Zero(); // Previous Swing Foot pose at the time of the MPC computation
 
   double SwingFootInitialAngle = 0.0;
   double input_tds = 0.25; // Double Step Time duration
@@ -534,47 +533,47 @@ private:
   double Vx_i = 0;
   double Vy_i = 0;
   double Omega_i = 0;
-  Eigen::Vector3d reference_velocity;
+  Eigen::Vector3d reference_velocity = Eigen::Vector3d::Zero();
 
   Eigen::Vector3d StaticPose = Eigen::Vector3d::Zero();
 
   sva::PTransformd ReferenceFrame_Origin_Offset = sva::PTransformd::Identity();
 
-  sva::PTransformd leftFootTransformZero;
-  sva::PTransformd rightFootTransformZero;
+  sva::PTransformd leftFootTransformZero = sva::PTransformd::Identity();
+  sva::PTransformd rightFootTransformZero = sva::PTransformd::Identity();
 
-  sva::PTransformd X_0_leftFoot;
-  Eigen::Matrix3d R_0_leftFoot;
-  Eigen::Matrix3d R_leftFoot_0;
-  Eigen::Vector3d T_leftFoot_0;
+  sva::PTransformd X_0_leftFoot = sva::PTransformd::Identity();
+  Eigen::Matrix3d R_0_leftFoot = Eigen::Matrix3d::Identity();
+  Eigen::Matrix3d R_leftFoot_0 = Eigen::Matrix3d::Identity();
+  Eigen::Vector3d T_leftFoot_0 = Eigen::Vector3d::Zero();
 
-  sva::PTransformd X_0_rightFoot;
-  Eigen::Matrix3d R_0_rightFoot;
-  Eigen::Matrix3d R_rightFoot_0;
-  Eigen::Vector3d T_rightFoot_0;
+  sva::PTransformd X_0_rightFoot = sva::PTransformd::Identity();
+  Eigen::Matrix3d R_0_rightFoot = Eigen::Matrix3d::Identity();
+  Eigen::Matrix3d R_rightFoot_0 = Eigen::Matrix3d::Identity();
+  Eigen::Vector3d T_rightFoot_0 = Eigen::Vector3d::Zero();
 
-  sva::PTransformd X_0_support;
-  sva::PTransformd X_0_swing;
-  sva::PTransformd X_0_support_flat;
-  sva::PTransformd X_0_support_real;
-  sva::PTransformd X_support_0;
-  sva::PTransformd X_support_0_real;
-  Eigen::Matrix3d R_0_support;
-  Eigen::Vector3d T_0_support;
-  Eigen::Matrix3d R_0_support_real;
-  Eigen::Vector3d T_0_support_real;
-  Eigen::Matrix3d R_support_0;
-  Eigen::Vector3d T_support_0;
-  Eigen::Matrix3d R_support_0_real;
-  Eigen::Vector3d T_support_0_real;
-  Eigen::Matrix3d R_swing_0;
-  Eigen::Matrix3d R_0_swing;
-  Eigen::Vector3d T_swing_0;
+  sva::PTransformd X_0_support = sva::PTransformd::Identity();
+  sva::PTransformd X_0_swing = sva::PTransformd::Identity();
+  sva::PTransformd X_0_support_flat = sva::PTransformd::Identity();
+  sva::PTransformd X_0_support_real = sva::PTransformd::Identity();
+  sva::PTransformd X_support_0 = sva::PTransformd::Identity();
+  sva::PTransformd X_support_0_real = sva::PTransformd::Identity();
+  Eigen::Matrix3d R_0_support = Eigen::Matrix3d::Identity();
+  Eigen::Vector3d T_0_support = Eigen::Vector3d::Zero();
+  Eigen::Matrix3d R_0_support_real = Eigen::Matrix3d::Identity();
+  Eigen::Vector3d T_0_support_real = Eigen::Vector3d::Zero();
+  Eigen::Matrix3d R_support_0 = Eigen::Matrix3d::Identity();
+  Eigen::Vector3d T_support_0 = Eigen::Vector3d::Zero();
+  Eigen::Matrix3d R_support_0_real = Eigen::Matrix3d::Identity();
+  Eigen::Vector3d T_support_0_real = Eigen::Vector3d::Zero();
+  Eigen::Matrix3d R_swing_0 = Eigen::Matrix3d::Identity();
+  Eigen::Matrix3d R_0_swing = Eigen::Matrix3d::Identity();
+  Eigen::Vector3d T_swing_0 = Eigen::Vector3d::Zero();
 
-  Eigen::Matrix3d floatingbaseWorldOri;
-  Eigen::Vector3d floatingbaseWorldPos;
-  sva::PTransformd X_world_floatingbase;
-  Eigen::Vector3d floatingbaseWorldRPY;
+  Eigen::Matrix3d floatingbaseWorldOri = Eigen::Matrix3d::Identity();
+  Eigen::Vector3d floatingbaseWorldPos = Eigen::Vector3d::Zero();
+  sva::PTransformd X_world_floatingbase = sva::PTransformd::Identity();
+  Eigen::Vector3d floatingbaseWorldRPY = Eigen::Vector3d::Zero();
 
   double currentLeftLeg = 0;
   double currentRightLeg = 0;
@@ -586,7 +585,7 @@ private:
 
   std::vector<std::string> SwingFootJoints;
 
-  Eigen::Vector6d footcontact_dof;
+  Eigen::Vector6d footcontact_dof = Eigen::Vector6d::Zero();
 
   int kfoot = 0; // indx of the target step in the step plan
 
@@ -603,8 +602,8 @@ private:
   std::vector<Eigen::Vector3d> SupPolygon;
 
   bool DebugMode = false;
-  Eigen::Vector3d debugCoM;
-  Eigen::Vector3d debugZMP;
+  Eigen::Vector3d debugCoM = Eigen::Vector3d::Zero();
+  Eigen::Vector3d debugZMP = Eigen::Vector3d::Zero();
   double debugTk = 0;
   bool debugDblSupp = true;
 };
