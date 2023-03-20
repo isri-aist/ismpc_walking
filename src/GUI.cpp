@@ -52,15 +52,17 @@ inline void AddStabilizerConfigToGUI(mc_rtc::gui::StateBuilder & gui,
           "Foot force difference Damping", {"Fx", "Fy", "Fz"},
           [&c_]() -> Eigen::Vector3d { return c_.dfDamping; },
           [&c_](const Eigen::Vector3d & a) { c_.dfDamping = a; }),
-      mc_rtc::gui::ArrayInput(
-          "DCM P gains", {"x", "y"}, [&c_]() -> const Eigen::Vector2d & { return c_.dcmPropGain; },
-          [&c_](const Eigen::Vector2d & gains) { c_.dcmPropGain = gains; }),
-      mc_rtc::gui::ArrayInput(
-          "DCM I gains", {"x", "y"}, [&c_]() -> const Eigen::Vector2d & { return c_.dcmIntegralGain; },
-          [&c_](const Eigen::Vector2d & gains) { c_.dcmIntegralGain = gains; }),
-      mc_rtc::gui::ArrayInput(
-          "DCM D gains", {"x", "y"}, [&c_]() -> const Eigen::Vector2d & { return c_.dcmDerivGain; },
-          [&c_](const Eigen::Vector2d & gains) { c_.dcmDerivGain = gains; }),
+      mc_rtc::gui::NumberInput(
+          "roll admittance", [&c_]() { return c_.rollAdmittance; }, [&c_](double a) { c_.rollAdmittance = a; }),
+      // mc_rtc::gui::ArrayInput(
+      //     "DCM P gains", {"x", "y"}, [&c_]() -> const Eigen::Vector2d & { return c_.dcmPropGain; },
+      //     [&c_](const Eigen::Vector2d & gains) { c_.dcmPropGain = gains; }),
+      // mc_rtc::gui::ArrayInput(
+      //     "DCM I gains", {"x", "y"}, [&c_]() -> const Eigen::Vector2d & { return c_.dcmIntegralGain; },
+      //     [&c_](const Eigen::Vector2d & gains) { c_.dcmIntegralGain = gains; }),
+      // mc_rtc::gui::ArrayInput(
+      //     "DCM D gains", {"x", "y"}, [&c_]() -> const Eigen::Vector2d & { return c_.dcmDerivGain; },
+      //     [&c_](const Eigen::Vector2d & gains) { c_.dcmDerivGain = gains; }),
       mc_rtc::gui::NumberInput(
           "CoMd Error gain", [&c_]() { return c_.comdErrorGain; }, [&c_](double a) { c_.comdErrorGain = a; }),
       mc_rtc::gui::NumberInput(
