@@ -12,6 +12,7 @@
 #include <mc_solver/ConstraintSetLoader.h>
 #include <mc_tasks/AddRemoveContactTask.h>
 #include <mc_tasks/SurfaceTransformTask.h>
+#include <mc_tasks/CoPTask.h>
 #include <mc_tasks/MomentumTask.h>
 #include <mc_tasks/lipm_stabilizer/StabilizerTask.h>
 #include <Tasks/QPContactConstr.h>
@@ -383,6 +384,10 @@ protected:
   std::shared_ptr<mc_tasks::lipm_stabilizer::StabilizerTask> stabTask;
 
   std::shared_ptr<mc_tasks::SurfaceTransformTask> SwingFootTask;
+  std::shared_ptr<mc_tasks::force::CoPTask> rightLandingTask;
+  std::shared_ptr<mc_tasks::force::CoPTask> leftLandingTask;
+  std::shared_ptr<mc_tasks::force::CoPTask> landingTask;
+
   std::shared_ptr<mc_tasks::SurfaceTransformTask> SupportFootTask;
   std::shared_ptr<mc_tasks::SurfaceTransformTask> leftSwingFootTask;
   std::shared_ptr<mc_tasks::SurfaceTransformTask> rightSwingFootTask;

@@ -52,8 +52,6 @@ inline void AddStabilizerConfigToGUI(mc_rtc::gui::StateBuilder & gui,
           "Foot force difference Damping", {"Fx", "Fy", "Fz"},
           [&c_]() -> Eigen::Vector3d { return c_.dfDamping; },
           [&c_](const Eigen::Vector3d & a) { c_.dfDamping = a; }),
-      mc_rtc::gui::NumberInput(
-          "roll admittance", [&c_]() { return c_.rollAdmittance; }, [&c_](double a) { c_.rollAdmittance = a; }),
       // mc_rtc::gui::ArrayInput(
       //     "DCM P gains", {"x", "y"}, [&c_]() -> const Eigen::Vector2d & { return c_.dcmPropGain; },
       //     [&c_](const Eigen::Vector2d & gains) { c_.dcmPropGain = gains; }),

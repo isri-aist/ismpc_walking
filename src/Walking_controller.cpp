@@ -103,6 +103,18 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, c
   rightSwingFootTask =
       std::make_shared<mc_tasks::SurfaceTransformTask>(rightFootName_, robots(), robots().robotIndex(), 10.0, 10.);
 
+  leftLandingTask =
+  std::make_shared<mc_tasks::force::CoPTask>(leftFootName_, robots(), robots().robotIndex(), 1, controller_config_.Stab_config.contactWeight);
+  leftLandingTask->name("landingTask_left");
+  leftLandingTask->admittance( sva::ForceVecd(Eigen::Vector3d{0.005,0.005,0} , Eigen::Vector3d{0,0,0.001}) );
+  leftLandingTask->damping(controller_config_.Stab_config.contactDamping);
+  
+  rightLandingTask =
+  std::make_shared<mc_tasks::force::CoPTask>(rightFootName_, robots(), robots().robotIndex(), 1, controller_config_.Stab_config.contactWeight);
+  rightLandingTask->name("landingTask_right");
+  rightLandingTask->admittance( sva::ForceVecd(Eigen::Vector3d{0.005,0.005,0} , Eigen::Vector3d{0,0,0.001}) );
+  rightLandingTask->damping(controller_config_.Stab_config.contactDamping);
+
   swingFootName = leftFootName_;
   supportFootName = rightFootName_;
 
@@ -281,7 +293,7 @@ void Walking_controller::ComputeWalkingTrajectory()
   int Steps = N_Steps;
   int Steps_Desired = N_Steps_Desired;
 
-  if(Stop && !Swing_Foot_Contact)
+  if(Stop && !DoubleSupport_state)
   {
     Steps_Desired = Steps + 1;
   }
@@ -301,9 +313,9 @@ void Walking_controller::ComputeWalkingTrajectory()
   {
     // MPCSolver.Disturbance( w_.norm()*(
     // mc_rtc::log::info("Disturbance {}",Eigen::Vector3d{0,15.,0}/robot().mass());
-    mc_filter::utils::clampInPlaceAndWarn(w_.x(),-0.03 , 0.03,"Perturbation (0)");
-    mc_filter::utils::clampInPlaceAndWarn(w_.y(),-0.03 , 0.03,"Perturbation (1)");
-    mc_filter::utils::clampInPlaceAndWarn(eta2_cstr,4, 17,"Omega Perturbation");
+    mc_filter::utils::clampInPlaceAndWarn(w_.x(),-0.05 , 0.05,"Perturbation (0)");
+    mc_filter::utils::clampInPlaceAndWarn(w_.y(),-0.1 , 0.1,"Perturbation (1)");
+    mc_filter::utils::clampInPlaceAndWarn(eta2_cstr,2, 20,"Omega Perturbation");
     MPCSolver.Disturbance(w_,sqrt(eta2_cstr),0.1);
     // MPCSolver.Disturbance(w_,sqrt(eta2_cstr));
   }
@@ -514,7 +526,7 @@ bool Walking_controller::run()
   }
 
 
-  if(!(Stop && Swing_Foot_Contact))
+  if(!(Stop && DoubleSupport_state))
   {
 
     if(t - t_k >= controller_config_.delta || DoubleSupport_state )
@@ -558,7 +570,7 @@ bool Walking_controller::run()
   }
   
 
-  if(!Swing_Foot_Contact && stabilizer_state_ != StabilizerState::SingleSupport && active)
+  if(!DoubleSupport_state && stabilizer_state_ != StabilizerState::SingleSupport && active)
   {
     stabilizer_state_ = StabilizerState::SingleSupport;
     mc_rbdyn::lipm_stabilizer::StabilizerConfiguration config = controller_config_.Stab_config_sg_supp;
@@ -571,7 +583,7 @@ bool Walking_controller::run()
     Configure(controller_config_);
     mc_rtc::log::info("configure sg");
   }
-  else if(Robot_Walking && Swing_Foot_Contact && stabilizer_state_ != StabilizerState::DoubleSupport && active)
+  else if(Robot_Walking && DoubleSupport_state && stabilizer_state_ != StabilizerState::DoubleSupport && active)
   {
     stabilizer_state_ = StabilizerState::DoubleSupport;
     mc_rbdyn::lipm_stabilizer::StabilizerConfiguration config = controller_config_.Stab_config_dbl_supp;
