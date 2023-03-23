@@ -191,20 +191,26 @@ void Walking_controller::ComputeFeetPerturbances(Eigen::Vector3d & offset, doubl
   const double h = controller_config_.Stab_config.comHeight;
   offset.setZero();
   eta2 = verticalComAcc / h;
-  if(!DoubleSupport_state && robot().surfaceWrench(swingFootName).force().z() > 10)
+  Eigen::Vector3d FilteredNetForce = stabTask->measuredFilteredNetForces();
+  double mass = FilteredNetForce.z() / mc_rtc::constants::GRAVITY;
+  comAccZ = (robot().surfaceForceSensor(supportFootName).worldWrench(robot()).force().z() + robot().surfaceForceSensor(swingFootName).worldWrench(robot()).force().z())/mass;
+  comAccZ -= mc_rtc::constants::GRAVITY;
+  
+  eta2 = (  mass * (comAccZ  +  mc_rtc::constants::GRAVITY) );
+  eta2 /= mass * h;
+
+  if(!DoubleSupport_state)
   {
-    const double support_vertical_perturbation = (robot().mass() * mc_rtc::constants::GRAVITY - robot().surfaceForceSensor(supportFootName).wrench().force().z());
+
+    eta2 -= robot().surfaceForceSensor(swingFootName).worldWrench(robot()).force().z() / mass * h;
 
     const sva::PTransformd X_swg_com = sva::PTransformd(Eigen::Matrix3d::Identity(),robot().com()) * X_0_swing.inv();
-    const sva::PTransformd X_supp_com = sva::PTransformd(Eigen::Matrix3d::Identity(),robot().com()) * X_0_support.inv();
     const sva::ForceVecd swing_wrench_0 = X_swg_com.dualMul( robot().surfaceWrench(swingFootName));
-    const sva::ForceVecd supp_wrench_0 = X_supp_com.dualMul( sva::ForceVecd(Eigen::Vector3d::Zero(),Eigen::Vector3d{0,0,support_vertical_perturbation}));
 
-    eta2 -= (swing_wrench_0.force().z() + support_vertical_perturbation)/(robot().mass() * h);
-    offset.x() += ( swing_wrench_0.force().x() + ((swing_wrench_0  + supp_wrench_0).moment().y()/h))
-                  /(eta2*robot().mass());
-    offset.y() += ( swing_wrench_0.force().y() - ((swing_wrench_0  + supp_wrench_0).moment().x()/h))
-                  /(eta2*robot().mass());
+    offset.x() += ( swing_wrench_0.force().x() + ((swing_wrench_0).moment().y()/h))
+                  /(eta2*mass);
+    offset.y() += ( swing_wrench_0.force().y() - ((swing_wrench_0).moment().x()/h))
+                  /(eta2*mass);
     
   }
   else

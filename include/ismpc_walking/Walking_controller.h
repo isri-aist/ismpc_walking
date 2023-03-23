@@ -580,6 +580,8 @@ private:
   sva::PTransformd X_world_floatingbase = sva::PTransformd::Identity();
   Eigen::Vector3d floatingbaseWorldRPY = Eigen::Vector3d::Zero();
 
+  double comAccZ = 0;
+
   double currentLeftLeg = 0;
   double currentRightLeg = 0;
 

@@ -36,6 +36,7 @@ void Walking_controller::AddToLog()
     return 0.;
   });
   logger().addLogEntry("ISMPC_t", [this]() -> const double & { return t; });
+  logger().addLogEntry("ISMPC_CoMAccZ", [this]() -> const double & { return comAccZ; });
   logger().addLogEntry("ISMPC_stab-error", [this]() -> const Eigen::Vector2d & { return this->mpc_state_.stab_error; });
   logger().addLogEntry("ISMPC_process-time", [this]() -> const double { return this->mpc_thread_process_time; });
 
