@@ -683,7 +683,9 @@ void Walking_controller::MoveCoM()
   Ac_wrench.z() = 0;
 
   target_force_ = robot().mass() * (Ac_wrench + mc_rtc::constants::gravity);
-  target_wrench_ = sva::ForceVecd{realRobot().com().cross(target_force_),target_force_};
+  target_wrench_ = sva::ForceVecd{Pcom.cross(target_force_),target_force_};
+
+  // mc_rtc::log::info("zmp diff {}", admittanceTarget -  mc_rbdyn::zmp(target_wrench_, sva::PTransformd::Identity()) );
 
   Ac_wrench.z() = 0;
   dcmTarget = Pcom + Vc / mpc_state_.eta;
@@ -712,7 +714,10 @@ void Walking_controller::MoveCoM()
   {
     MomentumTask->momentum(sva::ForceVecd::Zero());
   }
+
+  mc_tasks::lipm_stabilizer::ContactState supportFoot = supportFootName == leftFootName_ ? mc_tasks::lipm_stabilizer::ContactState::Left : mc_tasks::lipm_stabilizer::ContactState::Right;
   
+  stabTask->supportFoot(supportFoot);
 
 }
 

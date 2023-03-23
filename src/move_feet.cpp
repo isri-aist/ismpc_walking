@@ -76,6 +76,12 @@ bool Walking_controller::MoveFeet(double t)
 
       DoubleSupport_state = false;
       Swing_Foot_Contact = false;
+      //Recompute MPC once contact is released
+      //{
+      t_k += t - t_k; 
+      compute_trajectory_once.notify_all();
+      //}
+
     }
   }
 
@@ -137,7 +143,7 @@ bool Walking_controller::MoveFeet(double t)
 
       landingTask->targetPose(landingTask->surfacePose());
       landingTask->targetCoP(Eigen::Vector2d::Zero());
-      landingTask->targetForce(Eigen::Vector3d{0,0,controller_config_.impact_threshold});
+      landingTask->targetForce(Eigen::Vector3d{0,0,5});
       solver().addTask(landingTask);
 
 
