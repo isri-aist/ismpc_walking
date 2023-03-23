@@ -194,6 +194,10 @@ void Walking_controller::ComputeFeetPerturbances(Eigen::Vector3d & offset, doubl
   Eigen::Vector3d FilteredNetForce = stabTask->measuredFilteredNetForces();
   double mass = FilteredNetForce.z() / mc_rtc::constants::GRAVITY;
   comAccZ = (robot().surfaceForceSensor(supportFootName).worldWrench(robot()).force().z() + robot().surfaceForceSensor(swingFootName).worldWrench(robot()).force().z())/mass;
+  if (std::abs(comAccZ) < 0.1 * mc_rtc::constants::GRAVITY)
+  {
+    comAccZ  = mc_rtc::constants::GRAVITY;
+  } 
   comAccZ -= mc_rtc::constants::GRAVITY;
   
   eta2 = (  mass * (comAccZ  +  mc_rtc::constants::GRAVITY) );
