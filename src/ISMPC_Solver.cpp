@@ -1438,7 +1438,7 @@ bool ISMPC_Solver::GetWalkingParameters(bool stop)
  
 
       Eigen::Vector2d P_u_k_2 = P_u_k.segment(0,2) + stab_error;
-      V_c_k.segment(0,2) = m_eta * (P_u_k_2 - P_c_k.segment(0,2));
+      // V_c_k.segment(0,2) = m_eta * (P_u_k_2 - P_c_k.segment(0,2));
       // P_c_k.segment(0,2) = P_u_k_2 - P_c_k.segment(0,2)/m_eta;
       
       Eigen::Vector2d P_u_error = P_u_k.segment(0,2) - P_u_k_2; 
