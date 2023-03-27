@@ -267,4 +267,7 @@ void Walking_controller::switchFootSupport()
     supportFootName = leftFootName_;
     swingFootName = rightFootName_;
   }
+  mc_tasks::lipm_stabilizer::ContactState supportFoot = supportFootName == leftFootName_ ? mc_tasks::lipm_stabilizer::ContactState::Left : mc_tasks::lipm_stabilizer::ContactState::Right;
+  stabTask->supportFoot(supportFoot);
+
 }
