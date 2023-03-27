@@ -316,13 +316,14 @@ void Walking_controller::ComputeWalkingTrajectory()
 
   if(Use_w)
   {
-    // MPCSolver.Disturbance( w_.norm()*(
-    // mc_rtc::log::info("Disturbance {}",Eigen::Vector3d{0,15.,0}/robot().mass());
+
     mc_filter::utils::clampInPlaceAndWarn(w_.x(),-0.05 , 0.05,"Perturbation (0)");
     mc_filter::utils::clampInPlaceAndWarn(w_.y(),-0.1 , 0.1,"Perturbation (1)");
     mc_filter::utils::clampInPlaceAndWarn(eta2_cstr,2, 20,"Omega Perturbation");
-    MPCSolver.Disturbance(w_,sqrt(eta2_cstr),0.1);
-    // MPCSolver.Disturbance(w_,sqrt(eta2_cstr));
+    double t_perturbation = 0.1;
+    if(DoubleSupport_state){t_perturbation = 100;}
+    MPCSolver.Disturbance(w_,sqrt(eta2_cstr),t_perturbation);
+
   }
 
   MPCSolver.GetWalkingParameters(mpc_thread_state.stop);
@@ -854,13 +855,13 @@ void Walking_controller::reset(const mc_control::ControllerResetData & reset_dat
   config_stab.comWeight = 0;
   stabTask->configure(config_stab);
 
-  // if(config()("stabilizer")("robot")(robot().name())("stabilizer").has("external_wrench"))
-  // {
-  //     Eigen::Vector3d ext_wrench_gain_v = config()("stabilizer")("robot")(robot().name())("stabilizer")("external_wrench")("ext_wrench_gain");
-  //     sva::MotionVecd ext_wrench_gain{ext_wrench_gain_v, ext_wrench_gain_v};
-  //     stabTask->setExternalWrenches({leftHandName_, rightHandName_}, {sva::ForceVecd::Zero(), sva::ForceVecd::Zero()},
-  //                                   {ext_wrench_gain, ext_wrench_gain});
-  // }
+  if(config()("stabilizer")("robot")(robot().name())("stabilizer").has("external_wrench"))
+  {
+      Eigen::Vector3d ext_wrench_gain_v = config()("stabilizer")("robot")(robot().name())("stabilizer")("external_wrench")("ext_wrench_gain");
+      sva::MotionVecd ext_wrench_gain{ext_wrench_gain_v, ext_wrench_gain_v};
+      stabTask->setExternalWrenches({leftHandName_, rightHandName_}, {sva::ForceVecd::Zero(), sva::ForceVecd::Zero()},
+                                    {ext_wrench_gain, ext_wrench_gain});
+  }
 
   
   SwingFootTask.reset();

@@ -193,7 +193,13 @@ void Walking_controller::ComputeFeetPerturbances(Eigen::Vector3d & offset, doubl
   eta2 = verticalComAcc / h;
   Eigen::Vector3d FilteredNetForce = stabTask->measuredFilteredNetForces();
   double mass = FilteredNetForce.z() / mc_rtc::constants::GRAVITY;
-  comAccZ = (robot().surfaceForceSensor(supportFootName).worldWrench(robot()).force().z() + robot().surfaceForceSensor(swingFootName).worldWrench(robot()).force().z())/mass;
+
+  for(auto frame : {supportFootName,swingFootName,leftHandName_,rightHandName_})
+  {
+    const sva::PTransformd X_0_f = robot().frame(frame).position();
+    comAccZ += X_0_f.inv().dualMul(robot().frame(frame).wrench()).force().z();
+  }  
+  comAccZ/=mass;
   if (std::abs(comAccZ) < 0.1 * mc_rtc::constants::GRAVITY)
   {
     comAccZ  = mc_rtc::constants::GRAVITY;
@@ -203,10 +209,28 @@ void Walking_controller::ComputeFeetPerturbances(Eigen::Vector3d & offset, doubl
   eta2 = (  mass * (comAccZ  +  mc_rtc::constants::GRAVITY) );
   eta2 /= mass * h;
 
+  for(auto frame : {leftHandName_,rightHandName_} )
+  {
+    const sva::PTransformd X_0_f = robot().frame(frame).position();
+    eta2 -= X_0_f.inv().dualMul(robot().frame(frame).wrench()).force().z() / mass * h;
+  }
   if(!DoubleSupport_state)
   {
-
     eta2 -= robot().surfaceForceSensor(swingFootName).worldWrench(robot()).force().z() / mass * h;
+  }
+  for(auto frame : {leftHandName_,rightHandName_} )
+  {
+    const sva::PTransformd X_0_s = robot().frame(frame).position();
+    const sva::PTransformd X_s_com = sva::PTransformd(Eigen::Matrix3d::Identity(),robot().com()) * X_0_s.inv();
+    const sva::ForceVecd surface_wrench_0 = X_s_com.dualMul(robot().frame(frame).wrench());
+
+    offset.x() += ( surface_wrench_0.force().x() + ((surface_wrench_0).moment().y()/h))
+                  /(eta2*mass);
+    offset.y() += ( surface_wrench_0.force().y() - ((surface_wrench_0).moment().x()/h))
+                  /(eta2*mass);  
+  }
+  if(!DoubleSupport_state)
+  {
 
     const sva::PTransformd X_swg_com = sva::PTransformd(Eigen::Matrix3d::Identity(),robot().com()) * X_0_swing.inv();
     const sva::ForceVecd swing_wrench_0 = X_swg_com.dualMul( robot().surfaceWrench(swingFootName));
@@ -216,10 +240,6 @@ void Walking_controller::ComputeFeetPerturbances(Eigen::Vector3d & offset, doubl
     offset.y() += ( swing_wrench_0.force().y() - ((swing_wrench_0).moment().x()/h))
                   /(eta2*mass);
     
-  }
-  else
-  {
-    return;
   }
 
 }
