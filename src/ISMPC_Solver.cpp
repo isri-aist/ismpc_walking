@@ -769,8 +769,8 @@ void ISMPC_Solver::ZMP_Constraints()
   Eigen::MatrixXd DeltaNoDelay = Delta;
   DeltaNoDelay.block(0,0,2*m_C,2*m_C) = create_zmp_matrix(false);
 
-  Aineq_zmp.resize(  ZMP_Cstr.rows(),N_variable);
-  bineq_zmp.resize(Aineq_zmp.rows());
+  Aineq_zmp = Eigen::MatrixXd::Zero(  ZMP_Cstr.rows(),N_variable);
+  bineq_zmp = Eigen::VectorXd::Zero(Aineq_zmp.rows());
 
   Aineq_zmp << ZMP_Cstr * Delta;
   bineq_zmp << b_zmp;
@@ -841,10 +841,8 @@ void ISMPC_Solver::FootSteps_Constraints()
   Eigen::MatrixXd foosteps_cstr = Eigen::MatrixXd::Zero(N_footsteps_cstr, 2 * (j_Max_C));
   Eigen::VectorXd b_kin_cstr(N_footsteps_kin_cstr);
   Eigen::VectorXd b_steps_cstr(N_footsteps_cstr);
-  Aineq_steps.resize(N_footsteps_kin_cstr + N_footsteps_cstr, N_variable);
-  Aineq_steps.setZero();
-  bineq_steps.resize(N_footsteps_kin_cstr + N_footsteps_cstr);
-  bineq_steps.setZero();
+  Aineq_steps = Eigen::MatrixXd::Zero(N_footsteps_kin_cstr + N_footsteps_cstr, N_variable);
+  bineq_steps= Eigen::VectorXd::Zero(N_footsteps_kin_cstr + N_footsteps_cstr);
 
   create_cstr_matrices(foosteps_kin_cstr,b_kin_cstr,kin_cstr_normals_vec,b_kin_cstr_vec);
   create_cstr_matrices(foosteps_cstr,b_steps_cstr,step_cstr_normals_vec,b_step_cstr_vec);
@@ -963,55 +961,26 @@ void ISMPC_Solver::Stability_Constraints()
   A_stab.block(0,0,2,2 * m_C) *= exp(-m_eta * m_delay_elapsed);
 
 
-  // if(m_Tail == "Periodic")
-  // {
-  //   b_stab(0) =
-  //       m_eta * ((1 - exp(-m_eta * m_delta * m_C)) / (1 - exp(-m_eta * m_delta))) * (P_u_k.x() - (P_z_k.x() - w_k.x())*exp(-m_eta * m_delay));
-  //   b_stab(1) =
-  //       m_eta * ((1 - exp(-m_eta * m_delta * m_C)) / (1 - exp(-m_eta * m_delta))) * (P_u_k.y() - (P_z_k.y() - w_k.y())*exp(-m_eta * m_delay));
-  // }
-  // else if(m_Tail == "Truncated")
-  // {
-  //   b_stab(0) = P_u_k.x() - P_z_k.x()*exp(-m_eta * m_delay);
-  //   b_stab(1) = P_u_k.y() - P_z_k.y()*exp(-m_eta * m_delay);
-  // }
-  // else
-  // {
-    // AntTailTrajectory();
-    // int PreviewSize = (int)std::round(AfterTc_ZMP_trajectory.size() / 2);
-    // Ant_Tail_X = 0;
-    // Ant_Tail_Y = 0;
-    // for(int k = 0; k < PreviewSize; k++)
-    // {
-    //   if(k < PreviewSize - 1)
-    //   {
-    //     Ant_Tail_X += exp(-(k + m_C) * m_eta * m_delta) * AfterTc_ZMP_velocity(k);
-    //     Ant_Tail_Y += exp(-(k + m_C) * m_eta * m_delta) * AfterTc_ZMP_velocity(k + PreviewSize - 1);
-    //   }
-    // }
+  double l_d_w_p_e = (m_lambda/(m_lambda + m_eta)); 
+  P_u_k = P_c_k + (V_c_k / m_eta);
+  b_stab = ( P_u_k - ( (P_z_k_delayed - w_k) * exp(-m_eta * m_delay_elapsed)
+                        + (P_z_k - w_k) + l_d_w_p_e * u_delay
+                        - ( (P_z_k_delayed - w_k) + l_d_w_p_e * u_delay )* exp(-m_eta * m_delay_elapsed))
+                        - w_k * exp(-m_eta * perturbation_duration)).segment(0,2) ;
+  
 
-    // b_stab(0) = (m_eta / (1 - exp(-m_eta * m_delta))) * (P_u_k.x() - P_z_k.x() + w_k.x()) - Ant_Tail_X;
-    // b_stab(1) = (m_eta / (1 - exp(-m_eta * m_delta))) * (P_u_k.y() - P_z_k.y() + w_k.y()) - Ant_Tail_Y;
-    double l_d_w_p_e = (m_lambda/(m_lambda + m_eta)); 
-    P_u_k = P_c_k + (V_c_k / m_eta);
-    b_stab = ( P_u_k - ( (P_z_k_delayed - w_k) * exp(-m_eta * m_delay_elapsed)
-                         + (P_z_k - w_k) + l_d_w_p_e * u_delay
-                         - ( (P_z_k_delayed - w_k) + l_d_w_p_e * u_delay )* exp(-m_eta * m_delay_elapsed))
-                         - w_k * exp(-m_eta * perturbation_duration)).segment(0,2) ;
-    
-
-    Eigen::Vector2d b_stan_alt = ( 
-               P_u_k 
-               - (1 - exp(-m_eta * m_delay_elapsed)) * (u_delay * l_d_w_p_e + (P_z_k - w_k))
-               - (P_z_k_delayed - w_k )* exp(-m_eta * m_delay_elapsed)
-               - w_k * exp(-m_eta * perturbation_duration) 
-               ).segment(0,2);
-    
-    // mc_rtc::log::info(b_stab - b_stan_alt);
-    b_stab = b_stan_alt;
+  Eigen::Vector2d b_stan_alt = ( 
+              P_u_k 
+              - (1 - exp(-m_eta * m_delay_elapsed)) * (u_delay * l_d_w_p_e + (P_z_k - w_k))
+              - (P_z_k_delayed - w_k )* exp(-m_eta * m_delay_elapsed)
+              - w_k * exp(-m_eta * perturbation_duration) 
+              ).segment(0,2);
+  
+  // mc_rtc::log::info(b_stab - b_stan_alt);
+  b_stab = b_stan_alt;
 
 
-  // }
+  
 
   std::chrono::duration<double, std::milli> time_span = std::chrono::high_resolution_clock::now() - t_clock;
   double ProcessTime = time_span.count();

@@ -103,16 +103,17 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, c
   rightSwingFootTask =
       std::make_shared<mc_tasks::SurfaceTransformTask>(rightFootName_, robots(), robots().robotIndex(), 10.0, 10.);
 
+  sva::ForceVecd landingAdmittance = sva::ForceVecd(Eigen::Vector3d{0.03,0.03,0} , Eigen::Vector3d{0,0,0.003});
   leftLandingTask =
   std::make_shared<mc_tasks::force::CoPTask>(leftFootName_, robots(), robots().robotIndex(), 1, controller_config_.Stab_config.contactWeight);
   leftLandingTask->name("landingTask_left");
-  leftLandingTask->admittance( sva::ForceVecd(Eigen::Vector3d{0.005,0.005,0} , Eigen::Vector3d{0,0,0.001}) );
+  leftLandingTask->admittance( landingAdmittance );
   leftLandingTask->damping(controller_config_.Stab_config.contactDamping);
   
   rightLandingTask =
   std::make_shared<mc_tasks::force::CoPTask>(rightFootName_, robots(), robots().robotIndex(), 1, controller_config_.Stab_config.contactWeight);
   rightLandingTask->name("landingTask_right");
-  rightLandingTask->admittance( sva::ForceVecd(Eigen::Vector3d{0.005,0.005,0} , Eigen::Vector3d{0,0,0.001}) );
+  rightLandingTask->admittance( landingAdmittance );
   rightLandingTask->damping(controller_config_.Stab_config.contactDamping);
 
   swingFootName = leftFootName_;
