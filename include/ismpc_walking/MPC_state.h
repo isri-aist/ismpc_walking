@@ -105,7 +105,7 @@ struct MPC_state
     {
       return optimal_timesteps_[indx];
     }
-    return 1.;
+    return optimal_tds + 1;;
   }
   double get_tds()
   {
