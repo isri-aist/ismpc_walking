@@ -411,6 +411,7 @@ private:
   Eigen::Vector3d zmpCorr = Eigen::Vector3d::Zero();
   Eigen::Vector3d zmpTarget = Eigen::Vector3d::Zero();
   Eigen::Vector3d admittanceTarget = Eigen::Vector3d::Zero();
+  Eigen::Vector3d LcDotTarget = Eigen::Vector3d::Zero();
   Eigen::Vector3d zmpMeasured = Eigen::Vector3d::Zero();
   Eigen::Vector2d supportMin = Eigen::Vector2d::Zero();
   Eigen::Vector2d supportMax = Eigen::Vector2d::Zero();
@@ -450,6 +451,7 @@ private:
   std::atomic<bool> WalkingTrajectory_Computing = false;
   bool emergencyFlag = false; // Stop controller run loop
   bool AutoFootstepPlacement = true; // To enable the Autofootstep placement MPC
+  bool UseAngularMomentum = false;
   bool UsePendulumSolver = true;
   bool Tds_by_ratio = true;
   bool force_contact_safety_ = true;

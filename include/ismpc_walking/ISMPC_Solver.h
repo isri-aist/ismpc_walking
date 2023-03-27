@@ -231,6 +231,11 @@ public:
     return m_ZMP_u;
   }
 
+  const Eigen::VectorXd & Lc_dot()
+  {
+    return m_Ldot_c;
+  }
+
   const Eigen::Vector3d & Initial_ZMP() const noexcept
   {
     return P_z_k;
@@ -328,6 +333,7 @@ public:
 
   bool AutoFootstepPlacement = false;
   bool UsePendulumSolver = false;
+  bool UseAngularMomentumDot = false;
 
   std::vector<std::vector<Eigen::Vector3d>> All_poly;
 
@@ -403,12 +409,14 @@ private:
   Eigen::Vector3d P_u_k = Eigen::Vector3d::Zero(); // Initial Unstable Component/DCM
   Eigen::Vector3d U_k = Eigen::Vector3d::Zero(); //Current admittance acting on the pendulum (z_0 + u_0)
   Eigen::Vector3d w_k = Eigen::Vector3d::Zero(); // Perturbance
+  Eigen::Vector3d Lc_k = Eigen::Vector3d::Zero(); //Initial Angular Momemtum
   double perturbation_duration = 0;
 
 
   Eigen::Matrix3d R_support_0 = Eigen::Matrix3d::Identity();
   Eigen::Matrix3d R_0_support = Eigen::Matrix3d::Identity();
   Eigen::VectorXd m_ZMP_u = Eigen::VectorXd::Zero(0); // Computed ZMP velocity in world frame
+  Eigen::VectorXd m_Ldot_c = Eigen::VectorXd::Zero(0); // Computed Centroidal AngularMomemtum dot in world frame ori
   std::vector<double> m_timestamp; // Step TimesStamp Computed at the footStep Generation
 
   sva::PTransformd X_0_support_foot = sva::PTransformd::Identity();
@@ -447,6 +455,7 @@ private:
   bool Slide_ZMP_region = false;
 
   double m_eta = 1; // Prendulum frequency
+  double m_mass = 40.;
   double CoM_height = 0.78;
   double g = 9.8; // Gravity acceleration
   double m_tk = 0; //Represent the initial time in the MPC horizon
@@ -480,10 +489,12 @@ private:
   double m_dy_f = 0.1; // Step kinematic admissible Region
   double m_dx_f_rect = 0.1;
   double m_dy_f_rect = 0.1; // Step admissible region
+  double m_Ld_max = 0.3;
   double m_Beta_u = 1;
   double m_Beta_step = 1e1;
   double m_Beta_stab = 1e5;
   double m_Beta_traj = 0.;
+  double m_Beta_Lc = 1e3;
   double m_lambda = 100;
   double m_delay = 0; //delay ( < m_delta ) during which zmp is under previous input Uk
   double m_delay_elapsed = 0; //Between 0 and m_delay represent the remaining time the delay must be applied
@@ -541,6 +552,9 @@ private:
 
   Eigen::MatrixXd Aineq_zmp; // Inequality ZMP Matrix
   Eigen::VectorXd bineq_zmp; // Inequality ZMP Vector
+
+  Eigen::MatrixXd Aineq_Ld; // Inequality ZMP Matrix
+  Eigen::VectorXd bineq_Ld; // Inequality ZMP Vector
 
   Eigen::MatrixXd A_stab; // Equality stability cstr matrix
   Eigen::VectorXd b_stab; // Equality stability cstr vector

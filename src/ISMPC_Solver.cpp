@@ -90,6 +90,9 @@ void ISMPC_Solver::init_MPC(const MPC_state & mpc_state,
   V_c_k = mpc_state.Vck;
   P_z_k = mpc_state.Pzk;
 
+  m_mass = mpc_state.input_mass;
+
+
   DoubleSupport = mpc_state.doubleSupport;
   m_t_lift = mpc_state.t_lift;
   
@@ -942,16 +945,22 @@ void ISMPC_Solver::Stability_Constraints()
   Eigen::Vector3d c_k;
   c_k.setZero();
 
-  A_stab.resize(2, N_variable);
-  A_stab.setZero();
+  A_stab = Eigen::MatrixXd::Zero(2, N_variable);
   b_stab = Eigen::VectorXd::Zero(2);
   Eigen::Vector3d u_delay = U_k - P_z_k;
   for(int j = 0; j < m_C; j++)
   {
     A_stab.block(0,2*j,2,2) = Eigen::Matrix2d::Identity() * (m_lambda/(m_lambda + m_eta)) * exp(-j * m_eta * m_delta);
+  
+    if(UseAngularMomentumDot)
+    {
+      A_stab.block(0, 2 * (m_C + j_Max_C + j),2,2) << 0, 1 , -1 , 0; 
+      A_stab.block(0, 2 * (m_C + j_Max_C + j),2,2) /= (m_mass * CoM_height * std::pow(m_eta,2));
+      A_stab.block(0, 2 * (m_C + j_Max_C + j),2,2) *= exp(-m_eta * j * m_delta) * (1 - exp(-m_eta * m_delta));
+    }
 
   }
-  A_stab *= exp(-m_eta * m_delay_elapsed);
+  A_stab.block(0,0,2,2 * m_C) *= exp(-m_eta * m_delay_elapsed);
 
 
   // if(m_Tail == "Periodic")
@@ -1078,6 +1087,11 @@ void ISMPC_Solver::Integrate()
   Eigen::Vector3d state_y = Eigen::Vector3d{P_c_k.y(), V_c_k.y(), P_z_k.y() - w_k.y()};
 
   Eigen::Vector3d Pzi = Eigen::Vector3d{state_x(2),state_y(2),0};
+  
+  Eigen::Vector2d Lc_dot_comp = Eigen::Vector2d::Zero();
+  Lc_dot_comp << m_Ldot_c(m_C) ,  - m_Ldot_c(0);
+  Lc_dot_comp /= (m_mass * std::pow(m_eta,2) * CoM_height);
+  Pzi.segment(0,2) += Lc_dot_comp;
 
   for(int k = 1; k < N_delay + 1; k++)
   {
@@ -1088,15 +1102,17 @@ void ISMPC_Solver::Integrate()
     state_x = Integration_Mat * state_x + Integration_Vec * (U_k - P_z_k - w_k).x();
     state_y = Integration_Mat * state_y + Integration_Vec * (U_k - P_z_k - w_k).y();
     
-    m_X_MPC.push_back(state_x);
-    m_Y_MPC.push_back(state_y);
+    m_X_MPC.push_back(state_x - Eigen::Vector3d{0,0,Lc_dot_comp.x()});
+    m_Y_MPC.push_back(state_y - Eigen::Vector3d{0,0,Lc_dot_comp.y()});
 
   }
+
 
   
   m_admittance_targets.clear();
   for (Eigen::Index i = 0 ; i < m_C; i++)
   {
+
     double u_x = P_z_k_delayed.x() - w_k.x() - state_x(2);
     double u_y = P_z_k_delayed.y() - w_k.y() - state_y(2);
     for (Eigen::Index j = 0 ; j <= i ; j++)
@@ -1105,6 +1121,14 @@ void ISMPC_Solver::Integrate()
       u_y += m_ZMP_u(j + m_C);
     }
     Pzi = Eigen::Vector3d{state_x(2),state_y(2),0};
+    if(i != 0 || N_delay == 0)
+    {
+      Pzi.segment(0,2) -= Lc_dot_comp;
+      Lc_dot_comp << m_Ldot_c(i + m_C) ,  - m_Ldot_c(i);
+      Lc_dot_comp /= (m_mass * std::pow(m_eta,2) * CoM_height);
+      Pzi.segment(0,2) += Lc_dot_comp;
+    }
+
     m_admittance_targets.push_back(Eigen::Vector3d{u_x,u_y,0} + Pzi - P_z_k_delayed + P_z_k);
 
 
@@ -1124,8 +1148,8 @@ void ISMPC_Solver::Integrate()
       state_x = Integration_Mat * state_x + Integration_Vec * u_x;
       state_y = Integration_Mat * state_y + Integration_Vec * u_y;
       
-      m_X_MPC.push_back(state_x);
-      m_Y_MPC.push_back(state_y);
+      m_X_MPC.push_back(state_x - Eigen::Vector3d{0,0,Lc_dot_comp.x()});
+      m_Y_MPC.push_back(state_y - Eigen::Vector3d{0,0,Lc_dot_comp.y()});
 
     }
   }
@@ -1224,6 +1248,10 @@ bool ISMPC_Solver::GetWalkingParameters(bool stop)
   j_fm1 = j_f - 1;
 
   N_variable = 2 * (m_C + j_Max_C);
+  if(UseAngularMomentumDot)
+  {
+    N_variable += 2 * m_C;
+  }
 
   m_D = static_cast<int>(m_Tds / m_delta) - Tds_offset;
   count_Dstep = (std::min((m_tk / m_delta) , static_cast<double>(m_D)));
@@ -1318,19 +1346,47 @@ bool ISMPC_Solver::GetWalkingParameters(bool stop)
     beq = b_stab;
   }
 
-  Aineq = Eigen::MatrixXd::Zero(Aineq_steps.rows() + Aineq_zmp.rows(), N_variable);
-  bineq = Eigen::VectorXd::Zero(bineq_steps.rows() + bineq_zmp.rows());
-  Aineq << Aineq_zmp, Aineq_steps;
-  bineq << bineq_zmp, bineq_steps;
+  Aineq_Ld = Eigen::MatrixXd::Zero(0, N_variable);
+  bineq_Ld = Eigen::VectorXd::Zero(0);
+  if(UseAngularMomentumDot)
+  {
+    Eigen::MatrixXd M_Ld = Eigen::MatrixXd::Zero(2 * m_C,N_variable);
+    M_Ld.block(0,2 * (m_C + j_Max_C) , 2 * m_C , 2 * m_C) = Eigen::MatrixXd::Identity(2 * m_C, 2 * m_C);
+    Eigen::MatrixXd M_L = Eigen::MatrixXd::Zero(2 * m_C,N_variable);
+    Eigen::MatrixXd Delta_Lc = Eigen::MatrixXd::Zero(2 * m_C,2 * m_C);
+    Eigen::VectorXd b_L = Eigen::VectorXd::Zero(M_L.rows());
+    Aineq_Ld = Eigen::MatrixXd::Zero(4 * m_C , N_variable);
+    Aineq_Ld.block(0,2 * (m_C + j_Max_C),2 * m_C , 2 * m_C) = Eigen::MatrixXd::Identity(2*m_C , 2 * m_C);
+    Aineq_Ld.block(2 * m_C ,2 * (m_C + j_Max_C),2 * m_C , 2 * m_C) = -Eigen::MatrixXd::Identity(2*m_C , 2 * m_C);
+    bineq_Ld = Eigen::VectorXd::Zero(Aineq_Ld.rows());
+
+    for(int i = 0; i < m_C; i++)
+    {
+      for(int k = 0; k <= i; k++)
+      {
+        Delta_Lc.block(2 * i,2 * k , 2 , 2) = Eigen::Matrix2d::Identity() * m_delta;
+      }
+      b_L.segment(2 * i , 2 ) = - Lc_k.segment(0,2);
+      bineq_Ld.segment(2 * i,2) = Eigen::Vector2d::Ones() * m_Ld_max;
+      bineq_Ld.segment(2 * ( m_C + i),2) = Eigen::Vector2d::Ones() * m_Ld_max;
+    }
+    m_Q += m_Beta_Lc * M_Ld.transpose() * M_Ld;
+
+  }
+
+  Aineq = Eigen::MatrixXd::Zero(Aineq_steps.rows() + Aineq_zmp.rows() + Aineq_Ld.rows(), N_variable);
+  bineq = Eigen::VectorXd::Zero(Aineq.rows());
+  Aineq << Aineq_zmp, Aineq_steps , Aineq_Ld;
+  bineq << bineq_zmp, bineq_steps , bineq_Ld;
 
   QP_Output = solveQP();
   stab_error = (A_stab * QP_Output - b_stab).block(0,0,2,1);
   
   // std::cout << "QP out " << QP_Output << std::endl;
 
-  Eigen::VectorXd zmp_vel_ = QP_Output.segment(0, 2 * m_C);
-  // mc_rtc::log::info(zmp_vel_);
-  if(!(((zmp_vel_ - zmp_vel_).array() == (zmp_vel_ - zmp_vel_).array()).all()))
+  Eigen::VectorXd zmp_u = QP_Output.segment(0, 2 * m_C);
+  // mc_rtc::log::info(zmp_u);
+  if(!(((zmp_u - zmp_u).array() == (zmp_u - zmp_u).array()).all()))
   {
 
     mc_rtc::log::warning("[ISMPC] nan");
@@ -1381,10 +1437,16 @@ bool ISMPC_Solver::GetWalkingParameters(bool stop)
 
     m_QP_zmp = (A_zmp * QP_Output).segment(0,2 * m_C);
     m_ZMP_u.resize(2 * m_C, 1);
+    m_Ldot_c = Eigen::VectorXd::Zero(2 * m_C);
     for(int k = 0; k < m_C; k++)
     {
       m_ZMP_u(k) = QP_Output(2 * k);
       m_ZMP_u(k + m_C) = QP_Output(2 * k + 1);
+      if(UseAngularMomentumDot)
+      {
+        m_Ldot_c(k) = QP_Output(2 * (m_C + j_Max_C + k));
+        m_Ldot_c(k + m_C) = QP_Output(2 * (m_C + j_Max_C + k) + 1);
+      }
     }
 
     for(int k = 0; k < j_Max_C; k++)

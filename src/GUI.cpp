@@ -216,6 +216,9 @@ void Walking_controller::addToGUI()
           "Automatic FootStep Placement", [this]() { return AutoFootstepPlacement; },
           [this]() { AutoFootstepPlacement = !AutoFootstepPlacement; }),
       mc_rtc::gui::Checkbox(
+          "Use Angular Momentum", [this]() { return UseAngularMomentum; },
+          [this]() { UseAngularMomentum = !UseAngularMomentum; }),
+      mc_rtc::gui::Checkbox(
           "Timing/Steps optimization", [this]() { return UsePendulumSolver; },
           [this]() { UsePendulumSolver = !UsePendulumSolver; }),
       mc_rtc::gui::Checkbox(

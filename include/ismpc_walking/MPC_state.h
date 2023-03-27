@@ -141,6 +141,17 @@ struct MPC_state
     return Eigen::Vector3d{mpc_u_[indx] , mpc_u_[indx + static_cast<int>(horizon_size)],0.};
   }
 
+  Eigen::Vector3d get_Lc_dot(int indx)
+  {
+    if(indx/2 >= mpc_Lc_dot_.size())
+    {
+      std::cout << "[mpc_Lc_dot_ access] Warning wrong index returning 0 vector" << std::endl;
+      return Eigen::Vector3d::Zero();
+    }
+    double horizon_size = static_cast<double>(mpc_Lc_dot_.size()) / 2;
+    return Eigen::Vector3d{mpc_Lc_dot_[indx] , mpc_Lc_dot_[indx + static_cast<int>(horizon_size)],0.};
+  }
+
   std::vector<Eigen::Vector3d>
       X_MPC; // Contain 3d vectors that represents in that order the CoM the CoMd and the ZMP for each timestep
   std::vector<Eigen::Vector3d>
@@ -174,9 +185,11 @@ struct MPC_state
   Eigen::Vector3d Pu = Eigen::Vector3d::Zero();
   Eigen::Vector3d w; // Perturbation
   Eigen::VectorXd mpc_u_;
+  Eigen::VectorXd mpc_Lc_dot_;
   std::vector<Eigen::Vector3d> QP_zmp;
   std::vector<sva::MotionVecd> input_v_;
   double input_eta = 3.5;
+  double input_mass = 40;
   double eta = 3.5;
   std::vector<sva::PTransformd> input_steps_; // planner reference steps
   std::vector<sva::PTransformd> planned_steps_;

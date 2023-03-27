@@ -119,7 +119,10 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, c
   supportFootName = rightFootName_;
 
   MomentumTask =
-      std::make_shared<mc_tasks::MomentumTask>(robots(),robot().robotIndex(),10,10);
+      std::make_shared<mc_tasks::MomentumTask>(robots(),robot().robotIndex(),0,10);
+  Eigen::Vector6d MomentumTask_dof;
+  MomentumTask_dof << 1,1,1,0,0,0;
+  MomentumTask->dimWeight(MomentumTask_dof);  
 
   comTask =
       std::make_shared<mc_tasks::CoMTask>(robots(),robot().robotIndex(),10,200);
@@ -175,7 +178,7 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, c
   solver().addTask(comTask);
   solver().addTask(leftSwingFootTask);
   solver().addTask(rightSwingFootTask);
-  // solver().addTask(MomentumTask);
+  solver().addTask(MomentumTask);
   updateTasks();
   deactivate();
   mc_rtc::log::success("ismpc_walking controller init done ");
@@ -262,6 +265,7 @@ void Walking_controller::ComputeWalkingTrajectory()
   }
   MPCSolver.AutoFootstepPlacement = AutoFootstepPlacement;
   MPCSolver.UsePendulumSolver = UsePendulumSolver;
+  MPCSolver.UseAngularMomentumDot = UseAngularMomentum;
 
   if(mpc_thread_state.input_steps_.size() != 0)
   {
@@ -351,6 +355,7 @@ void Walking_controller::ComputeWalkingTrajectory()
     mpc_thread_state.admittance_ref_ = MPCSolver.admittance_references();
     mpc_thread_state.QP_zmp = MPCSolver.QP_zmp();
     mpc_thread_state.eta = MPCSolver.eta();
+    mpc_thread_state.mpc_Lc_dot_ = MPCSolver.Lc_dot();
     kfoot = 0;
     NewThreadState = true;
     
@@ -360,6 +365,7 @@ void Walking_controller::ComputeWalkingTrajectory()
     mpc_state_.Pu_max = MPCSolver.Puk_max().segment(0, 2);
     mpc_state_.Pu_min = MPCSolver.Puk_min().segment(0, 2);
     mpc_state_.SupPolygon = MPCSolver.get_polynome_support();
+    mpc_state_.mpc_Lc_dot_.setZero();
     mpc_state_.QPSuccess = false;
   }
 }
@@ -645,6 +651,9 @@ void Walking_controller::MoveCoM()
   Eigen::Vector3d Vc(mpc_state_.Get_CoMVel_planarTarget(mpc_state_.Index));
   Vc.z() = 0;
   zmpTarget = mpc_state_.Get_ZMP_planarTarget(mpc_state_.Index);
+  
+  LcDotTarget = mpc_state_.get_Lc_dot(mpc_state_.Index);
+
     
   // mc_rtc::log::info("//Index : {}, z_y {}",mpc_state_.Index,zmpTarget.y());
 
@@ -701,18 +710,20 @@ void Walking_controller::MoveCoM()
       Stop = true;
       mc_rtc::log::warning("[Walking Controller] MPC control is off, cannot walk");
     }
+    LcDotTarget.setZero();
   }
   comTask->com(Pcom);
   comTask->refVel(Vc);
   comTask->refAccel(Ac_com);
-  sva::ForceVecd RealRobot_mom = rbd::computeCentroidalMomentum(realRobot().mb(), realRobot().mbc(), realRobot().com());
-  if(Robot_Walking)
+  sva::ForceVecd RealRobot_LcDot = rbd::computeCentroidalMomentumDot(realRobot().mb(), realRobot().mbc(), realRobot().com(),realRobot().comVelocity());
+  MomentumTask->weight(0);
+  if(UseAngularMomentum)
   {
-    MomentumTask->momentum(sva::ForceVecd(Eigen::Vector3d::Zero(),robot().mass() * Vc));
-  }
-  else
-  {
-    MomentumTask->momentum(sva::ForceVecd::Zero());
+    if(LcDotTarget.norm() > 1e-6)
+    {
+      MomentumTask->weight(1000);
+    }
+    MomentumTask->refAccel(sva::MotionVecd(LcDotTarget,Eigen::Vector3d::Zero()).vector());
   }
 
   mc_tasks::lipm_stabilizer::ContactState supportFoot = supportFootName == leftFootName_ ? mc_tasks::lipm_stabilizer::ContactState::Left : mc_tasks::lipm_stabilizer::ContactState::Right;
@@ -728,6 +739,10 @@ void Walking_controller::UpdateInitialVectors()
   mpc_state_.t_lift = t_lift;
   mpc_state_.doubleSupport = DoubleSupport_state;
   mpc_state_.t = static_cast<double>(count) * controller_timestep;
+
+  Eigen::Vector3d FilteredNetForce = stabTask->measuredFilteredNetForces();
+  mpc_state_.input_mass = FilteredNetForce.z() / mc_rtc::constants::GRAVITY;
+   
   // mpc_state_.Pzk = Eigen::Vector3d{0,0,1}.cross( robot().com().cross(robot().mass()*mc_rtc::constants::gravity) ) /
   //                       ( (robot().mass()*(mc_rtc::constants::gravity - robot().comAcceleration())).transpose() *
   //                       Eigen::Vector3d{0,0,1} );
@@ -812,6 +827,8 @@ void Walking_controller::UpdateInitialVectors()
   Ldot_offset = Eigen::Vector3d{-Ldot.y(),Ldot.x(),0.};
   Ldot_offset /= (robot().mass() * controller_config_.Stab_config.comHeight * eta2_cstr);
   w_ += Ldot_offset;
+  
+
   // eta2_cstr = (mc_rtc::constants::GRAVITY/controller_config_.Stab_config.comHeight);
 
   mpc_state_.Pck.z() = controller_config_.Stab_config.comHeight;
