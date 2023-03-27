@@ -23,15 +23,27 @@ inline void AddStabilizerConfigToGUI(mc_rtc::gui::StateBuilder & gui,
       mc_rtc::gui::ArrayInput(
           "Foot admittance", {"CoPx", "CoPy"},
           [&c_]() -> Eigen::Vector2d {
-            return {c_.copAdmittance.x(), c_.copAdmittance.y()};
+            return c_.copAdmittance;
           },
           [&c_](const Eigen::Vector2d & a) { c_.copAdmittance = a; }),
       mc_rtc::gui::ArrayInput(
           "Foot CoP lambda", {"CoPx", "CoPy","Fz"},
           [&c_]() -> Eigen::Vector3d {
-            return {c_.lambdaCoP.x(), c_.lambdaCoP.y(),c_.lambdaCoP.z()};
+            return c_.lambdaCoP;
           },
           [&c_](const Eigen::Vector3d & a) { c_.lambdaCoP = a; }),
+      mc_rtc::gui::ArrayInput(
+          "CoP Lambda Support Foot", {"CoPx", "CoPy"},
+          [&c_]() -> Eigen::Vector2d {
+            return c_.lambdaCoPSupportFoot;
+          },
+          [&c_](const Eigen::Vector2d & a) { c_.lambdaCoPSupportFoot = a; }),
+      mc_rtc::gui::ArrayInput(
+          "CoP slope", {"CoPx", "CoPy"},
+          [&c_]() -> Eigen::Vector2d {
+            return c_.copSlope;
+          },
+          [&c_](const Eigen::Vector2d & a) { c_.copSlope = a; }),
       mc_rtc::gui::NumberInput(
           "Admittance Delay", [&c_]() { return c_.delayCoP; },
           [&c_](double d) { c_.delayCoP = d; }),
