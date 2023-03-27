@@ -168,7 +168,7 @@ bool Walking_controller::MoveFeet(double t)
       // }
     }
 
-    if(Swing_Foot_Contact && !DoubleSupport_state && (t - t_contact >= 0.1 || Step_Time >= SingleSupportDuration ) )
+    if(Swing_Foot_Contact && !DoubleSupport_state && (t - t_contact >= 0. || Step_Time >= SingleSupportDuration ) )
     {
       solver().removeTask(landingTask);
       Eigen::Vector3d supp_pose;
