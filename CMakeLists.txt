@@ -22,10 +22,10 @@ project(${PROJECT_NAME} LANGUAGES CXX VERSION ${PROJECT_VERSION})
 
 # Check if the project is built inside mc_rtc
 if(NOT TARGET mc_rtc::mc_control)
-  find_package(mc_rtc REQUIRED)
+  add_project_dependency(mc_rtc REQUIRED)
 endif()
 
-find_package(pendulum_feasibility_solver REQUIRED)
+add_project_dependency(pendulum_feasibility_solver REQUIRED)
 # find_package(FootStepsPlannerPlugin REQUIRED)
 
 add_subdirectory(src)
