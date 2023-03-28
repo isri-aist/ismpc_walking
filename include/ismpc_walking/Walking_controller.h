@@ -313,7 +313,13 @@ protected:
     datastore().make_call("ismpc_walking::stop_phase", [this]() -> bool { return Stop; });
     datastore().make_call("ismpc_walking::robot_walking", [this]() -> bool { return Robot_Walking; });
     datastore().make_call("ismpc_walking::double_support", [this]() -> bool { return DoubleSupport_state; });
-    datastore().make_call("ismpc_walking::start/stop", [this]() { Stop = !Stop; });
+    datastore().make_call("ismpc_walking::start/stop", [this]() {
+      if(stabilizer_active_ && Stop)
+      {
+        compute_trajectory_once.notify_all();
+      }
+      Stop = !Stop;
+    });
     datastore().make_call("ismpc_walking::configure",
                           [this](const ControllerConfiguration & config) { Configure(config); });
     datastore().make_call("ismpc_walking::get_config",
