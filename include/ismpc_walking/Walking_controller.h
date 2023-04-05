@@ -147,7 +147,7 @@ public:
   void Configure(const ControllerConfiguration & config)
   {
     controller_config_ = config;
-    controller_config_.Stab_config_sg_supp.lambdaCoP = controller_config_.lambda_sg_supp * Eigen::Vector3d::Ones();
+    controller_config_.Stab_config_sg_supp.lambda_CoP_Fz = controller_config_.lambda_sg_supp * Eigen::Vector3d::Ones();
 
     controller_config_.Beta_step =
         std::min(controller_config_.Beta_range(1), std::max(controller_config_.Beta_range(0), controller_config_.Beta_step));
