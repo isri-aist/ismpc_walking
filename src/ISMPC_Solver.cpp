@@ -1413,8 +1413,8 @@ bool ISMPC_Solver::GetWalkingParameters(bool stop)
       m_ZMP_u(k + m_C) = QP_Output(2 * k + 1);
       if(UseAngularMomentumDot)
       {
-        m_Ldot_c(k) = QP_Output(2 * (m_C + j_Max_C + k));
-        m_Ldot_c(k + m_C) = QP_Output(2 * (m_C + j_Max_C + k) + 1);
+        m_Ldot_c(k) = std::min( std::max( QP_Output(2 * (m_C + j_Max_C + k)) , -m_Ld_max),m_Ld_max);
+        m_Ldot_c(k + m_C) = std::min( std::max( QP_Output(2 * (m_C + j_Max_C + k) + 1), -m_Ld_max),m_Ld_max);
       }
     }
 
