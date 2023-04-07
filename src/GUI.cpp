@@ -32,6 +32,9 @@ inline void AddStabilizerConfigToGUI(mc_rtc::gui::StateBuilder & gui,
             return c_.lambda_CoP_Fz;
           },
           [&c_](const Eigen::Vector3d & a) { c_.lambda_CoP_Fz = a; }),
+      mc_rtc::gui::NumberInput(
+          "CoM height", [&c_]() { return c_.comHeight; },
+          [&c_](double d) { c_.comHeight = d; }),
       // mc_rtc::gui::ArrayInput(
       //     "CoP Lambda Support Foot", {"CoPx", "CoPy"},
       //     [&c_]() -> Eigen::Vector2d {
@@ -113,7 +116,12 @@ inline void AddStabilizerConfigToGUI(mc_rtc::gui::StateBuilder & gui,
                      [&c_](double pitch) {
                        c_.torsoPitch = pitch;
                        ;
-                     }));
+                     }),
+                    mc_rtc::gui::ArrayInput(
+                      "Admittance damping",{"wx","wy","wz","vx","vy","vz"}, [&c_]() -> Eigen::Vector6d {return c_.contactDamping.vector();},
+                      [&c_](const Eigen::Vector6d & d) {c_.contactDamping = sva::MotionVecd(d);}
+                    ));
+
   category.push_back("DCM Bias");
   gui.addElement(category, mc_rtc::gui::ElementsStacking::Horizontal,
                  mc_rtc::gui::Checkbox(
