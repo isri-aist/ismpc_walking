@@ -859,13 +859,13 @@ void Walking_controller::reset(const mc_control::ControllerResetData & reset_dat
   config_stab.comWeight = 0;
   stabTask->configure(config_stab);
 
-  if(config()("stabilizer")("robot")(robot().name())("stabilizer").has("external_wrench"))
-  {
-      Eigen::Vector3d ext_wrench_gain_v = config()("stabilizer")("robot")(robot().name())("stabilizer")("external_wrench")("ext_wrench_gain");
-      sva::MotionVecd ext_wrench_gain{ext_wrench_gain_v, ext_wrench_gain_v};
-      stabTask->setExternalWrenches({leftHandName_, rightHandName_}, {sva::ForceVecd::Zero(), sva::ForceVecd::Zero()},
-                                    {ext_wrench_gain, ext_wrench_gain});
-  }
+  // if(config()("stabilizer")("robot")(robot().name())("stabilizer").has("external_wrench"))
+  // {
+  //     Eigen::Vector3d ext_wrench_gain_v = config()("stabilizer")("robot")(robot().name())("stabilizer")("external_wrench")("ext_wrench_gain");
+  //     sva::MotionVecd ext_wrench_gain{ext_wrench_gain_v, ext_wrench_gain_v};
+  //     stabTask->setExternalWrenches({leftHandName_, rightHandName_}, {sva::ForceVecd::Zero(), sva::ForceVecd::Zero()},
+  //                                   {ext_wrench_gain, ext_wrench_gain});
+  // }
 
   
   SwingFootTask.reset();

@@ -209,26 +209,26 @@ void Walking_controller::ComputeFeetPerturbances(Eigen::Vector3d & offset, doubl
   eta2 = (  mass * (comAccZ  +  mc_rtc::constants::GRAVITY) );
   eta2 /= mass * h;
 
-  for(auto frame : {leftHandName_,rightHandName_} )
-  {
-    const sva::PTransformd X_0_f = robot().frame(frame).position();
-    eta2 -= X_0_f.inv().dualMul(robot().frame(frame).wrench()).force().z() / mass * h;
-  }
-  if(!DoubleSupport_state)
-  {
-    eta2 -= robot().surfaceForceSensor(swingFootName).worldWrench(robot()).force().z() / mass * h;
-  }
-  for(auto frame : {leftHandName_,rightHandName_} )
-  {
-    const sva::PTransformd X_0_s = robot().frame(frame).position();
-    const sva::PTransformd X_s_com = sva::PTransformd(Eigen::Matrix3d::Identity(),robot().com()) * X_0_s.inv();
-    const sva::ForceVecd surface_wrench_0 = X_s_com.dualMul(robot().frame(frame).wrench());
+  // for(auto frame : {leftHandName_,rightHandName_} )
+  // {
+  //   const sva::PTransformd X_0_f = robot().frame(frame).position();
+  //   eta2 -= X_0_f.inv().dualMul(robot().frame(frame).wrench()).force().z() / mass * h;
+  // }
+  // if(!DoubleSupport_state)
+  // {
+  //   eta2 -= robot().surfaceForceSensor(swingFootName).worldWrench(robot()).force().z() / mass * h;
+  // }
+  // for(auto frame : {leftHandName_,rightHandName_} )
+  // {
+  //   const sva::PTransformd X_0_s = robot().frame(frame).position();
+  //   const sva::PTransformd X_s_com = sva::PTransformd(Eigen::Matrix3d::Identity(),robot().com()) * X_0_s.inv();
+  //   const sva::ForceVecd surface_wrench_0 = X_s_com.dualMul(robot().frame(frame).wrench());
 
-    offset.x() += ( surface_wrench_0.force().x() + ((surface_wrench_0).moment().y()/h))
-                  /(eta2*mass);
-    offset.y() += ( surface_wrench_0.force().y() - ((surface_wrench_0).moment().x()/h))
-                  /(eta2*mass);  
-  }
+  //   offset.x() += ( surface_wrench_0.force().x() + ((surface_wrench_0).moment().y()/h))
+  //                 /(eta2*mass);
+  //   offset.y() += ( surface_wrench_0.force().y() - ((surface_wrench_0).moment().x()/h))
+  //                 /(eta2*mass);  
+  // }
   if(!DoubleSupport_state)
   {
 
