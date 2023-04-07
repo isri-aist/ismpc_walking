@@ -17,10 +17,10 @@ void Walking_controller::AddToLog()
   logger().addLogEntry("foot_wrench_SwingFoot",
                        [this]() -> const sva::ForceVecd { return SwingFootTask->frame().wrench(); });
   logger().addLogEntry("foot_vertical_force_offset", [this]() -> const double & { return vertical_force_offset_; });
-  logger().addLogEntry("RealRobot LeftFoot Accel",
-                       [this]() -> const Eigen::Vector3d & { return robot().bodyAccB(LeftFootLinkName_).linear(); });
-  logger().addLogEntry("RealRobot RightFoot Accel",
-                       [this]() -> const Eigen::Vector3d & { return robot().bodyAccB(RightFootLinkName_).linear(); });
+  // logger().addLogEntry("RealRobot LeftFoot Accel",
+  //                      [this]() -> const Eigen::Vector3d & { return robot().bodyAccB(LeftFootLinkName_).linear(); });
+  // logger().addLogEntry("RealRobot RightFoot Accel",
+  //                      [this]() -> const Eigen::Vector3d & { return robot().bodyAccB(RightFootLinkName_).linear(); });
 
   logger().addLogEntry("ISMPC_measured_lambda",[this] () -> Eigen::Vector2d {return estimated_lambda();} );
   logger().addLogEntry("ISMPC_measured_zmpvel",[this] () -> Eigen::Vector2d {return zmp_vel_.eval().segment(0,2);} );
