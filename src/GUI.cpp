@@ -29,9 +29,9 @@ inline void AddStabilizerConfigToGUI(mc_rtc::gui::StateBuilder & gui,
       mc_rtc::gui::ArrayInput(
           "Foot CoP lambda", {"CoPx", "CoPy","Fz"},
           [&c_]() -> Eigen::Vector3d {
-            return c_.lambda_CoP_Fz;
+            return c_.copFzLambda;
           },
-          [&c_](const Eigen::Vector3d & a) { c_.lambda_CoP_Fz = a; }),
+          [&c_](const Eigen::Vector3d & a) { c_.copFzLambda = a; }),
       mc_rtc::gui::NumberInput(
           "CoM height", [&c_]() { return c_.comHeight; },
           [&c_](double d) { c_.comHeight = d; }),
