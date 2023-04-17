@@ -101,6 +101,10 @@ public:
     controller_config_.zmp_delay = config("ismpc")("zmp_delay");
     controller_config_.feet_ditance_ = config("ismpc")("feet_distance");
 
+    if(config("walking_controller").has("foot_landing_offset"))
+    {
+      controller_config_.foot_landing_offset = config("walking_controller")("foot_landing_offset");
+    }
     controller_config_.Ts_max = config("walking_controller")("max_step_duration");
     controller_config_.T_ss_min = config("walking_controller")("min_sg_suport_duration");
     controller_config_.T_ds_min = config("walking_controller")("min_dbl_suport_duration");

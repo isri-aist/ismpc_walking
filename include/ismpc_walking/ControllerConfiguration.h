@@ -41,6 +41,7 @@ struct ControllerConfiguration
   double Tc = 1.5; // Control Time
   double Tp = 4; // Preview Time
   double feet_ditance_ = 0.2;
+  double foot_landing_offset = 0.;
   double Double_Step_Ratio = 0.25;
   double impact_threshold = 30;
 

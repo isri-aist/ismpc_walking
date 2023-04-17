@@ -157,6 +157,7 @@ walking_controller:
     t_steps: 1.1
   min_sg_suport_duration: 0.75
   min_dbl_suport_duration: 0.25
+  foot_landing_offset: -3e-3
   max_step_duration: 2
   impact_threshold: 40
   footstep_height: 0.05

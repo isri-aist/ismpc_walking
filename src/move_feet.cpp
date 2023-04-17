@@ -88,8 +88,7 @@ bool Walking_controller::MoveFeet(double t)
   double offset = 0;
   double SingleSupportDuration = (NextTimeStep - t_lift) + offset;
   double height_off = X_0_support.translation().z();
-  SwingFootTrajectory.set_Z_ContactOffset(height_off);
-  // SwingFootTrajectory.setZOffset(3e-3);
+  SwingFootTrajectory.setZOffset(controller_config_.foot_landing_offset);
 
   SwingFootTrajectory.getSwingFootTrajectory(X_0_SwingFootTarget, X_0_SwingFootInitial, t,
                                              controller_config_.FootStepHeight, SingleSupportDuration, t_lift,
