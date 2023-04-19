@@ -1139,8 +1139,8 @@ bool ISMPC_Solver::GetWalkingParameters(bool stop)
     m_feasibilitySolver.configure(m_eta,
                                 m_delta_control,
                                 Eigen::Vector2d{0.1,0.4},
-                                Eigen::Vector2d{0.4,4},
-                                Eigen::Vector2d{0.5,5},
+                                Eigen::Vector2d{0.5,1.5},
+                                Eigen::Vector2d{0.5,2},
                                 Eigen::Vector2d{m_dx_f,m_dy_f},
                                 Eigen::Vector2d{m_dx * 0.7  , m_dy},
                                 m_feet_distance,8);
