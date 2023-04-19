@@ -373,6 +373,8 @@ void Walking_controller::ComputeWalkingTrajectory()
     mpc_state_.SupPolygon = MPCSolver.get_polynome_support();
     mpc_state_.mpc_Lc_dot_.setZero();
     mpc_state_.QPSuccess = false;
+    mc_rtc::log::error("MPC failed, stopping");
+    Stop = true;
   }
 }
 
