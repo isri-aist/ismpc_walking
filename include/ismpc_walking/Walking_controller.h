@@ -377,6 +377,7 @@ protected:
       stabTask->enable();
       stabilizer_state_ = StabilizerState::None;
       active = true;
+      DebugMode = false;
     }
   }
   void deactivate()
