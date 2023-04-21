@@ -475,6 +475,10 @@ private:
   double m_dy = 0.1; // ZMP square size at one timestep
   double m_dx_u = 0.1;
   double m_dy_u = 0.1; // ZMP square size at one timestep
+  Eigen::Vector2d m_ts_range{0.6,2};
+  Eigen::Vector2d m_tds_range{0.2,1.5};
+  Eigen::Vector2d m_tss_range{0.4,1.5};
+
   Eigen::Vector2d rect_pose_offset = Eigen::Vector2d::Zero(); // cstr zone offset in the foot frame for y axis, positive offset is an offset
                                     // toward the other feet;
   Eigen::Vector2d rect_pose_offset_static = Eigen::Vector2d::Zero(); // cstr zone offset in the foot frame for y axis, positive offset is an offset

@@ -105,9 +105,9 @@ public:
     {
       controller_config_.foot_landing_offset = config("walking_controller")("foot_landing_offset");
     }
-    controller_config_.Ts_max = config("walking_controller")("max_step_duration");
-    controller_config_.T_ss_min = config("walking_controller")("min_sg_suport_duration");
-    controller_config_.T_ds_min = config("walking_controller")("min_dbl_suport_duration");
+    controller_config_.ts_range = config("ismpc")("ts_range");
+    controller_config_.tss_range = config("ismpc")("tss_range");
+    controller_config_.tds_range = config("ismpc")("tds_range");
     controller_config_.impact_threshold = config("walking_controller")("impact_threshold");
     controller_config_.safety_roll_error_ = config("walking_controller")("safety_foot_roll_error");
     controller_config_.wrench_filter_cutoff = config("walking_controller")("wrench_filter_cutoff_T");
@@ -161,7 +161,6 @@ public:
     controller_config_.MPC_ZMP_Constraint_size.y() = std::min(
         controller_config_.MPC_ZMP_Constraint_max_size,
         std::max(controller_config_.MPC_ZMP_Constraint_min_size, controller_config_.MPC_ZMP_Constraint_size.y()));
-    controller_config_.Ts_min = controller_config_.T_ds_min + controller_config_.T_ss_min;
     MPCSolver.configure(controller_config_);
   }
 
@@ -203,8 +202,8 @@ public:
   void tds(double t_ds)
   {
     input_tds =
-        mc_filter::utils::clampAndWarn(t_ds, controller_config_.T_ds_min,
-                                       controller_config_.Ts_max / controller_config_.Double_Step_Ratio, "Tds capped");
+        mc_filter::utils::clampAndWarn(t_ds, controller_config_.tds_range(0),
+                                       controller_config_.tds_range(1), "Tds capped");
   }
   double ts() noexcept
   {
@@ -212,8 +211,8 @@ public:
   }
   void ts(double ts)
   {
-    T_Steps = mc_filter::utils::clampAndWarn(ts, controller_config_.T_ds_min + controller_config_.T_ss_min,
-                                             controller_config_.Ts_max, "Ts capped");
+    T_Steps = mc_filter::utils::clampAndWarn(ts, controller_config_.ts_range(0),
+                                             controller_config_.ts_range(1), "Ts capped");
   }
   int n_steps() noexcept
   {

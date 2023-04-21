@@ -16,10 +16,11 @@ struct ControllerConfiguration
   Eigen::Vector6d SwingFootWeight_Dim = Eigen::Vector6d::Ones();
   Eigen::Vector6d SwingFootStiffness_Dim = Eigen::Vector6d::Ones();
 
-  double Ts_max = 2;
-  double T_ds_min = 0.15;
-  double T_ss_min = 0.45;
-  double Ts_min = T_ds_min + T_ss_min;
+  //range is min max
+  Eigen::Vector2d ts_range{0.6,2};
+  Eigen::Vector2d tds_range{0.2,1.5};
+  Eigen::Vector2d tss_range{0.4,1.5};
+
 
   Eigen::Vector2d Footsteps_Generation_Kinematics_cstr{0.3, 0.1};
 

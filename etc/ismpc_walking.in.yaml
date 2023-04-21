@@ -114,6 +114,9 @@ ismpc:
   allow_none_tail: true
   foosteps_kin_cstr: [0.6,0.25]
   footsteps_cstr_square: [0.6,0.25]
+  ts_range: [0.7,2]
+  tds_range: [0.2,1.5]
+  tss_range: [0.5,1.5]
   double_support_ratio: 0.4
   ts: 1.3
   sliding_zmp_cstr_region: false

@@ -61,6 +61,11 @@ void ISMPC_Solver::configure(const ControllerConfiguration & config)
   zmp_ref_offset = config.MPC_ZMP_ref_offset_sg_supp;
   zmp_ref_offset_end_step = config.MPC_ZMP_ref_offset_end_step;
   zmp_ref_offset_start_step = config.MPC_ZMP_ref_offset_start_step;
+  m_ts_range = config.ts_range;
+  m_tss_range = config.tss_range;
+  m_tds_range = config.tds_range;
+
+
 
   Compute_Integration_Matrix();
   Compute_Integration_Vector(0);
@@ -1138,9 +1143,9 @@ bool ISMPC_Solver::GetWalkingParameters(bool stop)
     double Ts = m_timestamp[0];
     m_feasibilitySolver.configure(m_eta,
                                 m_delta_control,
-                                Eigen::Vector2d{0.1,0.4},
-                                Eigen::Vector2d{0.5,1.5},
-                                Eigen::Vector2d{0.5,2},
+                                m_tds_range,
+                                m_tss_range,
+                                m_ts_range,
                                 Eigen::Vector2d{m_dx_f,2*m_dy_f},
                                 Eigen::Vector2d{m_dx * 0.7  , m_dy},
                                 m_feet_distance,8);
