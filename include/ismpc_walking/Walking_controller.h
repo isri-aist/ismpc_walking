@@ -516,6 +516,7 @@ private:
   bool Swing_Foot_Contact = true;
   bool DoubleSupport_state = true;
   bool StepRecoveryState = false;
+  bool AutoStart = false;
 
   
   bool Use_w = true;

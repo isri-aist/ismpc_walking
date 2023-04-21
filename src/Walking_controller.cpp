@@ -162,16 +162,9 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, c
   create_datastore();
   getTransformations();
 
-  bool start_now = config("walking_controller")("auto_start")("activate");
+  AutoStart = config("walking_controller")("auto_start")("activate");
   reference_velocity.setZero();
-  if(start_now)
-  {
-    Stop = false;
-    N_Steps_Desired = config("walking_controller")("auto_start")("steps");
-    double t_step = config("walking_controller")("auto_start")("t_steps");
-    ts(t_step);
-    reference_velocity = config("walking_controller")("auto_start")("speed");
-  }
+
 
   MPCSolver.Allow_none(controller_config_.MPC_allow_None);
 
@@ -183,6 +176,15 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, c
   updateTasks();
   deactivate();
   mc_rtc::log::success("ismpc_walking controller init done ");
+  if(AutoStart)
+  {
+    activate();
+    Stop = false;
+    N_Steps_Desired = config("walking_controller")("auto_start")("steps");
+    double t_step = config("walking_controller")("auto_start")("ts");
+    ts(t_step);
+    reference_velocity = config("walking_controller")("auto_start")("speed");
+  }
 }
 
 bool Walking_controller::wait_for_mpc_thread()
@@ -907,5 +909,9 @@ void Walking_controller::reset(const mc_control::ControllerResetData & reset_dat
     compute_trajectory_once.notify_all();
     WalkingTrajectoryThread.join();
   }
-  deactivate();
+  if(!AutoStart)
+  {
+    deactivate();
+  }
+  AutoStart = false;
 }
