@@ -133,7 +133,7 @@ bool Walking_controller::MoveFeet(double t)
     // TouchDown = false;
 
     if( ((Step_Time > 0.2 && TouchDown)
-        || Step_Time >= SingleSupportDuration + controller_config_.delta) && !Swing_Foot_Contact)
+        || Step_Time >= SingleSupportDuration) && !Swing_Foot_Contact)
 
     {
 
