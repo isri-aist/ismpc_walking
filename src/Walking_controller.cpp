@@ -470,11 +470,11 @@ void Walking_controller::CheckStepRecovery()
     if(!ok || !ok_switch)
     {
       mc_rtc::log::warning("Can't Stop, stepping");
-      if(ok_switch)
-      {
-        SwitchFootSupport_manual();
-        return;
-      }
+      // if(!ok_switch)
+      // {
+      //   SwitchFootSupport_manual();
+      //   return;
+      // }
 
       // mc_rtc::log::info("Pu {} ; Pu max {}",stabTask->measuredDCM(),MPCSolver.Puk_max());
       // mc_rtc::log::info("Pu {} ; Pu min {}",stabTask->measuredDCM(),MPCSolver.Puk_min());      
@@ -497,6 +497,13 @@ void Walking_controller::CheckStepRecovery()
         }
 
       }
+
+      if( (ff.rotation() * (stabTask->measuredDCM() - robot().frame(supportFootName).position().translation())).norm() 
+            < (ff.rotation() * (stabTask->measuredDCM() - robot().frame(swingFootName).position().translation())).norm() )
+      {
+        SwitchFootSupport_manual();
+      }
+
       StepRecoveryState = true;
       Stop = false;
     }
