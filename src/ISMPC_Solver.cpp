@@ -1181,7 +1181,7 @@ bool ISMPC_Solver::GetWalkingParameters(bool stop)
     {
       m_timestamp = optimalTs;
       if(DoubleSupport){ m_Tds = optimalTds[0];}
-      input_steps_ = optimalPf;
+      // input_steps_ = optimalPf;
       m_feasibility_region = m_feasibilitySolver.get_feasibility_region();
     }
     else
