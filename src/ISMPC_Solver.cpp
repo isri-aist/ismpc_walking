@@ -330,11 +330,11 @@ void ISMPC_Solver::Static_ZMP_Constraints()
 
 
 
-  Aineq_zmp.resize(2 * ZMP_Cstr.rows(),N_variable);
+  Aineq_zmp.resize(1 * ZMP_Cstr.rows(),N_variable);
   bineq_zmp.resize(Aineq_zmp.rows());
 
-  Aineq_zmp << ZMP_Cstr * Delta , ZMP_Cstr * DeltaNoDelay;
-  bineq_zmp << b_zmp , b_zmp;
+  Aineq_zmp << ZMP_Cstr * Delta ;// , ZMP_Cstr * DeltaNoDelay;
+  bineq_zmp << b_zmp ;//, b_zmp;
   A_zmp = Delta;
   b_zmp_traj = Eigen::Map<Eigen::VectorXd>(ZMP_ref_traj.data(), ZMP_ref_traj.size());
   M_zmp_traj = Eigen::MatrixXd::Zero(b_zmp_traj.rows(), N_variable);
@@ -1385,7 +1385,7 @@ bool ISMPC_Solver::GetWalkingParameters(bool stop)
     beq = Eigen::VectorXd::Zero(1);
     QP_Output = solveQP();
     stab_error = (A_stab * QP_Output - b_stab);
-    mc_rtc::log::warning("[ISMPC] New stab error {}",stab_error);
+    mc_rtc::log::warning("[ISMPC] stab error {}",stab_error);
   }
 
   if(!QPsuccess)
