@@ -21,11 +21,17 @@ ObserverPipelines:
     - type: Encoder
     - type: Attitude
       required: true
+      update: true
     - type: KinematicInertial
+      update: true
       config:
         cutoff: 0.02
         anchorFrame:
           maxAnchorFrameDiscontinuity: 0.02
+    - type: BodySensor
+      update: false
+      config:
+        bodySensor: FloatingBase
 
 constraints:
   - type: contact

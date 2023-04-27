@@ -49,7 +49,7 @@ bool Walking_controller::MoveFeet(double t)
       solver().addTask(SwingFootTask);
       Eigen::Vector3d supp_pose;
       double supp_yaw;
-      supp_pose = robot().surfacePose(supportFootName).translation();
+      supp_pose = realRobot().surfacePose(supportFootName).translation();
       supp_pose.z() = 0.0;
       supp_yaw = mc_rbdyn::rpyFromMat(robot().surfacePose(supportFootName).rotation()).z();
       if(supportFootName == leftFootName_)
@@ -172,12 +172,12 @@ bool Walking_controller::MoveFeet(double t)
       solver().removeTask(landingTask);
       Eigen::Vector3d supp_pose;
       double supp_yaw;
-      supp_pose = robot().surfacePose(supportFootName).translation();
+      supp_pose = realRobot().surfacePose(supportFootName).translation();
       supp_pose.z() = 0.0;
       supp_yaw = mc_rbdyn::rpyFromMat(robot().surfacePose(supportFootName).rotation()).z();
       Eigen::Vector3d swing_pose;
       double swing_yaw;
-      swing_pose = robot().surfacePose(swingFootName).translation();
+      swing_pose = realRobot().surfacePose(swingFootName).translation();
       swing_pose.z() = 0.0;
       swing_yaw = mc_rbdyn::rpyFromMat(robot().surfacePose(swingFootName).rotation()).z();
       if(supportFootName == leftFootName_)
