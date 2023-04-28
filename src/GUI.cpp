@@ -268,6 +268,8 @@ void Walking_controller::addToGUI()
       mc_rtc::gui::Checkbox(
           "Force Contact Safety", [this]() { return force_contact_safety_; },
           [this]() { force_contact_safety_ = !force_contact_safety_; }),
+      mc_rtc::gui::Checkbox(
+          "Increase MPC update rate (Double Support)", [this]() { return IncreaseUpdate; }, [this]() { IncreaseUpdate = !IncreaseUpdate; }),
       // mc_rtc::gui::Checkbox("ZMP_Corr", [this](){return ZMP_correction;}, [this](){ZMP_correction =
       // !ZMP_correction;}),
       mc_rtc::gui::Label("Stab Error (m)", [this]() { return this->mpc_state_.stab_error; }),

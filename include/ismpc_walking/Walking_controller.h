@@ -454,6 +454,7 @@ private:
   bool UseRealRobot = true; // To use the real robots data
   bool UseMPCState = false;
   bool UseStepRecovery = false;
+  bool IncreaseUpdate = false; //Call the MPC at controller sampling during double support
   bool Stop = true; // If true, the robot is at stop or the robot is about to stop at next step;
   bool Robot_Walking = false; // If false, the robot is not moving;
   std::mutex compute_trajectory_once_mtx;
