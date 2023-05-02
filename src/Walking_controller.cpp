@@ -120,9 +120,9 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, c
   supportFootName = rightFootName_;
 
   MomentumTask =
-      std::make_shared<mc_tasks::MomentumTask>(robots(),robot().robotIndex(),0,10);
+      std::make_shared<mc_tasks::MomentumTask>(robots(),robot().robotIndex(),10,10);
   Eigen::Vector6d MomentumTask_dof;
-  MomentumTask_dof << 1,1,1,0,0,0;
+  MomentumTask_dof << 1,1,0,0,0,0;
   MomentumTask->dimWeight(MomentumTask_dof);  
 
   comTask =
@@ -742,13 +742,20 @@ void Walking_controller::MoveCoM()
   comTask->refAccel(Ac_com);
   sva::ForceVecd RealRobot_LcDot = rbd::computeCentroidalMomentumDot(realRobot().mb(), realRobot().mbc(), realRobot().com(),realRobot().comVelocity());
   MomentumTask->weight(0);
+  MomentumTask->stiffness(0);
+  MomentumTask->damping(0);
   if(UseAngularMomentum)
   {
-    if(LcDotTarget.norm() > 1e-6)
+    if(LcDotTarget.norm() > 1e-5)
     {
-      MomentumTask->weight(1000);
+      MomentumTask->weight(controller_config_.momentumTaskWeight);
+      MomentumTask->refAccel(sva::MotionVecd(LcDotTarget,Eigen::Vector3d::Zero()).vector());
     }
-    MomentumTask->refAccel(sva::MotionVecd(LcDotTarget,Eigen::Vector3d::Zero()).vector());
+    // else
+    // {
+    //   MomentumTask->stiffness(10);
+    //   MomentumTask->refAccel(Eigen::Vector6d::Zero());
+    // }
   }
 
   mc_tasks::lipm_stabilizer::ContactState supportFoot = supportFootName == leftFootName_ ? mc_tasks::lipm_stabilizer::ContactState::Left : mc_tasks::lipm_stabilizer::ContactState::Right;
@@ -833,7 +840,7 @@ void Walking_controller::UpdateInitialVectors()
       mpc_state_.Pu.segment(0,2) = -stabTask->filteredDCM();
       mpc_state_.Pck = mpc_state_.Pu - (mpc_state_.Vck / stabTask->omega());
     }
-
+    mpc_state_.Lck = rbd::computeCentroidalMomentum(realRobot().mb(), realRobot().mbc(), mpc_state_.Pck).moment();
     Ldot = rbd::computeCentroidalMomentumDot(realRobot().mb(), realRobot().mbc(), mpc_state_.Pck ,mpc_state_.Vck).moment(); 
 
   }

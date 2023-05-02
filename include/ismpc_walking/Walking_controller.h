@@ -82,6 +82,10 @@ public:
     {
       controller_config_.lambda_dbl_supp = config("ismpc")("lambda_dbl_supp");
     }
+    if(config("ismpc").has("beta_Ld"))
+    {
+      controller_config_.Beta_Ld = config("ismpc")("beta_Ld");
+    }
     if(config("ismpc").has("ts"))
     {
       ts(config("ismpc")("ts"));
@@ -105,6 +109,7 @@ public:
     {
       controller_config_.foot_landing_offset = config("walking_controller")("foot_landing_offset");
     }
+
     controller_config_.ts_range = config("ismpc")("ts_range");
     controller_config_.tss_range = config("ismpc")("tss_range");
     controller_config_.tds_range = config("ismpc")("tds_range");
@@ -116,11 +121,10 @@ public:
 
     controller_config_.SwingFootStiffness = config("tasks")("swingfoot_stiffness");
     controller_config_.SwingFootWeight = config("tasks")("swingfoot_weight");
-    controller_config_.SwingFootStiffness_Dim = config("tasks")("swingfoot_dimstiffness");
-    controller_config_.SwingFootWeight_Dim = config("tasks")("swingfoot_dimweight");
-
-
-    
+    if(config("tasks").has("momentum_task_weight"))
+    {
+      controller_config_.momentumTaskWeight = config("tasks")("momentum_task_weight");
+    }
 
     Configure(controller_config_);
   }
@@ -128,11 +132,12 @@ public:
   void reconfigure(const mc_rtc::Configuration & config)
   {
 
-    std::vector<double> qp_weight = config("QP Weight (u ; step ; zmp traj ; stab)");
+    std::vector<double> qp_weight = config("QP Weight (u ; step ; zmp traj ; stab ; Ld)");
     controller_config_.Beta_u = qp_weight[0]; 
     controller_config_.Beta_step = qp_weight[1]; 
     controller_config_.Beta_traj = qp_weight[2];
     controller_config_.Beta_stab = qp_weight[3]; 
+    controller_config_.Beta_Ld = qp_weight[4];
     controller_config_.Tc = config("Tc");
     controller_config_.delta = config("delta");
     controller_config_.MPC_Footsteps_kin_Constraint_size = config("step kinematics cstr");

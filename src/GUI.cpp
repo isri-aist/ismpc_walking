@@ -352,6 +352,9 @@ void Walking_controller::addToGUI()
       //       return mpc_state_.Pzk;
       //       ;
       //     }),
+
+      mc_rtc::gui::Force("Target angular momentum",[this]() -> sva::ForceVecd {return sva::ForceVecd(mpc_state_.get_Lc_dot(0),Eigen::Vector3d::Zero());},[this]() -> const sva::PTransformd & {return robot().posW();}),
+
       mc_rtc::gui::Trajectory("Predicted ZMP Trajectory", mc_rtc::gui::LineConfig(mc_rtc::gui::Color(0., 0., 1.),0.02,mc_rtc::gui::LineStyle::Dotted) ,
                               [this]() -> std::vector<Eigen::Vector3d> {
                                 std::vector<Eigen::Vector3d> Output;
@@ -470,9 +473,9 @@ void Walking_controller::add_ISMPC_Config_GUI()
       {"Walking", "ISMPC Configuration"},
       mc_rtc::gui::Form(
           "Configure", [this](const mc_rtc::Configuration & conf) { reconfigure(conf);},
-          mc_rtc::gui::FormArrayInput("QP Weight (u ; step ; zmp traj ; stab)", false,
-                                      [this]() -> std::array<double, 4> {
-                                        return {controller_config_.Beta_u, controller_config_.Beta_step,controller_config_.Beta_traj,controller_config_.Beta_stab};
+          mc_rtc::gui::FormArrayInput("QP Weight (u ; step ; zmp traj ; stab ; Ld)", false,
+                                      [this]() -> std::array<double, 5> {
+                                        return {controller_config_.Beta_u, controller_config_.Beta_step,controller_config_.Beta_traj,controller_config_.Beta_stab, controller_config_.Beta_Ld};
                                       }),
           
           mc_rtc::gui::FormNumberInput("Tc", false, [this]() { return controller_config_.Tc; }),

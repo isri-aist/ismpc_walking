@@ -41,6 +41,7 @@ void ISMPC_Solver::configure(const ControllerConfiguration & config)
   m_Beta_u = config.Beta_u;
   m_Beta_stab = config.Beta_stab;
   m_Beta_traj = config.Beta_traj;
+  m_Beta_Lc = config.Beta_Ld;
   m_lambda = config.lambda_;
   m_feet_distance = config.feet_ditance_;
   zmp_delay(config.zmp_delay);
@@ -94,7 +95,7 @@ void ISMPC_Solver::init_MPC(const MPC_state & mpc_state,
   P_c_k = mpc_state.Pck;
   V_c_k = mpc_state.Vck;
   P_z_k = mpc_state.Pzk;
-
+  Lc_k = mpc_state.Lck;
   m_mass = mpc_state.input_mass;
 
 
@@ -1344,7 +1345,9 @@ bool ISMPC_Solver::GetWalkingParameters(bool stop)
       bineq_Ld.segment(2 * i,2) = Eigen::Vector2d::Ones() * m_Ld_max;
       bineq_Ld.segment(2 * ( m_C + i),2) = Eigen::Vector2d::Ones() * m_Ld_max;
     }
-    m_Q += m_Beta_Lc * M_Ld.transpose() * M_Ld;
+    M_L.block(0,2 * (m_C + j_Max_C) , 2 * m_C , 2 * m_C) = Delta_Lc;
+    m_Q += m_Beta_Lc * M_Ld.transpose() * M_Ld + 1e3 * M_L.transpose() * M_L;
+    m_p += 1e3 * M_L.transpose() * b_L;
 
   }
 
@@ -1418,8 +1421,10 @@ bool ISMPC_Solver::GetWalkingParameters(bool stop)
       m_ZMP_u(k + m_C) = QP_Output(2 * k + 1);
       if(UseAngularMomentumDot)
       {
-        m_Ldot_c(k) = std::min( std::max( QP_Output(2 * (m_C + j_Max_C + k)) , -m_Ld_max),m_Ld_max);
-        m_Ldot_c(k + m_C) = std::min( std::max( QP_Output(2 * (m_C + j_Max_C + k) + 1), -m_Ld_max),m_Ld_max);
+        // m_Ldot_c(k) = std::min( std::max( QP_Output(2 * (m_C + j_Max_C + k)) , -m_Ld_max),m_Ld_max);
+        // m_Ldot_c(k + m_C) = std::min( std::max( QP_Output(2 * (m_C + j_Max_C + k) + 1), -m_Ld_max),m_Ld_max);
+        m_Ldot_c(k) = QP_Output(2 * (m_C + j_Max_C + k)) ;
+        m_Ldot_c(k + m_C) = QP_Output(2 * (m_C + j_Max_C + k) + 1);
       }
     }
 

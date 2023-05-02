@@ -5,16 +5,10 @@ struct ControllerConfiguration
 {
   double SwingFootWeight = 5000;
   double SwingFootStiffness = 300;
-  double CoM_Stiff = 100;
-  double CoM_Weight = 1000;
-  Eigen::Vector2d Std_Admittance = {1e-2, 1e-2};
-  Eigen::Vector2d Impact_Admittance = {1e-2, 1e-2};
 
   double Controller_timestep = 5e-3;
 
-  Eigen::Vector3d CoMWeight_Dim{1, 1, 1};
-  Eigen::Vector6d SwingFootWeight_Dim = Eigen::Vector6d::Ones();
-  Eigen::Vector6d SwingFootStiffness_Dim = Eigen::Vector6d::Ones();
+  double momentumTaskWeight = 10000;
 
   //range is min max
   Eigen::Vector2d ts_range{0.6,2};
@@ -28,6 +22,7 @@ struct ControllerConfiguration
   double Beta_step = 1e4; // 1e4;
   double Beta_stab = 1e7;
   double Beta_traj = 0.;
+  double Beta_Ld = 1.;
   double lambda_ = 100.;
   double lambda_sg_supp = 100;
   double lambda_dbl_supp = 100;

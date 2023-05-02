@@ -180,6 +180,7 @@ struct MPC_state
   Eigen::Vector3d Vck = Eigen::Vector3d::Zero();
   Eigen::Vector3d Pzk = Eigen::Vector3d::Zero();
   Eigen::Vector3d Uk  = Eigen::Vector3d::Zero();
+  Eigen::Vector3d Lck = Eigen::Vector3d::Zero();
   Eigen::Vector3d ComBias = Eigen::Vector3d::Zero();
   std::vector<Eigen::Vector3d> admittance_ref_;
   Eigen::Vector3d Pu = Eigen::Vector3d::Zero();

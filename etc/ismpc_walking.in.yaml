@@ -200,8 +200,10 @@ walking_controller:
       torsoBodyName: "CHEST_LINK0"
       leftFootLink: "LLEG_LINK5"
       rightFootLink: "RLEG_LINK5"
-      momemtum_task_joints: ["LARM_JOINT0",
-                                "RARM_JOINT0","RARM_JOINT3","LARM_JOINT3"]
+      # momemtum_task_joints: ["LARM_JOINT0",
+      #                           "RARM_JOINT0","RARM_JOINT3","LARM_JOINT3"]
+      momemtum_task_joints: ["Root","CHEST_JOINT0",
+                                "CHEST_JOINT1"]
     hrp5_p:
       torsoBodyName: "Chest_Link0"
       leftFootLink: "Lleg_Link5"
