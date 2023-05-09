@@ -674,7 +674,7 @@ void Walking_controller::MoveCoM()
   Vc.z() = 0;
   zmpTarget = mpc_state_.Get_ZMP_planarTarget(mpc_state_.Index);
   
-  LcDotTarget = mpc_state_.get_Lc_dot(mpc_state_.Index);
+  LcDotTarget = mpc_state_.get_Lc_dot(0);
 
     
   // mc_rtc::log::info("//Index : {}, z_y {}",mpc_state_.Index,zmpTarget.y());
@@ -727,27 +727,28 @@ void Walking_controller::MoveCoM()
     Pcom.segment(0,2) = sva::interpolate(robot().surfacePose(leftFootName_),robot().surfacePose(rightFootName_),0.5).translation().segment(0,2);
     Vc.setZero();
     Ac_com.setZero();
-    if(!Stop)
+    if(!active)
     {
-      Stop = true;
-      mc_rtc::log::warning("[Walking Controller] MPC control is off, cannot walk");
+      if(!Stop)
+      {
+        Stop = true;
+        mc_rtc::log::warning("[Walking Controller] MPC control is off, cannot walk");
+      }
+      LcDotTarget.setZero();
     }
-    LcDotTarget.setZero();
   }
   comTask->com(Pcom);
   comTask->refVel(Vc);
   comTask->refAccel(Ac_com);
   sva::ForceVecd RealRobot_LcDot = rbd::computeCentroidalMomentumDot(realRobot().mb(), realRobot().mbc(), realRobot().com(),realRobot().comVelocity());
   MomentumTask->weight(0);
-  MomentumTask->stiffness(0);
+  MomentumTask->stiffness(1);
   MomentumTask->damping(0);
   if(UseAngularMomentum)
   {
-    if(LcDotTarget.norm() > 1e-5)
-    {
-      MomentumTask->weight(controller_config_.momentumTaskWeight);
-      MomentumTask->refAccel(sva::MotionVecd(LcDotTarget,Eigen::Vector3d::Zero()).vector());
-    }
+    MomentumTask->weight(controller_config_.momentumTaskWeight);
+    MomentumTask->refAccel(sva::MotionVecd(LcDotTarget,Eigen::Vector3d::Zero()).vector());
+    
     // else
     // {
     //   MomentumTask->stiffness(10);
