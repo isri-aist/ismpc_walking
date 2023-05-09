@@ -557,7 +557,7 @@ bool Walking_controller::run()
   if(!(Stop && DoubleSupport_state))
   {
 
-    if(t - t_k >= controller_config_.delta || (DoubleSupport_state && IncreaseUpdate) )
+    if(t - t_k + controller_timestep >= controller_config_.delta || (DoubleSupport_state && IncreaseUpdate) )
     {
       t_k += t - t_k; 
       compute_trajectory_once.notify_all();
@@ -580,7 +580,7 @@ bool Walking_controller::run()
     {
       if(UseStepRecovery){CheckStepRecovery();}
     }
-    if(t_stop > controller_config_.delta || StepRecoveryState || IncreaseUpdate )
+    if(t_stop + controller_timestep >= controller_config_.delta || StepRecoveryState || IncreaseUpdate )
     {
       count_stop = count;
     
