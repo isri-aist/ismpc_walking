@@ -307,7 +307,7 @@ protected:
 
   void add_ISMPC_Config_GUI();
 
-  void ComputeFeetPerturbances(Eigen::Vector3d & offset, double & eta2);
+  void ComputeFeetPerturbances(Eigen::Vector3d & offset, double & kappa);
 
   void AddToLog();
 
@@ -527,6 +527,7 @@ private:
   
   bool Use_w = true;
   Eigen::Vector3d w_ = Eigen::Vector3d::Zero();
+  double kappa_ = 1;
   double eta2_cstr;
   Eigen::Vector3d Ldot_offset = Eigen::Vector3d::Zero(); //offset due to angular momentum
   Eigen::Vector3d Ldot = Eigen::Vector3d::Zero(); //current angular momentum

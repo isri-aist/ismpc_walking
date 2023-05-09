@@ -323,12 +323,9 @@ void Walking_controller::ComputeWalkingTrajectory()
   if(Use_w)
   {
 
-    mc_filter::utils::clampInPlaceAndWarn(w_.x(),-0.05 , 0.05,"Perturbation (0)");
-    mc_filter::utils::clampInPlaceAndWarn(w_.y(),-0.1 , 0.1,"Perturbation (1)");
-    mc_filter::utils::clampInPlaceAndWarn(eta2_cstr,2, 20,"Omega Perturbation");
     double t_perturbation = 0.1;
-    if(DoubleSupport_state){t_perturbation = 100;}
-    MPCSolver.Disturbance(w_,sqrt(eta2_cstr),t_perturbation);
+    if(DoubleSupport_state || debugDblSupp){t_perturbation = 0.1;}
+    MPCSolver.Disturbance(w_,kappa_,t_perturbation);
 
   }
 
@@ -850,16 +847,15 @@ void Walking_controller::UpdateInitialVectors()
 
     mpc_state_.Pzk = mpc_state_.Get_ZMP_planarTarget(mpc_state_.Index);
   }
-  else if(!UseRealRobot)
-  {
-    mpc_state_.Pzk = mpc_state_.Pck;
-  }
 
-  ComputeFeetPerturbances(w_,eta2_cstr);
-  Ldot_offset = Eigen::Vector3d{-Ldot.y(),Ldot.x(),0.};
-  Ldot_offset /= (robot().mass() * controller_config_.Stab_config.comHeight * eta2_cstr);
-  w_ += Ldot_offset;
-  
+  if(!DebugMode)
+  {
+    ComputeFeetPerturbances(w_,kappa_);
+    Ldot_offset = Eigen::Vector3d::Zero();
+    // Ldot_offset = Eigen::Vector3d{-Ldot.y(),Ldot.x(),0.};
+    // Ldot_offset /= (robot().mass() * controller_config_.Stab_config.comHeight * eta2_cstr);
+    w_ += Ldot_offset;
+  }
 
   // eta2_cstr = (mc_rtc::constants::GRAVITY/controller_config_.Stab_config.comHeight);
 

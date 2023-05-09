@@ -171,11 +171,11 @@ public:
     return w_k;
   }
 
-  void Disturbance(const Eigen::Vector3d w, const double eta = 3.5,const double d = 1e3) noexcept
+  void Disturbance(const Eigen::Vector3d w, const double kappa = 1,const double d = 1e3) noexcept
   {
     w_k  = w;
-    m_eta = eta;
-    Compute_Integration_Matrix();
+    m_kappa = kappa;
+    Compute_Integration_Matrix(m_eta);
     perturbation_duration = d;
   }
 
@@ -385,14 +385,14 @@ private:
   Eigen::MatrixXd create_zmp_matrix(bool addDelay  );
   Eigen::MatrixXd create_u_matrix();
 
-  void Compute_Integration_Matrix();
+  void Compute_Integration_Matrix(const double eta);
 
   /**
    * Integrate The ZMP velocity to compute the CoM, CoMd and ZMP trajectory
    */
   void Integrate();
 
-  void Compute_Integration_Vector(int i);
+  void Compute_Integration_Vector(const double eta,const Eigen::Vector2d & zmp0,const Eigen::Vector2d & zmpref, const double t0,const double tk);
 
   /**
    * Generate a ZMP trajectory that is the middle point of the zmp square constraints between the preview and control
@@ -409,6 +409,7 @@ private:
   Eigen::Vector3d P_u_k = Eigen::Vector3d::Zero(); // Initial Unstable Component/DCM
   Eigen::Vector3d U_k = Eigen::Vector3d::Zero(); //Current admittance acting on the pendulum (z_0 + u_0)
   Eigen::Vector3d w_k = Eigen::Vector3d::Zero(); // Perturbance
+  double m_kappa = 1;
   Eigen::Vector3d Lc_k = Eigen::Vector3d::Zero(); //Initial Angular Momemtum
   double perturbation_duration = 0;
 
@@ -455,6 +456,7 @@ private:
   bool Slide_ZMP_region = false;
 
   double m_eta = 1; // Prendulum frequency
+  double m_eta_free = 1; // Prendulum frequency disturbance free
   double m_mass = 40.;
   double CoM_height = 0.78;
   double g = 9.8; // Gravity acceleration
@@ -527,8 +529,9 @@ private:
   Eigen::VectorXd b_zmp_traj;
 
   // CoM,CoMd,ZMP Integration
-  Eigen::Matrix3d Integration_Mat;
-  Eigen::Vector3d Integration_Vec;
+  Eigen::Matrix2d Integration_Mat;
+  Eigen::Vector2d Integration_Vec_x;
+  Eigen::Vector2d Integration_Vec_y;
 
   //Pendulum dynamic to integrate state : \dot{s} = A * s + B * U 
   Eigen::Matrix3d m_dynamic_matrix_A;

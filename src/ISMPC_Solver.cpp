@@ -19,8 +19,7 @@ ISMPC_Solver::ISMPC_Solver(double delta_controller, double delta, double Tp, dou
   m_P = static_cast<int>(m_Tp / m_delta);
   QPsuccess = false;
 
-  Compute_Integration_Matrix();
-  Compute_Integration_Vector(0);
+  Compute_Integration_Matrix(m_eta);
 
   w_k.setZero();
 }
@@ -58,6 +57,7 @@ void ISMPC_Solver::configure(const ControllerConfiguration & config)
   m_P = (int)std::round((m_Tp) / m_delta);
   CoM_height = config.Stab_config.comHeight;
   m_eta = sqrt(mc_rtc::constants::GRAVITY / CoM_height);
+  m_eta_free = m_eta;
   Use_Stability_Task = config.use_stability_task;
   zmp_ref_offset = config.MPC_ZMP_ref_offset_sg_supp;
   zmp_ref_offset_end_step = config.MPC_ZMP_ref_offset_end_step;
@@ -68,8 +68,7 @@ void ISMPC_Solver::configure(const ControllerConfiguration & config)
 
 
 
-  Compute_Integration_Matrix();
-  Compute_Integration_Vector(0);
+  Compute_Integration_Matrix(m_eta);
 
   mc_rtc::log::info("[ISMPC] Configuration :");
   mc_rtc::log::info("Beta {}", m_Beta_step);
@@ -147,7 +146,9 @@ void ISMPC_Solver::init_MPC(const MPC_state & mpc_state,
 
   w_k.setZero();
   m_eta = sqrt(mc_rtc::constants::GRAVITY/CoM_height);
-  Compute_Integration_Matrix();
+  m_eta_free = m_eta;
+  perturbation_duration = 0;
+  Compute_Integration_Matrix(m_eta);
 }
 
 void ISMPC_Solver::create_cstr_matrices(Eigen::MatrixXd & A_out, Eigen::VectorXd & b_out, std::vector<SupportPolygon> & A_in, const std::vector<Eigen::VectorXd> & b_in)
@@ -212,18 +213,14 @@ Eigen::MatrixXd ISMPC_Solver::create_u_matrix()
   return A_out;
 }
 
-void ISMPC_Solver::Compute_Integration_Matrix()
+void ISMPC_Solver::Compute_Integration_Matrix(const double eta)
 {
   Integration_Mat.setZero();
-  Integration_Mat(0, 0) = std::cosh(m_eta * m_delta_control);
-  Integration_Mat(0, 1) = std::sinh(m_eta * m_delta_control) / m_eta;
-  Integration_Mat(0, 2) = 1 - std::cosh(m_eta * m_delta_control);
-  Integration_Mat(1, 0) = m_eta * std::sinh(m_eta * m_delta_control);
-  Integration_Mat(1, 1) = std::cosh(m_eta * m_delta_control);
-  Integration_Mat(1, 2) = -m_eta * std::sinh(m_eta * m_delta_control);
-  Integration_Mat(2, 0) = 0;
-  Integration_Mat(2, 1) = 0;
-  Integration_Mat(2, 2) = 1;
+  Integration_Mat(0, 0) = std::cosh(eta * m_delta_control);
+  Integration_Mat(0, 1) = std::sinh(eta * m_delta_control) / eta;
+  Integration_Mat(1, 0) = eta * std::sinh(eta * m_delta_control);
+  Integration_Mat(1, 1) = std::cosh(eta * m_delta_control);
+
 }
 
 void ISMPC_Solver::Static_ZMP_Constraints()
@@ -952,45 +949,61 @@ void ISMPC_Solver::Stability_Constraints()
   A_stab = Eigen::MatrixXd::Zero(2, N_variable);
   b_stab = Eigen::VectorXd::Zero(2);
   Eigen::Vector3d u_delay = U_k - P_z_k;
+  const double l_d_l_p_e = (m_lambda/(m_lambda + m_eta)); 
+  const double e_d_l_p_e = (m_eta/(m_lambda + m_eta)); 
+
+  double t = 0;
+  double duration = m_delta + m_delay_elapsed;
+  const double disturbance_duration = perturbation_duration;
+
   for(int j = 0; j < m_C; j++)
   {
-    A_stab.block(0,2*j,2,2) = Eigen::Matrix2d::Identity() * (m_lambda/(m_lambda + m_eta)) * exp(-j * m_eta * m_delta);
+    const double tj = static_cast<double>(j) * m_delta;
+    if(tj >= perturbation_duration)
+    {
+      A_stab.block(0,2*j,2,2) = Eigen::Matrix2d::Identity() * l_d_l_p_e * exp(-m_eta * tj);
+    }
+    else
+    {
+      A_stab.block(0,2 * j ,2,2) = Eigen::Matrix2d::Identity() * exp(-m_eta * tj) * ( 
+        m_kappa * (1 - exp(-m_eta * (perturbation_duration - tj)))
+        + exp(-m_eta * (perturbation_duration - tj))
+        + e_d_l_p_e * (m_kappa * (exp(-(m_eta + m_lambda) * (perturbation_duration - tj)) - 1 ) 
+                                - exp(-(m_eta + m_lambda) * (perturbation_duration - tj))
+                      )
+        );
   
+    }
+
     if(UseAngularMomentumDot)
     {
       A_stab.block(0, 2 * (m_C + j_Max_C + j),2,2) << 0, 1 , -1 , 0; 
       A_stab.block(0, 2 * (m_C + j_Max_C + j),2,2) /= (m_mass * CoM_height * std::pow(m_eta,2));
-      A_stab.block(0, 2 * (m_C + j_Max_C + j),2,2) *= exp(-m_eta * j * m_delta) * (1 - exp(-m_eta * m_delta));
+      A_stab.block(0, 2 * (m_C + j_Max_C + j),2,2) *= exp(-m_eta * t) * (1 - exp(-m_eta * duration));
+      t += duration;
+      duration = m_delta; 
     }
 
   }
   A_stab.block(0,0,2,2 * m_C) *= exp(-m_eta * m_delay_elapsed);
 
 
-  double l_d_w_p_e = (m_lambda/(m_lambda + m_eta)); 
   P_u_k = P_c_k + (V_c_k / m_eta);
-  b_stab = ( P_u_k - ( (P_z_k_delayed - w_k) * exp(-m_eta * m_delay_elapsed)
-                        + (P_z_k - w_k) + l_d_w_p_e * u_delay
-                        - ( (P_z_k_delayed - w_k) + l_d_w_p_e * u_delay )* exp(-m_eta * m_delay_elapsed))
-                        - w_k * exp(-m_eta * perturbation_duration)).segment(0,2) ;
-  
+  // b_stab = (P_u_k 
+  //         - (
+  //           P_z_k 
+  //           + l_d_l_p_e * (U_k - P_z_k)  
+  //           - l_d_l_p_e * (U_k - P_z_k_delayed) * exp(-m_eta * m_delay_elapsed)
+  //           - w_k * ( 1 - exp(-m_eta * (disturbance_duration + m_delay_elapsed ))) 
+  //           )
+  //         ).segment(0,2);
+  b_stab = P_u_k.segment(0,2);
+  b_stab -= m_kappa * ( U_k * ( 1 - exp(-m_eta * m_delay_elapsed)) 
+                        + e_d_l_p_e * (P_z_k - U_k) * ( 1 - exp(-(m_eta + m_lambda)* m_delay_elapsed)) ).segment(0,2);
 
-  Eigen::Vector2d b_stan_alt = ( 
-              P_u_k 
-              - (1 - exp(-m_eta * m_delay_elapsed)) * (u_delay * l_d_w_p_e + (P_z_k - w_k))
-              - (P_z_k_delayed - w_k )* exp(-m_eta * m_delay_elapsed)
-              - w_k * exp(-m_eta * perturbation_duration) 
-              ).segment(0,2);
-  
-  // mc_rtc::log::info(b_stab - b_stan_alt);
-  b_stab = b_stan_alt;
-
-
-  
-
-  std::chrono::duration<double, std::milli> time_span = std::chrono::high_resolution_clock::now() - t_clock;
-  double ProcessTime = time_span.count();
-  // mc_rtc::log::success("Stability Constraints computed in : " + std::to_string(ProcessTime) + " ms");
+  b_stab -= exp(-m_eta * m_delay_elapsed) * (P_z_k_delayed * m_kappa * (1 - exp(-m_eta * perturbation_duration )) 
+                                              + P_z_k_delayed * exp(-m_eta * perturbation_duration )).segment(0,2); 
+  b_stab -= - (w_k * ( 1 - exp(-m_eta * (perturbation_duration + m_delay_elapsed)))).segment(0,2);
 }
 
 void ISMPC_Solver::Compute_Stability_Range()
@@ -1033,19 +1046,29 @@ void ISMPC_Solver::Compute_Standing_Stability_Range()
   // }
 }
 
-void ISMPC_Solver::Compute_Integration_Vector(int i)
+void ISMPC_Solver::Compute_Integration_Vector(const double eta,const Eigen::Vector2d & zmp0,const Eigen::Vector2d & zmpref, const double t0,const double tk)
 {
-  double l_p_w = (m_lambda + m_eta);
-  double l_m_w = (m_lambda - m_eta);
-  double com_param = 0.5 * m_eta * ( (1/l_p_w) * (exp((-l_p_w*i + (i+1) * m_eta)*m_delta_control) - exp((-l_p_w + m_eta) * (i+1) * m_delta_control) ));
-  com_param -= 0.5 * m_eta * ( (1/l_m_w) * (exp((-l_m_w*i - (i+1) * m_eta)*m_delta_control) - exp((-l_m_w - m_eta) * (i+1) * m_delta_control) ));
-  com_param += 1 - cosh(m_eta * m_delta_control);
+  const double ch = (1 - cosh(eta * m_delta_control));
+  const double sh = (0 - sinh(eta * m_delta_control));
+  const double e_p_l = m_lambda + eta;
+  const double l_m_e = m_lambda - eta;
+  const double e_m_l = - l_m_e;
+  Eigen::Vector2d com_coef = zmpref * ch;
+  Eigen::Vector2d comd_coef = eta * zmpref * sh;
 
-  double comvel_param = 0.5 * (std::pow(m_eta,2)) * ( (1/l_p_w) * (exp((-l_p_w*i + (i+1) * m_eta)*m_delta_control) - exp((-l_p_w + m_eta) * (i+1) * m_delta_control) ));
-  comvel_param += 0.5 * (std::pow(m_eta,2)) * ( (1/l_m_w) * (exp((-l_m_w*i - (i+1) * m_eta)*m_delta_control) - exp((-l_m_w - m_eta) * (i+1) * m_delta_control) ));
-  comvel_param += - m_eta * sinh(m_eta * m_delta_control);
+  const double t_kp1_m_t0 = tk + m_delta_control - t0;
 
-  Integration_Vec = Eigen::Vector3d{com_param , comvel_param, 1 - exp(-m_lambda * (i*m_delta_control))};
+  com_coef -= eta * (zmp0 - zmpref) * (0.5 * exp(-m_lambda * t_kp1_m_t0) * 
+                                                ( ( (exp(m_delta_control * e_p_l) - 1)/e_p_l ) 
+                                                + ( (exp(m_delta_control * l_m_e) - 1)/e_m_l ) ) );
+  
+  comd_coef -= std::pow(eta,2) * (zmp0 - zmpref) * (0.5 *  exp(-m_lambda * t_kp1_m_t0) * 
+                                                        ( ( (exp(m_delta_control * e_p_l) - 1)/e_p_l ) 
+                                                        - ( (exp(m_delta_control * l_m_e) - 1)/e_m_l ) ) );
+
+  Integration_Vec_x << com_coef(0),comd_coef(0);
+  Integration_Vec_y << com_coef(1),comd_coef(1);
+
 }
 
 void ISMPC_Solver::Integrate()
@@ -1056,84 +1079,86 @@ void ISMPC_Solver::Integrate()
   int N = (int)(m_delta / m_delta_control);
   int N_delay = static_cast<int>(m_delay_elapsed/m_delta_control);
   int N_perturbation = static_cast<int>(perturbation_duration/m_delta_control);
+  double eta = m_eta;
+  double kappa = m_kappa;
 
+  Eigen::Vector2d state_x = Eigen::Vector2d{P_c_k.x(), V_c_k.x()}; 
+  Eigen::Vector2d state_y = Eigen::Vector2d{P_c_k.y(), V_c_k.y()}; 
 
-  Eigen::Vector3d state_x = Eigen::Vector3d{P_c_k.x(), V_c_k.x(), P_z_k.x() - w_k.x()};
-  Eigen::Vector3d state_y = Eigen::Vector3d{P_c_k.y(), V_c_k.y(), P_z_k.y() - w_k.y()};
+  Eigen::Vector2d w = w_k.segment(0,2);
 
-  Eigen::Vector3d Pzi = Eigen::Vector3d{state_x(2),state_y(2),0};
+  m_X_MPC.push_back(Eigen::Vector3d{state_x.x(),state_x.y(),P_z_k.x()});
+  m_Y_MPC.push_back(Eigen::Vector3d{state_y.x(),state_y.y(),P_z_k.y()});
+
   
   Eigen::Vector2d Lc_dot_comp = Eigen::Vector2d::Zero();
-  Lc_dot_comp << m_Ldot_c(m_C) ,  - m_Ldot_c(0);
-  Lc_dot_comp /= (m_mass * std::pow(m_eta,2) * CoM_height);
-  Pzi.segment(0,2) += Lc_dot_comp;
+  Lc_dot_comp << -m_Ldot_c(m_C) ,  m_Ldot_c(0);
+  Lc_dot_comp /= (m_mass * std::pow(eta,2) * CoM_height);
+  Eigen::Vector2d Pzi = ( kappa * P_z_k.segment(0,2) - w - Lc_dot_comp);
 
-  for(int k = 1; k < N_delay + 1; k++)
+
+  Eigen::Vector2d zmp_ref = kappa * U_k.segment(0,2) - w - Lc_dot_comp; 
+
+  for(int k = 0; k < N_delay; k++)
   {
-    Compute_Integration_Vector(k);
-    state_x(2) = Pzi.x();
-    state_y(2) = Pzi.y();
+    const double tk = static_cast<double>(k) * m_delta_control;
 
-    state_x = Integration_Mat * state_x + Integration_Vec * (U_k - P_z_k - w_k).x();
-    state_y = Integration_Mat * state_y + Integration_Vec * (U_k - P_z_k - w_k).y();
+    Compute_Integration_Vector(eta,Pzi,zmp_ref,0,tk);
+
+
+    state_x = Integration_Mat * state_x + Integration_Vec_x ;
+    state_y = Integration_Mat * state_y + Integration_Vec_y ;
+
+    Eigen::Vector2d zmp = zmp_ref + (Pzi - zmp_ref) * exp(-m_lambda * (tk + m_delta_control));
     
-    m_X_MPC.push_back(state_x - Eigen::Vector3d{0,0,Lc_dot_comp.x()});
-    m_Y_MPC.push_back(state_y - Eigen::Vector3d{0,0,Lc_dot_comp.y()});
+    m_X_MPC.push_back(Eigen::Vector3d{state_x.x(),state_x.y(),(zmp + w + Lc_dot_comp).x() / kappa });
+    m_Y_MPC.push_back(Eigen::Vector3d{state_y.x(),state_y.y(),(zmp + w + Lc_dot_comp).y() / kappa });
 
   }
 
-
+  zmp_ref = kappa * P_z_k_delayed.segment(0,2) - w ; 
   
   m_admittance_targets.clear();
   for (Eigen::Index i = 0 ; i < m_C; i++)
   {
 
-    double u_x = P_z_k_delayed.x() - w_k.x() - state_x(2);
-    double u_y = P_z_k_delayed.y() - w_k.y() - state_y(2);
-    for (Eigen::Index j = 0 ; j <= i ; j++)
+    if(static_cast<double>(i) * m_delta == perturbation_duration)
     {
-      u_x += m_ZMP_u(j);
-      u_y += m_ZMP_u(j + m_C);
-    }
-    Pzi = Eigen::Vector3d{state_x(2),state_y(2),0};
-    if(i != 0 || N_delay == 0)
-    {
-      Pzi.segment(0,2) -= Lc_dot_comp;
-      Lc_dot_comp << m_Ldot_c(i + m_C) ,  - m_Ldot_c(i);
-      Lc_dot_comp /= (m_mass * std::pow(m_eta,2) * CoM_height);
-      Pzi.segment(0,2) += Lc_dot_comp;
-    }
+      zmp_ref += w;
+      zmp_ref /= kappa;
+      w.setZero();
+      kappa = 1;
 
-    m_admittance_targets.push_back(Eigen::Vector3d{u_x,u_y,0} + Pzi - P_z_k_delayed + P_z_k);
+    }
+    Lc_dot_comp << -m_Ldot_c(i + m_C) ,  m_Ldot_c(i);
+    Lc_dot_comp /= (m_mass * std::pow(eta,2) * CoM_height);
+
+    zmp_ref.x() += kappa * m_ZMP_u(i) - Lc_dot_comp.x();
+    zmp_ref.y() += kappa * m_ZMP_u(i + m_C) - Lc_dot_comp.y();
+
+    Pzi = (Eigen::Vector2d{m_X_MPC.back()[2],m_Y_MPC.back()[2]} * kappa - w - Lc_dot_comp) ;
+    
+    m_admittance_targets.push_back(Eigen::Vector3d{(zmp_ref + w + Lc_dot_comp).x(),(zmp_ref + w + Lc_dot_comp).y(),0} / kappa);
 
 
     for (int k = 0; k < N  ; k ++)
     {    
+      const double tk = static_cast<double>(k) * m_delta_control;
+      Compute_Integration_Vector(eta,Pzi,zmp_ref,0,tk);
 
-      Compute_Integration_Vector(k+1);
-      if( i * N + k > N_perturbation )
-      {
-        Pzi += w_k;
-        N_perturbation = m_C * N;
-      }
 
-      state_x(2) = Pzi.x();
-      state_y(2) = Pzi.y();
+      state_x = Integration_Mat * state_x + Integration_Vec_x ;
+      state_y = Integration_Mat * state_y + Integration_Vec_y ;
 
-      state_x = Integration_Mat * state_x + Integration_Vec * u_x;
-      state_y = Integration_Mat * state_y + Integration_Vec * u_y;
+      Eigen::Vector2d zmp = zmp_ref + (Pzi - zmp_ref) * exp(-m_lambda * (tk + m_delta_control));
       
-      m_X_MPC.push_back(state_x - Eigen::Vector3d{0,0,Lc_dot_comp.x()});
-      m_Y_MPC.push_back(state_y - Eigen::Vector3d{0,0,Lc_dot_comp.y()});
+      m_X_MPC.push_back(Eigen::Vector3d{state_x.x(),state_x.y(),(zmp + w + Lc_dot_comp).x()/kappa});
+      m_Y_MPC.push_back(Eigen::Vector3d{state_y.x(),state_y.y(),(zmp + w + Lc_dot_comp).y()/kappa});
 
     }
+    zmp_ref += Lc_dot_comp;
   }
 
-  for(size_t i = 0; i < std::min( m_Y_MPC.size() , static_cast<size_t>(N_perturbation)); i++)
-  {
-    m_X_MPC[i].z() += w_k.x();
-    m_Y_MPC[i].z() += w_k.y();
-  }
 }
 
 bool ISMPC_Solver::GetWalkingParameters(bool stop)
@@ -1448,7 +1473,7 @@ bool ISMPC_Solver::GetWalkingParameters(bool stop)
  
 
       Eigen::Vector2d P_u_k_2 = P_u_k.segment(0,2) + stab_error;
-      // V_c_k.segment(0,2) = m_eta * (P_u_k_2 - P_c_k.segment(0,2));
+      V_c_k.segment(0,2) = m_eta * (P_u_k_2 - P_c_k.segment(0,2));
       // P_c_k.segment(0,2) = P_u_k_2 - P_c_k.segment(0,2)/m_eta;
       
       Eigen::Vector2d P_u_error = P_u_k.segment(0,2) - P_u_k_2; 
