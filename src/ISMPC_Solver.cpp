@@ -41,6 +41,7 @@ void ISMPC_Solver::configure(const ControllerConfiguration & config)
   m_Beta_stab = config.Beta_stab;
   m_Beta_traj = config.Beta_traj;
   m_Beta_Lc = config.Beta_Ld;
+  m_Beta_dcm = config.Beta_dcm;
   m_lambda = config.lambda_;
   m_feet_distance = config.feet_ditance_;
   zmp_delay(config.zmp_delay);
@@ -149,6 +150,147 @@ void ISMPC_Solver::init_MPC(const MPC_state & mpc_state,
   m_eta_free = m_eta;
   perturbation_duration = 0;
   Compute_Integration_Matrix(m_eta);
+}
+
+Eigen::Vector2d ISMPC_Solver::compute_dcm_delay()
+{
+  const double e_d_lpe = m_eta/(m_lambda + m_eta);
+  const double epl = m_lambda + m_eta;
+  const Eigen::Vector2d Puk = (P_c_k + (V_c_k / m_eta)).segment(0,2);
+
+  Eigen::Vector2d Pu_delay = Puk;
+  Pu_delay -= (m_kappa * U_k - w_k).segment(0,2) * (1 - exp(-m_eta * m_delay_elapsed));
+  Pu_delay -= e_d_lpe * m_kappa * (P_z_k - U_k).segment(0,2) * (1 - exp(-epl * m_delay_elapsed));
+  Pu_delay *= exp( m_eta * m_delay_elapsed);
+
+  return Pu_delay;
+}
+
+void ISMPC_Solver::compute_dcm(Eigen::MatrixXd & A_out, Eigen::VectorXd & b_out, const Eigen::Vector2d & dcm_delay, const int indx)
+{
+  const double e_d_lpe = m_eta/(m_eta + m_lambda);
+  const double lpe = m_eta + m_lambda;
+  A_out = Eigen::MatrixXd::Zero(2,N_variable);
+  const double tj = indx * m_delta;
+  double tp = perturbation_duration;
+  if(tj < tp)
+  {
+      tp = tj;
+  }
+  const int p = static_cast<int>(tp / m_delta);
+  b_out = dcm_delay;
+  b_out -= P_z_k_delayed.segment(0,2) * (m_kappa * (1 - exp(-m_eta * tp)) + (exp(-m_eta * tp)) - exp(-m_eta * tj));
+
+  for (int i = 0 ; i < p ; i++)
+  {
+      const double ti = static_cast<double>(i) * m_delta;
+      A_out.block(0,2 * i,2,2) -= Eigen::Matrix2d::Identity() * exp(-m_eta * ti) * m_kappa * (  1 - exp(-m_eta * (tp - ti) ) - e_d_lpe * ( 1 - exp(-lpe * (tp - ti) ) ) ) ; 
+      A_out.block(0,2 * i,2,2) -= Eigen::Matrix2d::Identity() * exp(-m_eta * ti) * (  exp(-m_eta * (tp - ti)) - exp(-m_eta * (tj - ti) )
+                                - e_d_lpe * ( exp(-lpe * (tp - ti)) - exp(-lpe * (tj - ti)) ) );
+
+    if(UseAngularMomentumDot)
+    {
+      A_out.block(0, 2 * (m_C + j_Max_C + i),2,2) << 0, 1 , -1 , 0; 
+      A_out.block(0, 2 * (m_C + j_Max_C + i),2,2) * (exp(-m_eta * ti) - exp(-m_eta * (ti + m_delta)));
+      A_out.block(0, 2 * (m_C + j_Max_C + i),2,2) /= (m_mass * CoM_height * std::pow(m_eta,2));
+    }
+  
+  }
+  for (int i = p ; i < indx ; i++)
+  {
+      const double ti = static_cast<double>(i) * m_delta;
+      A_out.block(0,2 * i,2,2) -= Eigen::Matrix2d::Identity() * exp(-m_eta * ti) * ( 1 - exp(-m_eta * (tj - ti)) - e_d_lpe * (1 - exp(-lpe * (tj - ti)))  );
+  }
+  A_out *= exp(m_eta * tj);
+  
+  b_out += w_k * (1 - exp(-m_eta * tp));
+  b_out *= exp(m_eta * tj);
+
+}
+
+void ISMPC_Solver::create_dcm_cost_function(Eigen::MatrixXd & M_out, Eigen::VectorXd & b_out)
+{
+  dcm_ref_traj.clear();
+  int step_indx = 0;
+  HoubaPolynomial<Eigen::Vector2d> path;
+  double sgn = -1; //change between 1 and -1 depending of support foot (1 if right)
+  if(m_support_foot == "RightFoot") // Right Support
+  {
+    sgn = 1;
+  }
+  Eigen::Vector2d Pu_delayed = compute_dcm_delay();
+  M_out = Eigen::MatrixXd::Zero(2 * m_C , N_variable);
+  b_out = Eigen::VectorXd::Zero(2 * m_C);
+  Eigen::Vector2d P_start = X_0_support_foot.translation().segment(0,2) 
+                            + X_0_support_foot.rotation().transpose().block(0,0,2,2) * Eigen::Vector2d{0,sgn * m_feet_distance/2} ;
+
+  Eigen::Vector2d P_step = input_steps_[step_indx].translation().segment(0,2) 
+                            + input_steps_[step_indx].rotation().transpose().block(0,0,2,2) * Eigen::Vector2d{0,-sgn * m_feet_distance/2} ;
+  
+  double ori_start = rpyFromMat(X_0_support_foot.rotation()).z();
+  Eigen::Vector2d init_ori = {cos(ori_start), sin(ori_start)};
+  double ori_step = rpyFromMat(input_steps_[step_indx].rotation()).z();
+  Eigen::Vector2d end_ori = {cos(ori_step), sin(ori_step)};
+
+
+  double t_start = 0;
+  double t = m_tk;
+  double t_step = m_timestamp[0];
+
+  path.reset(P_start, init_ori, P_step, end_ori);
+  double traj_lenght = path.arcLength(0, 1);
+  double v = traj_lenght / (t_step - t_start);
+
+  Eigen::Vector2d dir = (path.pos( t + m_delta / t_step) - path.pos(t)).normalized();
+
+  for (int i = 0 ; i < m_C; i++)
+  {
+
+    if(t_start + t >= t_step && step_indx + 1 < input_steps_.size() )
+    {
+      if( !m_stop)
+      {
+        t_start = t_step;
+        sgn*=-1;
+
+        P_start = P_step;
+        ori_start = ori_step;
+        init_ori = {cos(ori_start), sin(ori_start)};
+        
+        step_indx += 1;
+
+        P_step = input_steps_[step_indx].translation().segment(0,2) 
+                                  + input_steps_[step_indx].rotation().transpose().block(0,0,2,2) * Eigen::Vector2d{0,-sgn * m_feet_distance/2} ;
+        ori_step = rpyFromMat(input_steps_[step_indx].rotation()).z();
+        end_ori = {cos(ori_step), sin(ori_step)};
+        t_step = m_timestamp[step_indx];
+        
+        path.reset(P_start, init_ori, P_step, end_ori);
+        traj_lenght = path.arcLength(0, 1);
+        v = traj_lenght / (t_step - t_start);
+      }
+
+      t = 0;
+    }
+
+    Eigen::MatrixXd A_dcm_i;
+    Eigen::VectorXd b_dcm_i;  
+    compute_dcm(A_dcm_i ,b_dcm_i,Pu_delayed,i+1);
+    M_out.block(2 * i,0,2, N_variable) = A_dcm_i;
+    b_out.segment(2*i,2) = -b_dcm_i;
+
+    if(t + m_delta <= t_step )
+    {
+      dir = (path.pos( (t+m_delta) / (t_step - t_start) ) - path.pos( t / (t_step - t_start) )).normalized(); 
+    }
+
+    dcm_ref_traj.push_back(path.pos( t / (t_step - t_start) ) + dir *  v / m_eta);
+
+    b_out.segment(2*i,2) += dcm_ref_traj.back();
+    
+    t += m_delta;
+  }
+
 }
 
 void ISMPC_Solver::create_cstr_matrices(Eigen::MatrixXd & A_out, Eigen::VectorXd & b_out, std::vector<SupportPolygon> & A_in, const std::vector<Eigen::VectorXd> & b_in)
@@ -805,7 +947,7 @@ void ISMPC_Solver::FootSteps_Constraints()
   {
     const double theta_i = mc_rbdyn::rpyFromMat(input_steps_[i].rotation()).z();
     sva::PTransformd & X_0_step_i = input_steps_[i];
-    sva::PTransformd & X_0_step_im1 = X_0_support_foot;
+    sva::PTransformd X_0_step_im1 = X_0_support_foot;
     if(i != 0)
     {
       X_0_step_im1 = input_steps_[i - 1];
@@ -1264,8 +1406,10 @@ bool ISMPC_Solver::GetWalkingParameters(bool stop)
   // mc_rtc::log::info("countD {}, m_D {} ,t_k : {}; Tc : {} ; Ts {} ; Tds {} ; j_f_max : {}",count_Dstep,m_D,m_tk,
   // m_Tc,m_timestamp[0],m_Tds,j_Max_C); 
   // mc_rtc::log::info("m_C {}",m_C); t_clock = std::chrono::high_resolution_clock::now();
+  double beta_dcm = m_Beta_dcm;
   if(m_stop)
   {
+    beta_dcm = m_Beta_dcm_stop; 
     Static_ZMP_Constraints();
     if(UsePendulumSolver)
     {
@@ -1299,9 +1443,13 @@ bool ISMPC_Solver::GetWalkingParameters(bool stop)
 
  
   Eigen::MatrixXd M_u = Eigen::MatrixXd::Zero(2*m_C, N_variable);
-  // M_u.block(0, 0, 2 * m_C, 2 * m_C) =  (create_u_matrix() - create_zmp_matrix());
   Eigen::VectorXd b_u = Eigen::VectorXd::Zero(M_u.rows());
   M_u.block(0, 0, 2 * m_C, 2 * m_C) = Eigen::MatrixXd::Identity(2 * m_C , 2 * m_C);
+
+  Eigen::MatrixXd M_dcm = Eigen::MatrixXd::Zero(0,N_variable);
+  Eigen::VectorXd b_dcm = Eigen::VectorXd::Zero(0);
+
+  create_dcm_cost_function(M_dcm,b_dcm);
 
   Eigen::MatrixXd M_steps = Eigen::MatrixXd::Zero(2*j_Max_C, N_variable);
   M_steps.block(0, 2 * m_C, 2 * j_Max_C, 2 * j_Max_C) = Eigen::MatrixXd::Identity(2 * j_Max_C, 2 * j_Max_C);
@@ -1318,11 +1466,13 @@ bool ISMPC_Solver::GetWalkingParameters(bool stop)
   m_Q = Eigen::MatrixXd::Identity(N_variable, N_variable) * 1e-12 + 
          m_Beta_u*(M_u.transpose() * M_u) + 
          m_Beta_step * (M_steps.transpose() * M_steps) + 
-         m_Beta_traj * (M_zmp_traj.transpose() * M_zmp_traj);
+         m_Beta_traj * (M_zmp_traj.transpose() * M_zmp_traj) +
+         beta_dcm  * (M_dcm.transpose() * M_dcm) ;
          
   m_p = m_Beta_u*(-M_u.transpose() * b_u) + 
         m_Beta_step * (-M_steps.transpose() * b_steps) + 
-        m_Beta_traj * (-M_zmp_traj.transpose() * b_zmp_traj);
+        m_Beta_traj * (-M_zmp_traj.transpose() * b_zmp_traj)+
+        beta_dcm  * (-M_dcm.transpose() * b_dcm);
      
 
 

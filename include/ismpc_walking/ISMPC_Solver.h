@@ -8,6 +8,7 @@
 #include "eigen-quadprog/QuadProg.h"
 #include "eigen-quadprog/eigen_quadprog_api.h"
 #include <thread>
+#include "Polynomials.h"
 
 class ISMPC_Solver
 {
@@ -226,6 +227,11 @@ public:
     return AfterTc_ZMP_trajectory;
   }
 
+  const std::vector<Eigen::Vector2d> & dcmRefTrajectory()
+  {
+    return dcm_ref_traj;
+  }
+
   const Eigen::VectorXd & ZMP_vel() const noexcept
   {
     return m_ZMP_u;
@@ -377,11 +383,42 @@ private:
    */
   void Stability_Constraints();
 
+  /**
+   * @brief 
+   *  Compute the stability condition such as x_u_star = A * x + b 
+   * 
+   * @param A_out 
+   * @param b_out 
+   * @param eta 
+   * @param indx_start 
+   */
+  void Stability_Condition(Eigen::MatrixXd & A_out, Eigen::VectorXd & b_out,const double eta,const int indx_start,const Eigen::Vector2d w);
+
 
   void create_cstr_matrices(Eigen::MatrixXd & A_out, Eigen::VectorXd & b_out, std::vector<SupportPolygon> & A_in, const std::vector<Eigen::VectorXd> & b_in);
 
   void create_cstr_matrices(Eigen::MatrixXd & A_out, Eigen::VectorXd & b_out, std::vector<Eigen::MatrixX2d> & A_in, const std::vector<Eigen::VectorXd> & b_in);
   
+  /**
+   * @brief Compute the dcm after the delayed reference have been applied
+   * 
+   * @return Eigen::Vector2d 
+   */
+  Eigen::Vector2d compute_dcm_delay();
+
+  /**
+   * @brief Compute A and b such as for tj = j * m_delta ; dcm_j = A * x + b
+   * where x the decision variables
+   * 
+   * @param A_out 
+   * @param b_out 
+   * @param dcm_delay 
+   * @param indx 
+   */
+  void compute_dcm(Eigen::MatrixXd & A_out, Eigen::VectorXd & b_out, const Eigen::Vector2d & dcm_delay, const int indx);
+
+  void create_dcm_cost_function(Eigen::MatrixXd & M_out, Eigen::VectorXd & b_out);
+
   Eigen::MatrixXd create_zmp_matrix(bool addDelay  );
   Eigen::MatrixXd create_u_matrix();
 
@@ -501,6 +538,8 @@ private:
   double m_Beta_stab = 1e5;
   double m_Beta_traj = 0.;
   double m_Beta_Lc = 1e-2;
+  double m_Beta_dcm = 1e2;
+  double m_Beta_dcm_stop =1000;
   double m_lambda = 100;
   double m_delay = 0; //delay ( < m_delta ) during which zmp is under previous input Uk
   double m_delay_elapsed = 0; //Between 0 and m_delay represent the remaining time the delay must be applied
@@ -527,6 +566,8 @@ private:
   std::vector<Eigen::Vector3d> ZMP_max_ref_traj;
   Eigen::MatrixXd M_zmp_traj;
   Eigen::VectorXd b_zmp_traj;
+
+  std::vector<Eigen::Vector2d> dcm_ref_traj;
 
   // CoM,CoMd,ZMP Integration
   Eigen::Matrix2d Integration_Mat;

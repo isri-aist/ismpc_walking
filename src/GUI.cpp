@@ -382,6 +382,18 @@ void Walking_controller::addToGUI()
                                 return mpc_state_.admittance_ref_;
                               }),
 
+      mc_rtc::gui::Trajectory("DCM ref Trajectory", mc_rtc::gui::LineConfig(mc_rtc::gui::Color(0., 1., 1),0.02,mc_rtc::gui::LineStyle::Dotted),
+                              [this]() -> std::vector<Eigen::Vector3d> {                                
+                                std::vector<Eigen::Vector3d> output;
+                                std::vector<Eigen::Vector2d> traj = MPCSolver.dcmRefTrajectory();
+
+                                for (auto & p : traj)
+                                {
+                                  output.push_back(Eigen::Vector3d{p.x(),p.y(),mpc_state_.Pck.z()});
+                                }
+                                return output;
+                              }),
+
       mc_rtc::gui::Trajectory("Predicted CoM Trajectory", mc_rtc::gui::Color(1., 0., 0.),
                               [this]() -> std::vector<Eigen::Vector3d> {
                                 std::vector<Eigen::Vector3d> Output;
@@ -473,11 +485,11 @@ void Walking_controller::add_ISMPC_Config_GUI()
       {"Walking", "ISMPC Configuration"},
       mc_rtc::gui::Form(
           "Configure", [this](const mc_rtc::Configuration & conf) { reconfigure(conf);},
-          mc_rtc::gui::FormArrayInput("QP Weight (u ; step ; zmp traj ; stab ; Ld)", false,
-                                      [this]() -> std::array<double, 5> {
-                                        return {controller_config_.Beta_u, controller_config_.Beta_step,controller_config_.Beta_traj,controller_config_.Beta_stab, controller_config_.Beta_Ld};
+          mc_rtc::gui::FormArrayInput("QP Weight (u ; step ; zmp traj ; stab ; Ld ; dcm)", false,
+                                      [this]() -> std::array<double, 6> {
+                                        return {controller_config_.Beta_u, controller_config_.Beta_step,controller_config_.Beta_traj,controller_config_.Beta_stab, controller_config_.Beta_Ld, controller_config_.Beta_dcm};
                                       }),
-          
+          mc_rtc::gui::FormNumberInput("Beta dcm static", false, [this]() { return controller_config_.Beta_dcm_static; }),
           mc_rtc::gui::FormNumberInput("Tc", false, [this]() { return controller_config_.Tc; }),
           mc_rtc::gui::FormNumberInput("delta", false, [this]() { return controller_config_.delta; }),
           mc_rtc::gui::FormArrayInput("step kinematics cstr", false,
