@@ -443,15 +443,31 @@ void Walking_controller::addToGUI()
                                   mc_rtc::gui::plot::Y(
                                       "u", [this]() { return admittanceTarget.y(); }, mc_rtc::gui::Color::Red),
                                   mc_rtc::gui::plot::Y(
+                                      "mpc zmp ref", [this]() { return mpc_state_.ref_zmp_.y(); }, mc_rtc::gui::Color::Green, mc_rtc::gui::plot::Style::Solid),
+                                  mc_rtc::gui::plot::Y(
                                       "zmp_mes", [this]() { return mpc_state_.getPzk().y(); }, mc_rtc::gui::Color::Blue, mc_rtc::gui::plot::Style::Dashed),
+                                  mc_rtc::gui::plot::Y(
+                                      "dcm_mes", [this]() { return mpc_state_.getPuk().y(); }, mc_rtc::gui::Color::Magenta, mc_rtc::gui::plot::Style::Solid),
                                   mc_rtc::gui::plot::Y(
                                       "zmp modelled", [this]() { return zmpTarget.y(); }, mc_rtc::gui::Color::Blue));
                             }
                             ),
-                    mc_rtc::gui::Button("Stop ZMP (y)", [this]() { gui()->removePlot("DCM-ZMP Tracking (y)"); })
+                    mc_rtc::gui::Button("Stop ZMP (y)", [this]() { gui()->removePlot("ZMP Model Tracking (y)"); })
                     
                     
                     );
+  constexpr double ARROW_HEAD_DIAM = 0.015;
+  constexpr double ARROW_HEAD_LEN = 0.05;
+  constexpr double ARROW_SHAFT_DIAM = 0.06;
+  constexpr double FORCE_SCALE = 0.0015;
+  mc_rtc::gui::ArrowConfig pendulumArrowConfig;
+  pendulumArrowConfig.color = mc_rtc::gui::Color::Yellow;
+  pendulumArrowConfig.end_point_scale = 0.02;
+  pendulumArrowConfig.head_diam = .1 * ARROW_HEAD_DIAM;
+  pendulumArrowConfig.head_len = .1 * ARROW_HEAD_LEN;
+  pendulumArrowConfig.scale = 1.;
+  pendulumArrowConfig.shaft_diam = .1 * ARROW_SHAFT_DIAM;
+  pendulumArrowConfig.start_point_scale = 0.02;
       gui()->addElement({"Walking","Debug"},
                  mc_rtc::gui::Checkbox("Active",[this]()-> bool {return DebugMode;}, 
                                                 [this](){
@@ -465,6 +481,8 @@ void Walking_controller::addToGUI()
                                             [this](const Eigen::Vector3d & p) {debugCoM = p;}),
                  mc_rtc::gui::Point3D("ZMP",[this]() -> const Eigen::Vector3d & {return debugZMP;},
                                             [this](const Eigen::Vector3d & p) {debugZMP = p;}),
+                 mc_rtc::gui::Arrow("Pendulum",pendulumArrowConfig,[this]() ->Eigen::Vector3d{return debugZMP;},
+                                                                   [this]() ->Eigen::Vector3d{return debugCoM;}),
                  mc_rtc::gui::NumberInput("t_k",[this]() -> const double {return debugTk;},
                                             [this](const double p) {debugTk = p;}),
                  mc_rtc::gui::Checkbox("Double Support",[this]()-> bool {return debugDblSupp;}, 
