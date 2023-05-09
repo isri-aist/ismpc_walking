@@ -223,13 +223,20 @@ void ISMPC_Solver::create_dcm_cost_function(Eigen::MatrixXd & M_out, Eigen::Vect
   b_out = Eigen::VectorXd::Zero(2 * m_C);
   Eigen::Vector2d P_start = X_0_support_foot.translation().segment(0,2) 
                             + X_0_support_foot.rotation().transpose().block(0,0,2,2) * Eigen::Vector2d{0,sgn * m_feet_distance/2} ;
-
-  Eigen::Vector2d P_step = input_steps_[step_indx].translation().segment(0,2) 
-                            + input_steps_[step_indx].rotation().transpose().block(0,0,2,2) * Eigen::Vector2d{0,-sgn * m_feet_distance/2} ;
-  
   double ori_start = rpyFromMat(X_0_support_foot.rotation()).z();
+
+  Eigen::Vector2d P_step = P_start;
+
+  double ori_step = ori_start;
+  if(!m_stop)
+  {
+    P_step = input_steps_[step_indx].translation().segment(0,2) 
+                            + input_steps_[step_indx].rotation().transpose().block(0,0,2,2) * Eigen::Vector2d{0,-sgn * m_feet_distance/2};
+    ori_step = rpyFromMat(input_steps_[step_indx].rotation()).z();
+  }
+
+
   Eigen::Vector2d init_ori = {cos(ori_start), sin(ori_start)};
-  double ori_step = rpyFromMat(input_steps_[step_indx].rotation()).z();
   Eigen::Vector2d end_ori = {cos(ori_step), sin(ori_step)};
 
 
