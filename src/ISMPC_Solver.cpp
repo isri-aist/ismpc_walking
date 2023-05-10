@@ -42,6 +42,7 @@ void ISMPC_Solver::configure(const ControllerConfiguration & config)
   m_Beta_traj = config.Beta_traj;
   m_Beta_Lc = config.Beta_Ld;
   m_Beta_dcm = config.Beta_dcm;
+  m_Beta_dcm_stop = config.Beta_dcm_static;
   m_lambda = config.lambda_;
   m_feet_distance = config.feet_ditance_;
   zmp_delay(config.zmp_delay);
@@ -171,7 +172,8 @@ void ISMPC_Solver::compute_dcm(Eigen::MatrixXd & A_out, Eigen::VectorXd & b_out,
   const double e_d_lpe = m_eta/(m_eta + m_lambda);
   const double lpe = m_eta + m_lambda;
   A_out = Eigen::MatrixXd::Zero(2,N_variable);
-  const double tj = indx * m_delta;
+  b_out = Eigen::VectorXd::Zero(2);
+  const double tj = static_cast<double>(indx) * m_delta;
   double tp = perturbation_duration;
   if(tj < tp)
   {
@@ -179,36 +181,39 @@ void ISMPC_Solver::compute_dcm(Eigen::MatrixXd & A_out, Eigen::VectorXd & b_out,
   }
   const int p = static_cast<int>(tp / m_delta);
   b_out = dcm_delay;
-  b_out -= P_z_k_delayed.segment(0,2) * (m_kappa * (1 - exp(-m_eta * tp)) + (exp(-m_eta * tp)) - exp(-m_eta * tj));
-
-  for (int i = 0 ; i < p ; i++)
-  {
-      const double ti = static_cast<double>(i) * m_delta;
-      A_out.block(0,2 * i,2,2) -= Eigen::Matrix2d::Identity() * exp(-m_eta * ti) * m_kappa * (  1 - exp(-m_eta * (tp - ti) ) - e_d_lpe * ( 1 - exp(-lpe * (tp - ti) ) ) ) ; 
-      A_out.block(0,2 * i,2,2) -= Eigen::Matrix2d::Identity() * exp(-m_eta * ti) * (  exp(-m_eta * (tp - ti)) - exp(-m_eta * (tj - ti) )
-                                - e_d_lpe * ( exp(-lpe * (tp - ti)) - exp(-lpe * (tj - ti)) ) );
-
-    if(UseAngularMomentumDot)
-    {
-      A_out.block(0, 2 * (m_C + j_Max_C + i),2,2) << 0, 1 , -1 , 0; 
-      A_out.block(0, 2 * (m_C + j_Max_C + i),2,2) * (exp(-m_eta * ti) - exp(-m_eta * (ti + m_delta)));
-      A_out.block(0, 2 * (m_C + j_Max_C + i),2,2) /= (m_mass * CoM_height * std::pow(m_eta,2));
-    }
-  
-  }
-  for (int i = p ; i < indx ; i++)
-  {
-      const double ti = static_cast<double>(i) * m_delta;
-      A_out.block(0,2 * i,2,2) -= Eigen::Matrix2d::Identity() * exp(-m_eta * ti) * ( 1 - exp(-m_eta * (tj - ti)) - e_d_lpe * (1 - exp(-lpe * (tj - ti)))  );
-  }
-  A_out *= exp(m_eta * tj);
-  
-  b_out += w_k * (1 - exp(-m_eta * tp));
+  b_out -= P_z_k_delayed.segment(0,2) * (m_kappa * (1 - exp(-m_eta * tp)) + exp(-m_eta * tp) - exp(-m_eta * tj) );
+  b_out += w_k.segment(0,2) * (1 - exp(-m_eta * tp));
   b_out *= exp(m_eta * tj);
 
+  for (int i = 0 ; i < indx ; i++)
+  {
+      const double ti = static_cast<double>(i) * m_delta;
+      if(i < p)
+      {
+        A_out.block(0,2 * i,2,2) -= Eigen::Matrix2d::Identity() * exp(-m_eta * ti) * m_kappa * (  1 - exp(-m_eta * (tp - ti) ) 
+                                                                                                  - e_d_lpe * ( 1 - exp(-lpe * (tp - ti) ) ) ) ; 
+        A_out.block(0,2 * i,2,2) -= Eigen::Matrix2d::Identity() * exp(-m_eta * ti) * (  exp(-m_eta * (tp - ti)) - exp(-m_eta * (tj - ti) )
+                                                                                        - e_d_lpe * ( exp(-lpe * (tp - ti)) - exp(-lpe * (tj - ti)) ) );
+      }
+      else
+      {
+        A_out.block(0,2 * i,2,2) -= Eigen::Matrix2d::Identity() * exp(-m_eta * ti) * ( 1 - exp(-m_eta * (tj - ti)) - e_d_lpe * (1 - exp(-lpe * (tj - ti)))  );
+      }
+
+      if(UseAngularMomentumDot)
+      {
+        A_out.block(0, 2 * (m_C + j_Max_C + i),2,2) << 0, 1 , -1 , 0; 
+        A_out.block(0, 2 * (m_C + j_Max_C + i),2,2) * (exp(-m_eta * ti) - exp(-m_eta * (ti + m_delta)));
+        A_out.block(0, 2 * (m_C + j_Max_C + i),2,2) /= (m_mass * CoM_height * std::pow(m_eta,2));
+      }
+  
+  }
+
+  A_out *= exp(m_eta * tj);
+  
 }
 
-void ISMPC_Solver::create_dcm_cost_function(Eigen::MatrixXd & M_out, Eigen::VectorXd & b_out)
+void ISMPC_Solver::create_dcm_cost_function(Eigen::MatrixXd & M_dcm, Eigen::VectorXd & b_dcm, Eigen::VectorXd & b_traj)
 {
   dcm_ref_traj.clear();
   int step_indx = 0;
@@ -219,10 +224,12 @@ void ISMPC_Solver::create_dcm_cost_function(Eigen::MatrixXd & M_out, Eigen::Vect
     sgn = 1;
   }
   Eigen::Vector2d Pu_delayed = compute_dcm_delay();
-  M_out = Eigen::MatrixXd::Zero(2 * m_C , N_variable);
-  b_out = Eigen::VectorXd::Zero(2 * m_C);
+
+  M_dcm = Eigen::MatrixXd::Zero(2 * m_C , N_variable);
+  b_dcm = Eigen::VectorXd::Zero(2 * m_C);
+  b_traj = Eigen::VectorXd::Zero(2 * m_C);
   Eigen::Vector2d P_start = X_0_support_foot.translation().segment(0,2) 
-                            + X_0_support_foot.rotation().transpose().block(0,0,2,2) * Eigen::Vector2d{0,sgn * m_feet_distance/2} ;
+                            + X_0_support_foot.rotation().transpose().block(0,0,2,2) * Eigen::Vector2d{0,sgn * m_feet_distance/4} ;
   double ori_start = rpyFromMat(X_0_support_foot.rotation()).z();
 
   Eigen::Vector2d P_step = P_start;
@@ -231,7 +238,7 @@ void ISMPC_Solver::create_dcm_cost_function(Eigen::MatrixXd & M_out, Eigen::Vect
   if(!m_stop)
   {
     P_step = input_steps_[step_indx].translation().segment(0,2) 
-                            + input_steps_[step_indx].rotation().transpose().block(0,0,2,2) * Eigen::Vector2d{0,-sgn * m_feet_distance/2};
+                            + input_steps_[step_indx].rotation().transpose().block(0,0,2,2) * Eigen::Vector2d{0,-sgn * 3 * m_feet_distance/4};
     ori_step = rpyFromMat(input_steps_[step_indx].rotation()).z();
   }
 
@@ -241,14 +248,10 @@ void ISMPC_Solver::create_dcm_cost_function(Eigen::MatrixXd & M_out, Eigen::Vect
 
 
   double t_start = 0;
-  double t = m_tk;
+  double t = m_tk + m_delta;
   double t_step = m_timestamp[0];
 
   path.reset(P_start, init_ori, P_step, end_ori);
-  double traj_lenght = path.arcLength(0, 1);
-  double v = traj_lenght / (t_step - t_start);
-
-  Eigen::Vector2d dir = (path.pos( t + m_delta / t_step) - path.pos(t)).normalized();
 
   for (int i = 0 ; i < m_C; i++)
   {
@@ -267,33 +270,26 @@ void ISMPC_Solver::create_dcm_cost_function(Eigen::MatrixXd & M_out, Eigen::Vect
         step_indx += 1;
 
         P_step = input_steps_[step_indx].translation().segment(0,2) 
-                                  + input_steps_[step_indx].rotation().transpose().block(0,0,2,2) * Eigen::Vector2d{0,-sgn * m_feet_distance/2} ;
+                                  + input_steps_[step_indx].rotation().transpose().block(0,0,2,2) * Eigen::Vector2d{0,-sgn * 3 * m_feet_distance/4} ;
         ori_step = rpyFromMat(input_steps_[step_indx].rotation()).z();
         end_ori = {cos(ori_step), sin(ori_step)};
         t_step = m_timestamp[step_indx];
         
         path.reset(P_start, init_ori, P_step, end_ori);
-        traj_lenght = path.arcLength(0, 1);
-        v = traj_lenght / (t_step - t_start);
       }
 
-      t = 0;
+      t = m_delta;
     }
 
     Eigen::MatrixXd A_dcm_i;
     Eigen::VectorXd b_dcm_i;  
     compute_dcm(A_dcm_i ,b_dcm_i,Pu_delayed,i+1);
-    M_out.block(2 * i,0,2, N_variable) = A_dcm_i;
-    b_out.segment(2*i,2) = -b_dcm_i;
+    M_dcm.block(2 * i,0,2, N_variable) = A_dcm_i;
+    b_dcm.segment(2*i,2) = b_dcm_i;
 
-    if(t + m_delta <= t_step )
-    {
-      dir = (path.pos( (t+m_delta) / (t_step - t_start) ) - path.pos( t / (t_step - t_start) )).normalized(); 
-    }
+    dcm_ref_traj.push_back( (path.pos( t / (t_step - t_start) ) + path.vel(t / (t_step - t_start)) / m_eta));
 
-    dcm_ref_traj.push_back(path.pos( t / (t_step - t_start) ) + dir *  v / m_eta);
-
-    b_out.segment(2*i,2) += dcm_ref_traj.back();
+    b_traj.segment(2*i,2) = dcm_ref_traj.back();
     
     t += m_delta;
   }
@@ -634,7 +630,7 @@ void ISMPC_Solver::ZMP_Constraints()
       sgn *= -1;
     
       double tds = m_Tds;
-      if(UsePendulumSolver)
+      if(UsePendulumSolver && m_feas_res)
       {
         tds = m_feasibilitySolver.get_optimal_steps_ds_duration()[j_f];
       }
@@ -1325,7 +1321,7 @@ bool ISMPC_Solver::GetWalkingParameters(bool stop)
                                 m_feet_distance,8);
     std::vector<sva::PTransformd> & stepsRef = corr_steps_.size() != 0 ? corr_steps_ : input_steps_;
 
-    bool feas_res = m_feasibilitySolver.solve(m_tk,m_t_lift,DoubleSupport,P_u_k.segment(0,2),P_z_k.segment(0,2),
+    m_feas_res = m_feasibilitySolver.solve(m_tk,m_t_lift,DoubleSupport,P_u_k.segment(0,2),P_z_k.segment(0,2),
                                             m_support_foot,
                                             X_0_support_foot,
                                             X_0_swing_foot_initial,
@@ -1351,7 +1347,7 @@ bool ISMPC_Solver::GetWalkingParameters(bool stop)
     //   mc_rtc::log::info("ref p {}",input_steps_[0].translation());
     //   mc_rtc::log::info("optimal p {}",optimalPf[0].translation());
     // }
-    if(feas_res)
+    if(m_feas_res)
     {
       m_timestamp = optimalTs;
       if(DoubleSupport){ m_Tds = optimalTds[0];}
@@ -1367,6 +1363,7 @@ bool ISMPC_Solver::GetWalkingParameters(bool stop)
   }
   else
   {
+    m_feas_res = false;
     m_Tds = m_input_Tds;
   }
   
@@ -1454,8 +1451,9 @@ bool ISMPC_Solver::GetWalkingParameters(bool stop)
 
   Eigen::MatrixXd M_dcm = Eigen::MatrixXd::Zero(0,N_variable);
   Eigen::VectorXd b_dcm = Eigen::VectorXd::Zero(0);
+  Eigen::VectorXd b_dcm_traj = Eigen::VectorXd::Zero(0);
 
-  create_dcm_cost_function(M_dcm,b_dcm);
+  create_dcm_cost_function(M_dcm,b_dcm,b_dcm_traj);
 
   Eigen::MatrixXd M_steps = Eigen::MatrixXd::Zero(2*j_Max_C, N_variable);
   M_steps.block(0, 2 * m_C, 2 * j_Max_C, 2 * j_Max_C) = Eigen::MatrixXd::Identity(2 * j_Max_C, 2 * j_Max_C);
@@ -1478,7 +1476,7 @@ bool ISMPC_Solver::GetWalkingParameters(bool stop)
   m_p = m_Beta_u*(-M_u.transpose() * b_u) + 
         m_Beta_step * (-M_steps.transpose() * b_steps) + 
         m_Beta_traj * (-M_zmp_traj.transpose() * b_zmp_traj)+
-        beta_dcm  * (-M_dcm.transpose() * b_dcm);
+        beta_dcm  * (-M_dcm.transpose() * ( b_dcm_traj - b_dcm ));
      
 
 
@@ -1594,6 +1592,8 @@ bool ISMPC_Solver::GetWalkingParameters(bool stop)
     corr_steps_.clear();
 
     m_QP_zmp = (A_zmp * QP_Output).segment(0,2 * m_C);
+    m_QP_dcm = M_dcm * QP_Output + b_dcm;
+
     m_ZMP_u.resize(2 * m_C, 1);
     m_Ldot_c = Eigen::VectorXd::Zero(2 * m_C);
     for(int k = 0; k < m_C; k++)

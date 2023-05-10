@@ -193,6 +193,7 @@ struct MPC_state
   Eigen::VectorXd mpc_u_;
   Eigen::VectorXd mpc_Lc_dot_;
   std::vector<Eigen::Vector3d> QP_zmp;
+  std::vector<Eigen::Vector3d> QP_dcm;
   std::vector<sva::MotionVecd> input_v_;
   double input_eta = 3.5;
   double input_mass = 40;

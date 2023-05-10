@@ -359,6 +359,7 @@ void Walking_controller::ComputeWalkingTrajectory()
     mpc_thread_state.ref_zmp_ = MPCSolver.zmp_ref().segment(0,2);
     mpc_thread_state.admittance_ref_ = MPCSolver.admittance_references();
     mpc_thread_state.QP_zmp = MPCSolver.QP_zmp();
+    mpc_thread_state.QP_dcm = MPCSolver.QP_dcm();
     mpc_thread_state.eta = MPCSolver.eta();
     mpc_thread_state.mpc_Lc_dot_ = MPCSolver.Lc_dot();
     kfoot = 0;

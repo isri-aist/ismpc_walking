@@ -213,6 +213,16 @@ public:
     return out;
   }
 
+  const std::vector<Eigen::Vector3d> QP_dcm()
+  {
+    std::vector<Eigen::Vector3d> out;
+    for (Eigen::Index i = 0 ; i < m_QP_dcm.size()/2 ; i++)
+    {
+      out.push_back(Eigen::Vector3d{m_QP_dcm(2*i),m_QP_dcm(2*i + 1) , CoM_height});
+    }
+    return out;
+  }
+
   /**
    * Set an initial DCM in the world frame
    */
@@ -417,7 +427,24 @@ private:
    */
   void compute_dcm(Eigen::MatrixXd & A_out, Eigen::VectorXd & b_out, const Eigen::Vector2d & dcm_delay, const int indx);
 
-  void create_dcm_cost_function(Eigen::MatrixXd & M_out, Eigen::VectorXd & b_out);
+  /**
+   * @brief Create a dcm cost function such as 
+   * dcm = M_dcm * x + b_dcm
+   * where x is the decision variables
+   * and generate the ref traj vector
+   * 
+   * @param M_out 
+   * @param b_out 
+   */
+  void create_dcm_cost_function(Eigen::MatrixXd & M_dcm, Eigen::VectorXd & b_dcm, Eigen::VectorXd & b_traj);
+
+  /**
+   * @brief Create a dcm traj weights
+   * 
+   * @param weights ouputs weights
+   * @param s pahse (between 0 and 1)
+   */
+  void create_dcm_traj_weights(std::vector<double> weights, double s );
 
   Eigen::MatrixXd create_zmp_matrix(bool addDelay  );
   Eigen::MatrixXd create_u_matrix();
@@ -456,6 +483,7 @@ private:
   Eigen::VectorXd m_ZMP_u = Eigen::VectorXd::Zero(0); // Computed ZMP velocity in world frame
   Eigen::VectorXd m_Ldot_c = Eigen::VectorXd::Zero(0); // Computed Centroidal AngularMomemtum dot in world frame ori
   std::vector<double> m_timestamp; // Step TimesStamp Computed at the footStep Generation
+  
 
   sva::PTransformd X_0_support_foot = sva::PTransformd::Identity();
   sva::PTransformd X_0_swing_foot_initial = sva::PTransformd::Identity();
@@ -477,8 +505,10 @@ private:
   int N_Steps = 0;
 
   bool QPsuccess = false;
+  bool m_feas_res = false;
   Eigen::Vector2d stab_error = Eigen::Vector2d::Zero();
   Eigen::VectorXd m_QP_zmp;
+  Eigen::VectorXd m_QP_dcm;
   std::vector<Eigen::Vector3d> m_admittance_targets;
   bool Use_Stability_Task = false;
   bool Allow_None = true;

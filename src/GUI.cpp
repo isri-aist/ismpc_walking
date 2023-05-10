@@ -395,6 +395,24 @@ void Walking_controller::addToGUI()
                                 }
                                 return Output;
                               }),
+
+      mc_rtc::gui::Trajectory("Predicted DCM Trajectory", mc_rtc::gui::Color(0., 1., 0.),
+                              [this]() -> std::vector<Eigen::Vector3d> {
+                                std::vector<Eigen::Vector3d> Output;
+                                for(size_t k = 0; k < mpc_state_.X_MPC.size(); k++)
+                                {
+                                  Output.push_back(mpc_state_.Get_CoM_planarTarget(k) + mpc_state_.Get_CoMVel_planarTarget(k) / mpc_state_.eta
+                                                   + Eigen::Vector3d{0, 0, controller_config_.Stab_config.comHeight});
+                                }
+                                return Output;
+                              }),
+
+      mc_rtc::gui::Trajectory("DCM QP Trajectory", mc_rtc::gui::LineConfig(mc_rtc::gui::Color(0., 1., 0.),0.02,mc_rtc::gui::LineStyle::Dotted),
+                              [this]() -> std::vector<Eigen::Vector3d> {
+                                
+                                std::vector<Eigen::Vector3d> ref_traj = mpc_state_.QP_dcm;                   
+                                return ref_traj;
+                              }),
       
 
       // mc_rtc::gui::Trajectory("Anticipative Trajectory", mc_rtc::gui::Color(1., 0., 1.),
