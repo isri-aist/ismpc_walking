@@ -564,6 +564,7 @@ private:
   double m_Beta_Lc = 1e-2;
   double m_Beta_dcm = 1e2;
   double m_Beta_dcm_stop =1000;
+  double m_Beta_dcm_vel = 0;
   double m_lambda = 100;
   double m_delay = 0; //delay ( < m_delta ) during which zmp is under previous input Uk
   double m_delay_elapsed = 0; //Between 0 and m_delay represent the remaining time the delay must be applied

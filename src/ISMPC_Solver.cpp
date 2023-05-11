@@ -43,6 +43,7 @@ void ISMPC_Solver::configure(const ControllerConfiguration & config)
   m_Beta_Lc = config.Beta_Ld;
   m_Beta_dcm = config.Beta_dcm;
   m_Beta_dcm_stop = config.Beta_dcm_static;
+  m_Beta_dcm_vel = config.Beta_dcm_vel;
   m_lambda = config.lambda_;
   m_feet_distance = config.feet_ditance_;
   zmp_delay(config.zmp_delay);
@@ -1535,6 +1536,9 @@ bool ISMPC_Solver::GetWalkingParameters(bool stop)
   Eigen::VectorXd b_dcm_traj = Eigen::VectorXd::Zero(0);
   Eigen::MatrixXd M_dcm_traj = Eigen::MatrixXd::Zero(0,N_variable);
 
+  Eigen::MatrixXd M_dcmVel = Eigen::MatrixXd::Zero(0,N_variable);
+  Eigen::VectorXd b_dcmVel = Eigen::VectorXd::Zero(0);
+
   create_dcm_cost_function(M_dcm,b_dcm,M_dcm_traj,b_dcm_traj);
 
   Eigen::MatrixXd M_steps = Eigen::MatrixXd::Zero(2*j_Max_C, N_variable);
@@ -1553,12 +1557,14 @@ bool ISMPC_Solver::GetWalkingParameters(bool stop)
          m_Beta_u*(M_u.transpose() * M_u) + 
          m_Beta_step * (M_steps.transpose() * M_steps) + 
          m_Beta_traj * (M_zmp_traj.transpose() * M_zmp_traj) +
-         beta_dcm  * ( (M_dcm - M_dcm_traj).transpose() * (M_dcm - M_dcm_traj)) ;
+         beta_dcm  * ( (M_dcm - M_dcm_traj).transpose() * (M_dcm - M_dcm_traj)) +
+         m_Beta_dcm_vel * ( (m_eta * (M_dcm - M_zmp_traj - M_dcm_traj)).transpose() * (m_eta * (M_dcm - M_zmp_traj - M_dcm_traj)));
          
   m_p = m_Beta_u*(-M_u.transpose() * b_u) + 
         m_Beta_step * (-M_steps.transpose() * b_steps) + 
         m_Beta_traj * (-M_zmp_traj.transpose() * b_zmp_traj)+
-        beta_dcm  * (-(M_dcm - M_dcm_traj).transpose() * ( b_dcm_traj - b_dcm ));
+        beta_dcm  * (-(M_dcm - M_dcm_traj).transpose() * ( b_dcm_traj - b_dcm )) +
+        m_Beta_dcm_vel * (-( m_eta * (M_dcm - M_zmp_traj - M_dcm_traj)).transpose()) * (m_eta * (b_dcm_traj - b_dcm - b_zmp_traj)) ;
      
 
 

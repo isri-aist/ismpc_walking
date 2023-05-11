@@ -140,13 +140,14 @@ public:
   void reconfigure(const mc_rtc::Configuration & config)
   {
 
-    std::vector<double> qp_weight = config("QP Weight (u ; step ; zmp traj ; stab ; Ld ; dcm)");
+    std::vector<double> qp_weight = config("QP Weight (u ; step ; zmp traj ; stab ; Ld ; dcm ; dcm_vel)");
     controller_config_.Beta_u = qp_weight[0]; 
     controller_config_.Beta_step = qp_weight[1]; 
     controller_config_.Beta_traj = qp_weight[2];
     controller_config_.Beta_stab = qp_weight[3]; 
     controller_config_.Beta_Ld = qp_weight[4];
     controller_config_.Beta_dcm = qp_weight[5];
+    controller_config_.Beta_dcm_vel = qp_weight[6];
     controller_config_.Beta_dcm_static = config("Beta dcm static");
     controller_config_.Tc = config("Tc");
     controller_config_.delta = config("delta");

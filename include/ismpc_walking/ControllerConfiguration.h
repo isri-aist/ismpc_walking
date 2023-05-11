@@ -24,6 +24,7 @@ struct ControllerConfiguration
   double Beta_traj = 0.;
   double Beta_Ld = 1.;
   double Beta_dcm_static = 200;
+  double Beta_dcm_vel = 0;
   double Beta_dcm = 1;
   double lambda_ = 100.;
   double lambda_sg_supp = 100;
