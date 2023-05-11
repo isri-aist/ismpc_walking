@@ -148,7 +148,9 @@ public:
     controller_config_.Beta_Ld = qp_weight[4];
     controller_config_.Beta_dcm = qp_weight[5];
     controller_config_.Beta_dcm_vel = qp_weight[6];
-    controller_config_.Beta_dcm_static = config("Beta dcm static");
+    std::vector<double> static_weight = config("Beta dcm static (pos , vel)");
+    controller_config_.Beta_dcm_static = static_weight[0];
+    controller_config_.Beta_dcm_vel_static = static_weight[1];
     controller_config_.Tc = config("Tc");
     controller_config_.delta = config("delta");
     controller_config_.MPC_Footsteps_kin_Constraint_size = config("step kinematics cstr");

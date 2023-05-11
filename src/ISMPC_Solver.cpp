@@ -44,6 +44,7 @@ void ISMPC_Solver::configure(const ControllerConfiguration & config)
   m_Beta_dcm = config.Beta_dcm;
   m_Beta_dcm_stop = config.Beta_dcm_static;
   m_Beta_dcm_vel = config.Beta_dcm_vel;
+  m_Beta_dcm_vel_stop = config.Beta_dcm_vel_static;
   m_lambda = config.lambda_;
   m_feet_distance = config.feet_ditance_;
   zmp_delay(config.zmp_delay);
@@ -204,8 +205,8 @@ void ISMPC_Solver::compute_dcm(Eigen::MatrixXd & A_out, Eigen::Vector2d & b_out,
 
       if(UseAngularMomentumDot)
       {
-        A_out.block(0, 2 * (m_C + j_Max_C + i),2,2) << 0, 1 , -1 , 0; 
-        A_out.block(0, 2 * (m_C + j_Max_C + i),2,2) * (exp(-m_eta * ti) - exp(-m_eta * (ti + m_delta)));
+        A_out.block(0, 2 * (m_C + j_Max_C + i),2,2) << 0,-1 , 1 , 0; 
+        A_out.block(0, 2 * (m_C + j_Max_C + i),2,2) *= (exp(-m_eta * ti) - exp(-m_eta * (ti + m_delta)));
         A_out.block(0, 2 * (m_C + j_Max_C + i),2,2) /= (m_mass * CoM_height * std::pow(m_eta,2));
       }
   
@@ -215,10 +216,8 @@ void ISMPC_Solver::compute_dcm(Eigen::MatrixXd & A_out, Eigen::Vector2d & b_out,
   
 }
 
-void ISMPC_Solver::create_dcm_cost_function(Eigen::MatrixXd & M_dcm, Eigen::VectorXd & b_dcm, Eigen::MatrixXd & M_traj ,Eigen::VectorXd & b_traj)
+void ISMPC_Solver::create_dcm_cost_function(Eigen::MatrixXd & M_dcm, Eigen::VectorXd & b_dcm, Eigen::MatrixXd & M_traj_dcm ,Eigen::VectorXd & b_traj_dcm,Eigen::MatrixXd & M_traj_zmp ,Eigen::VectorXd & b_traj_zmp)
 {
-
-
   int step_indx = 0;
 
   double sgn = -1; //change between 1 and -1 depending of support foot (1 if right)
@@ -232,8 +231,10 @@ void ISMPC_Solver::create_dcm_cost_function(Eigen::MatrixXd & M_dcm, Eigen::Vect
 
   M_dcm = Eigen::MatrixXd::Zero(2 * m_C , N_variable);
   b_dcm = Eigen::VectorXd::Zero(2 * m_C);
-  M_traj = Eigen::MatrixXd::Zero(2 * m_C , N_variable);
-  b_traj = Eigen::VectorXd::Zero(2 * m_C);
+  M_traj_dcm = Eigen::MatrixXd::Zero(2 * m_C , N_variable);
+  b_traj_dcm = Eigen::VectorXd::Zero(2 * m_C);
+  M_traj_zmp = Eigen::MatrixXd::Zero(2 * m_C , N_variable);
+  b_traj_zmp = Eigen::VectorXd::Zero(2 * m_C);
 
   // //Pu0_stab = M_dcm_stab * x + b_dcm_stab
   Eigen::MatrixXd M_dcm_stab = Eigen::MatrixXd::Zero(2 , N_variable);
@@ -331,28 +332,34 @@ void ISMPC_Solver::create_dcm_cost_function(Eigen::MatrixXd & M_dcm, Eigen::Vect
 
       if(indx_step - 1 < 0 || indx_step - 1>= j_Max_C)
       {
-        b_traj.segment(2 * i , 2) -= ( (exp(m_eta * m_delta) - exp(m_eta * t_m_PrevTs)) * P_PrevStp );
+        b_traj_dcm.segment(2 * i , 2) -= ( (exp(m_eta * m_delta) - exp(m_eta * t_m_PrevTs)) * P_PrevStp );
+        b_traj_zmp.segment(2 * i , 2) = P_PrevStp;
       }
       if(indx_step < 0 || indx_step >= j_Max_C)
       {
 
-        b_traj.segment(2 * i , 2) -= ( (exp(m_eta * t_m_PrevTs) - 1) * P_stp );
+        b_traj_dcm.segment(2 * i , 2) -= ( (exp(m_eta * t_m_PrevTs) - 1) * P_stp );
+        b_traj_zmp.segment(2 * i , 2) = P_stp;
 
       }
       if(indx_step - 1 >= 0 &&indx_step - 1 < j_Max_C)
       {
 
-        b_traj.segment(2 * i , 2) -= ( (exp(m_eta * m_delta) - exp(m_eta * t_m_PrevTs)) * prevOffset );
+        b_traj_dcm.segment(2 * i , 2) -= ( (exp(m_eta * m_delta) - exp(m_eta * t_m_PrevTs)) * prevOffset );
+        M_traj_dcm.block(2 * i , 2 * (m_C + indx_step - 1), 2 , 2 ) -= (exp(m_eta * m_delta) - exp(m_eta * t_m_PrevTs)) * Eigen::Matrix2d::Identity();
 
-        M_traj.block(2 * i , 2 * (m_C + indx_step - 1), 2 , 2 ) -= (exp(m_eta * m_delta) - exp(m_eta * t_m_PrevTs)) * Eigen::Matrix2d::Identity();
+        b_traj_zmp.segment(2 * i , 2) =  prevOffset ;
+        M_traj_zmp.block(2 * i , 2 * (m_C + indx_step - 1), 2 , 2 ) = Eigen::Matrix2d::Identity();
 
       }
       if(indx_step >= 0 &&indx_step < j_Max_C)
       {
 
-        b_traj.segment(2 * i , 2) -= (exp(m_eta * t_m_PrevTs) - 1) * sgn * R_step_0 * offset  ;
+        b_traj_dcm.segment(2 * i , 2) -= (exp(m_eta * t_m_PrevTs) - 1) * sgn * R_step_0 * offset  ;
+        M_traj_dcm.block(2 * i , 2 * (m_C + indx_step), 2 , 2 ) -= (exp(m_eta * t_m_PrevTs) - 1) * Eigen::Matrix2d::Identity();
 
-        M_traj.block(2 * i , 2 * (m_C + indx_step), 2 , 2 ) -= (exp(m_eta * t_m_PrevTs) - 1) * Eigen::Matrix2d::Identity();
+        b_traj_zmp.segment(2 * i , 2) =  sgn * R_step_0 * offset ;
+        M_traj_zmp.block(2 * i , 2 * (m_C + indx_step), 2 , 2 ) = Eigen::Matrix2d::Identity();
 
       }
       t_m_PrevTs = m_delta;
@@ -360,19 +367,20 @@ void ISMPC_Solver::create_dcm_cost_function(Eigen::MatrixXd & M_dcm, Eigen::Vect
       //adding previous dcm
       if(i == 0)
       {
-        M_traj.block(0,0,2,N_variable) = exp(m_eta * m_delta) * M_dcm_stab;
-        b_traj.segment(0,2) += exp(m_eta * m_delta) * b_dcm_stab;
+        M_traj_dcm.block(0,0,2,N_variable) = exp(m_eta * m_delta) * M_dcm_stab;
+        b_traj_dcm.segment(0,2) += exp(m_eta * m_delta) * b_dcm_stab;
       }
       else
       {
-        M_traj.block(2 * i , 0 , 2,N_variable) += exp(m_eta * m_delta) * M_traj.block(2 * (i-1) , 0 , 2,N_variable);
-        b_traj.segment(2 * i , 2 ) += exp(m_eta * m_delta) * b_traj.segment(2 * (i-1),2);
+        M_traj_dcm.block(2 * i , 0 , 2,N_variable) += exp(m_eta * m_delta) * M_traj_dcm.block(2 * (i-1) , 0 , 2,N_variable);
+        b_traj_dcm.segment(2 * i , 2 ) += exp(m_eta * m_delta) * b_traj_dcm.segment(2 * (i-1),2);
       } 
       t += m_delta;
     }
     else
     {
-      b_traj.segment(2 * i,2) = m_ref_zmp.segment(0,2);
+      b_traj_dcm.segment(2 * i,2) = m_ref_zmp.segment(0,2);
+      b_traj_zmp.segment(2 * i,2) = m_ref_zmp.segment(0,2);
     }
   }
 
@@ -1492,9 +1500,11 @@ bool ISMPC_Solver::GetWalkingParameters(bool stop)
   // m_Tc,m_timestamp[0],m_Tds,j_Max_C); 
   // mc_rtc::log::info("m_C {}",m_C); t_clock = std::chrono::high_resolution_clock::now();
   double beta_dcm = m_Beta_dcm;
+  double beta_dcm_vel = m_Beta_dcm_vel;
   if(m_stop)
   {
     beta_dcm = m_Beta_dcm_stop; 
+    beta_dcm_vel = m_Beta_dcm_vel_stop;
     Static_ZMP_Constraints();
     if(UsePendulumSolver)
     {
@@ -1535,12 +1545,22 @@ bool ISMPC_Solver::GetWalkingParameters(bool stop)
   Eigen::VectorXd b_dcm = Eigen::VectorXd::Zero(0);
   Eigen::VectorXd b_dcm_traj = Eigen::VectorXd::Zero(0);
   Eigen::MatrixXd M_dcm_traj = Eigen::MatrixXd::Zero(0,N_variable);
+  Eigen::VectorXd b_refDcm_zmp_traj = Eigen::VectorXd::Zero(0);
+  Eigen::MatrixXd M_refDcm_zmp_traj = Eigen::MatrixXd::Zero(0,N_variable);
 
-  Eigen::MatrixXd M_dcmVel = Eigen::MatrixXd::Zero(0,N_variable);
-  Eigen::VectorXd b_dcmVel = Eigen::VectorXd::Zero(0);
+  create_dcm_cost_function(M_dcm,b_dcm,M_dcm_traj,b_dcm_traj,M_refDcm_zmp_traj,b_refDcm_zmp_traj);
 
-  create_dcm_cost_function(M_dcm,b_dcm,M_dcm_traj,b_dcm_traj);
+  Eigen::MatrixXd M_dcmVel = m_eta * (M_dcm - A_zmp);
+  Eigen::VectorXd b_dcmVel = b_dcm;
+  for (int i = 0 ; i < m_C ; i++)
+  { 
+    b_dcmVel.segment(2 * i,2) -= P_z_k_delayed.segment(0,2);
+  }
+  b_dcmVel *= m_eta;
 
+  Eigen::MatrixXd M_dcmVelRef = m_eta * (M_dcm_traj - M_refDcm_zmp_traj);
+  Eigen::VectorXd b_dcmVelRef = m_eta * (b_dcm_traj - b_refDcm_zmp_traj);
+  
   Eigen::MatrixXd M_steps = Eigen::MatrixXd::Zero(2*j_Max_C, N_variable);
   M_steps.block(0, 2 * m_C, 2 * j_Max_C, 2 * j_Max_C) = Eigen::MatrixXd::Identity(2 * j_Max_C, 2 * j_Max_C);
   
@@ -1558,13 +1578,13 @@ bool ISMPC_Solver::GetWalkingParameters(bool stop)
          m_Beta_step * (M_steps.transpose() * M_steps) + 
          m_Beta_traj * (M_zmp_traj.transpose() * M_zmp_traj) +
          beta_dcm  * ( (M_dcm - M_dcm_traj).transpose() * (M_dcm - M_dcm_traj)) +
-         m_Beta_dcm_vel * ( (m_eta * (M_dcm - M_zmp_traj - M_dcm_traj)).transpose() * (m_eta * (M_dcm - M_zmp_traj - M_dcm_traj)));
+         beta_dcm_vel * (M_dcmVel - M_dcmVelRef).transpose() * (M_dcmVel - M_dcmVelRef);
          
   m_p = m_Beta_u*(-M_u.transpose() * b_u) + 
         m_Beta_step * (-M_steps.transpose() * b_steps) + 
         m_Beta_traj * (-M_zmp_traj.transpose() * b_zmp_traj)+
-        beta_dcm  * (-(M_dcm - M_dcm_traj).transpose() * ( b_dcm_traj - b_dcm )) +
-        m_Beta_dcm_vel * (-( m_eta * (M_dcm - M_zmp_traj - M_dcm_traj)).transpose()) * (m_eta * (b_dcm_traj - b_dcm - b_zmp_traj)) ;
+        beta_dcm  * ((M_dcm - M_dcm_traj).transpose() * (b_dcm - b_dcm_traj )) +
+        beta_dcm_vel * ((M_dcmVel - M_dcmVelRef)).transpose() * (b_dcmVel - b_dcmVelRef) ;
      
 
 

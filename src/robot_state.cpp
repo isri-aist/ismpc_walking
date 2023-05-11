@@ -189,6 +189,7 @@ void Walking_controller::ComputeFeetPerturbances(Eigen::Vector3d & offset, doubl
 {
   const double verticalComAcc = comTask->refAccel()(6) + mc_rtc::constants::gravity.z();
   const double h = controller_config_.Stab_config.comHeight;
+  sva::ForceVecd LcDot = rbd::computeCentroidalMomentumDot(robot().mb(),robot().mbc(),mpc_state_.Pck,mpc_state_.Vck);
   offset.setZero();
   kappa = 0;
   Eigen::Vector3d FilteredNetForce = stabTask->measuredFilteredNetForces();
@@ -242,6 +243,7 @@ void Walking_controller::ComputeFeetPerturbances(Eigen::Vector3d & offset, doubl
     kappa -= swing_wrench_0.force().z();
     
   }
+  offset += Eigen::Vector3d{-LcDot.couple().y() , LcDot.couple().x(),0};
 
   offset /= zeta; 
   kappa /= zeta;

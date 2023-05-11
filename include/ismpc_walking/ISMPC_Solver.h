@@ -434,10 +434,14 @@ private:
    *  
    * where x is the decision variables
    * 
-   * @param M_out 
-   * @param b_out 
+   * @param M_dcm Matrix to compute dcm
+   * @param b_dcm Vector to compute dcm
+   * @param M_traj_dcm Matrix to compute dcm ref traj
+   * @param b_traj_dcm Vector to compute dcm ref traj
+   * @param M_traj_zmp Matrix to compute zmp ref traj
+   * @param b_traj_zmp Vector to compute zmp ref traj
    */
-  void create_dcm_cost_function(Eigen::MatrixXd & M_dcm, Eigen::VectorXd & b_dcm, Eigen::MatrixXd & M_traj , Eigen::VectorXd & b_traj);
+  void create_dcm_cost_function(Eigen::MatrixXd & M_dcm, Eigen::VectorXd & b_dcm, Eigen::MatrixXd & M_traj_dcm ,Eigen::VectorXd & b_traj_dcm,Eigen::MatrixXd & M_traj_zmp ,Eigen::VectorXd & b_traj_zmp);
 
 
   Eigen::MatrixXd create_zmp_matrix(bool addDelay  );
@@ -565,6 +569,7 @@ private:
   double m_Beta_dcm = 1e2;
   double m_Beta_dcm_stop =1000;
   double m_Beta_dcm_vel = 0;
+  double m_Beta_dcm_vel_stop =1000;
   double m_lambda = 100;
   double m_delay = 0; //delay ( < m_delta ) during which zmp is under previous input Uk
   double m_delay_elapsed = 0; //Between 0 and m_delay represent the remaining time the delay must be applied
