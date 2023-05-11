@@ -1575,16 +1575,16 @@ bool ISMPC_Solver::GetWalkingParameters(bool stop)
 
   m_Q = Eigen::MatrixXd::Identity(N_variable, N_variable) * 1e-12 + 
          m_Beta_u*(M_u.transpose() * M_u) + 
-         m_Beta_step * (M_steps.transpose() * M_steps) + 
-         m_Beta_traj * (M_zmp_traj.transpose() * M_zmp_traj) +
-         beta_dcm  * ( (M_dcm - M_dcm_traj).transpose() * (M_dcm - M_dcm_traj)) +
+         m_Beta_step *  (M_steps.transpose() * M_steps) + 
+         m_Beta_traj *  (M_zmp_traj.transpose() * M_zmp_traj) +
+         beta_dcm  *    (M_dcm - M_dcm_traj).transpose() * (M_dcm - M_dcm_traj) +
          beta_dcm_vel * (M_dcmVel - M_dcmVelRef).transpose() * (M_dcmVel - M_dcmVelRef);
          
   m_p = m_Beta_u*(-M_u.transpose() * b_u) + 
         m_Beta_step * (-M_steps.transpose() * b_steps) + 
         m_Beta_traj * (-M_zmp_traj.transpose() * b_zmp_traj)+
-        beta_dcm  * ((M_dcm - M_dcm_traj).transpose() * (b_dcm - b_dcm_traj )) +
-        beta_dcm_vel * ((M_dcmVel - M_dcmVelRef)).transpose() * (b_dcmVel - b_dcmVelRef) ;
+        beta_dcm  * (M_dcm - M_dcm_traj).transpose() * (b_dcm - b_dcm_traj ) +
+        beta_dcm_vel * (M_dcmVel - M_dcmVelRef).transpose() * (b_dcmVel - b_dcmVelRef) ;
      
 
 
