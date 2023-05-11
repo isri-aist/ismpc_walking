@@ -162,17 +162,18 @@ Eigen::Vector2d ISMPC_Solver::compute_dcm_delay()
   Eigen::Vector2d Pu_delay = Puk;
   Pu_delay -= (m_kappa * U_k - w_k).segment(0,2) * (1 - exp(-m_eta * m_delay_elapsed));
   Pu_delay -= e_d_lpe * m_kappa * (P_z_k - U_k).segment(0,2) * (1 - exp(-epl * m_delay_elapsed));
+  
   Pu_delay *= exp( m_eta * m_delay_elapsed);
 
   return Pu_delay;
 }
 
-void ISMPC_Solver::compute_dcm(Eigen::MatrixXd & A_out, Eigen::VectorXd & b_out, const Eigen::Vector2d & dcm_delay, const int indx)
+void ISMPC_Solver::compute_dcm(Eigen::MatrixXd & A_out, Eigen::Vector2d & b_out, const Eigen::Vector2d & dcm_delay, const int indx)
 {
   const double e_d_lpe = m_eta/(m_eta + m_lambda);
   const double lpe = m_eta + m_lambda;
   A_out = Eigen::MatrixXd::Zero(2,N_variable);
-  b_out = Eigen::VectorXd::Zero(2);
+  b_out = Eigen::Vector2d::Zero();
   const double tj = static_cast<double>(indx) * m_delta;
   double tp = perturbation_duration;
   if(tj < tp)
@@ -213,85 +214,165 @@ void ISMPC_Solver::compute_dcm(Eigen::MatrixXd & A_out, Eigen::VectorXd & b_out,
   
 }
 
-void ISMPC_Solver::create_dcm_cost_function(Eigen::MatrixXd & M_dcm, Eigen::VectorXd & b_dcm, Eigen::VectorXd & b_traj)
+void ISMPC_Solver::create_dcm_cost_function(Eigen::MatrixXd & M_dcm, Eigen::VectorXd & b_dcm, Eigen::MatrixXd & M_traj ,Eigen::VectorXd & b_traj)
 {
-  dcm_ref_traj.clear();
+
+
   int step_indx = 0;
-  HoubaPolynomial<Eigen::Vector2d> path;
+
   double sgn = -1; //change between 1 and -1 depending of support foot (1 if right)
   if(m_support_foot == "RightFoot") // Right Support
   {
     sgn = 1;
   }
-  Eigen::Vector2d Pu_delayed = compute_dcm_delay();
+  const double sgn_init = sgn;
+
+  const Eigen::Vector2d Pu_delayed = compute_dcm_delay();
 
   M_dcm = Eigen::MatrixXd::Zero(2 * m_C , N_variable);
   b_dcm = Eigen::VectorXd::Zero(2 * m_C);
+  M_traj = Eigen::MatrixXd::Zero(2 * m_C , N_variable);
   b_traj = Eigen::VectorXd::Zero(2 * m_C);
-  Eigen::Vector2d P_start = X_0_support_foot.translation().segment(0,2) 
-                            + X_0_support_foot.rotation().transpose().block(0,0,2,2) * Eigen::Vector2d{0,sgn * m_feet_distance/4} ;
-  double ori_start = rpyFromMat(X_0_support_foot.rotation()).z();
 
-  Eigen::Vector2d P_step = P_start;
+  // //Pu0_stab = M_dcm_stab * x + b_dcm_stab
+  Eigen::MatrixXd M_dcm_stab = Eigen::MatrixXd::Zero(2 , N_variable);
+  Eigen::Vector2d b_dcm_stab = Eigen::Vector2d::Zero(2);
 
-  double ori_step = ori_start;
+  const Eigen::Vector2d offset = Eigen::Vector2d{0,m_dy/2};
+  const Eigen::Matrix2d R_support_0 = X_0_support_foot.rotation().transpose().block(0,0,2,2);
+  const Eigen::Vector2d P_support = X_0_support_foot.translation().segment(0,2) + sgn * R_support_0 * offset;
+
+  double ts_im1 = 0;
+
   if(!m_stop)
   {
-    P_step = input_steps_[step_indx].translation().segment(0,2) 
-                            + input_steps_[step_indx].rotation().transpose().block(0,0,2,2) * Eigen::Vector2d{0,-sgn * 3 * m_feet_distance/4};
-    ori_step = rpyFromMat(input_steps_[step_indx].rotation()).z();
+
+    for(int i = 0 ; i < m_timestamp.size() ; i++)
+    {
+      double ts_i = m_timestamp[i] - m_tk; 
+      if(i == m_timestamp.size() - 1){ts_i = 1e9;}
+
+      Eigen::Matrix2d R_i_0; 
+      Eigen::Vector2d P_i = P_support;
+
+      if(i==0)
+      {    
+        b_dcm_stab += (exp(-m_eta * ts_im1 ) - exp(-m_eta * ts_i)) * P_support; 
+      }
+      else
+      {
+        R_i_0 = input_steps_[i-1].rotation().transpose().block(0,0,2,2);
+        P_i = input_steps_[i-1].translation().segment(0,2) + sgn * R_i_0 * offset;
+      
+        if(i - 1 < j_Max_C)
+        {
+          M_dcm_stab.block(0,2 * (m_C  + i - 1 ) , 2 , 2 ) = Eigen::Matrix2d::Identity() * (exp(-m_eta * ts_im1 ) - exp(-m_eta * ts_i));
+
+          b_dcm_stab += R_i_0 * sgn * offset * (exp(-m_eta * ts_im1 ) - exp(-m_eta * ts_i)) ;                                             
+                                                          
+        }
+        else
+        {    
+          b_dcm_stab += (exp(-m_eta * ts_im1 ) - exp(-m_eta * ts_i)) * P_i; 
+        }
+
+      }
+
+
+      ts_im1 = ts_i;
+      sgn *= -1;
+
+    }
+
   }
 
+  double t = m_tk;
+  double ts = m_timestamp[0];
+  double t_m_PrevTs = 0;
+  int indx_step = -1;
 
-  Eigen::Vector2d init_ori = {cos(ori_start), sin(ori_start)};
-  Eigen::Vector2d end_ori = {cos(ori_step), sin(ori_step)};
+  Eigen::Matrix2d R_step_0 = X_0_support_foot.rotation().transpose().block(0,0,2,2);
+  Eigen::Matrix2d R_PrevStep_0 = X_0_support_foot.rotation().transpose().block(0,0,2,2);
 
+  sgn = sgn_init;
+  Eigen::Vector2d P_stp = P_support;
+  Eigen::Vector2d P_PrevStp = P_support;
+  Eigen::Vector2d prevOffset = Eigen::Vector2d::Zero();
 
-  double t_start = 0;
-  double t = m_tk + m_delta;
-  double t_step = m_timestamp[0];
-
-  path.reset(P_start, init_ori, P_step, end_ori);
 
   for (int i = 0 ; i < m_C; i++)
   {
-
-    if(t_start + t >= t_step && step_indx + 1 < input_steps_.size() )
+    Eigen::MatrixXd A_dcm = Eigen::MatrixXd::Zero(2 , N_variable);
+    Eigen::Vector2d c_dcm = Eigen::Vector2d::Zero();
+    compute_dcm(A_dcm,c_dcm,Pu_delayed,i+1);
+    M_dcm.block(2 * i , 0,2 , N_variable) = A_dcm;
+    b_dcm.segment(2 * i , 2) = c_dcm;
+    if(!m_stop)
     {
-      if( !m_stop)
+      if(t + m_delta >= ts)
       {
-        t_start = t_step;
-        sgn*=-1;
+        t_m_PrevTs = (t + m_delta - ts);
+        prevOffset = sgn * R_step_0 * offset;
+        P_PrevStp = P_stp;
 
-        P_start = P_step;
-        ori_start = ori_step;
-        init_ori = {cos(ori_start), sin(ori_start)};
-        
-        step_indx += 1;
-
-        P_step = input_steps_[step_indx].translation().segment(0,2) 
-                                  + input_steps_[step_indx].rotation().transpose().block(0,0,2,2) * Eigen::Vector2d{0,-sgn * 3 * m_feet_distance/4} ;
-        ori_step = rpyFromMat(input_steps_[step_indx].rotation()).z();
-        end_ori = {cos(ori_step), sin(ori_step)};
-        t_step = m_timestamp[step_indx];
-        
-        path.reset(P_start, init_ori, P_step, end_ori);
+        indx_step +=1;
+        ts = m_timestamp[indx_step + 1];
+        if(indx_step == m_timestamp.size() - 1){ts = 1e6;}
+        R_step_0 = input_steps_[indx_step].rotation().transpose().block(0,0,2,2);
+        sgn *= -1;
+        if(indx_step != -1 && indx_step > j_Max_C)
+        {
+          P_stp = input_steps_[indx_step].translation().segment(0,2) + sgn * R_step_0 * offset;
+        }
       }
 
-      t = m_delta;
+
+
+      if(indx_step - 1 < 0 || indx_step - 1>= j_Max_C)
+      {
+        b_traj.segment(2 * i , 2) -= ( (exp(m_eta * m_delta) - exp(m_eta * t_m_PrevTs)) * P_PrevStp );
+      }
+      if(indx_step < 0 || indx_step >= j_Max_C)
+      {
+
+        b_traj.segment(2 * i , 2) -= ( (exp(m_eta * t_m_PrevTs) - 1) * P_stp );
+
+      }
+      if(indx_step - 1 >= 0 &&indx_step - 1 < j_Max_C)
+      {
+
+        b_traj.segment(2 * i , 2) -= ( (exp(m_eta * m_delta) - exp(m_eta * t_m_PrevTs)) * prevOffset );
+
+        M_traj.block(2 * i , 2 * (m_C + indx_step - 1), 2 , 2 ) -= (exp(m_eta * m_delta) - exp(m_eta * t_m_PrevTs)) * Eigen::Matrix2d::Identity();
+
+      }
+      if(indx_step >= 0 &&indx_step < j_Max_C)
+      {
+
+        b_traj.segment(2 * i , 2) -= (exp(m_eta * t_m_PrevTs) - 1) * sgn * R_step_0 * offset  ;
+
+        M_traj.block(2 * i , 2 * (m_C + indx_step), 2 , 2 ) -= (exp(m_eta * t_m_PrevTs) - 1) * Eigen::Matrix2d::Identity();
+
+      }
+      t_m_PrevTs = m_delta;
+
+      //adding previous dcm
+      if(i == 0)
+      {
+        M_traj.block(0,0,2,N_variable) = exp(m_eta * m_delta) * M_dcm_stab;
+        b_traj.segment(0,2) += exp(m_eta * m_delta) * b_dcm_stab;
+      }
+      else
+      {
+        M_traj.block(2 * i , 0 , 2,N_variable) += exp(m_eta * m_delta) * M_traj.block(2 * (i-1) , 0 , 2,N_variable);
+        b_traj.segment(2 * i , 2 ) += exp(m_eta * m_delta) * b_traj.segment(2 * (i-1),2);
+      } 
+      t += m_delta;
     }
-
-    Eigen::MatrixXd A_dcm_i;
-    Eigen::VectorXd b_dcm_i;  
-    compute_dcm(A_dcm_i ,b_dcm_i,Pu_delayed,i+1);
-    M_dcm.block(2 * i,0,2, N_variable) = A_dcm_i;
-    b_dcm.segment(2*i,2) = b_dcm_i;
-
-    dcm_ref_traj.push_back( (path.pos( t / (t_step - t_start) ) + path.vel(t / (t_step - t_start)) / m_eta));
-
-    b_traj.segment(2*i,2) = dcm_ref_traj.back();
-    
-    t += m_delta;
+    else
+    {
+      b_traj.segment(2 * i,2) = m_ref_zmp.segment(0,2);
+    }
   }
 
 }
@@ -1452,8 +1533,9 @@ bool ISMPC_Solver::GetWalkingParameters(bool stop)
   Eigen::MatrixXd M_dcm = Eigen::MatrixXd::Zero(0,N_variable);
   Eigen::VectorXd b_dcm = Eigen::VectorXd::Zero(0);
   Eigen::VectorXd b_dcm_traj = Eigen::VectorXd::Zero(0);
+  Eigen::MatrixXd M_dcm_traj = Eigen::MatrixXd::Zero(0,N_variable);
 
-  create_dcm_cost_function(M_dcm,b_dcm,b_dcm_traj);
+  create_dcm_cost_function(M_dcm,b_dcm,M_dcm_traj,b_dcm_traj);
 
   Eigen::MatrixXd M_steps = Eigen::MatrixXd::Zero(2*j_Max_C, N_variable);
   M_steps.block(0, 2 * m_C, 2 * j_Max_C, 2 * j_Max_C) = Eigen::MatrixXd::Identity(2 * j_Max_C, 2 * j_Max_C);
@@ -1471,12 +1553,12 @@ bool ISMPC_Solver::GetWalkingParameters(bool stop)
          m_Beta_u*(M_u.transpose() * M_u) + 
          m_Beta_step * (M_steps.transpose() * M_steps) + 
          m_Beta_traj * (M_zmp_traj.transpose() * M_zmp_traj) +
-         beta_dcm  * (M_dcm.transpose() * M_dcm) ;
+         beta_dcm  * ( (M_dcm - M_dcm_traj).transpose() * (M_dcm - M_dcm_traj)) ;
          
   m_p = m_Beta_u*(-M_u.transpose() * b_u) + 
         m_Beta_step * (-M_steps.transpose() * b_steps) + 
         m_Beta_traj * (-M_zmp_traj.transpose() * b_zmp_traj)+
-        beta_dcm  * (-M_dcm.transpose() * ( b_dcm_traj - b_dcm ));
+        beta_dcm  * (-(M_dcm - M_dcm_traj).transpose() * ( b_dcm_traj - b_dcm ));
      
 
 
@@ -1593,11 +1675,14 @@ bool ISMPC_Solver::GetWalkingParameters(bool stop)
 
     m_QP_zmp = (A_zmp * QP_Output).segment(0,2 * m_C);
     m_QP_dcm = M_dcm * QP_Output + b_dcm;
+    dcm_ref_traj.clear();
+    const Eigen::VectorXd dcm_traj = M_dcm_traj * QP_Output + b_dcm_traj;
 
     m_ZMP_u.resize(2 * m_C, 1);
     m_Ldot_c = Eigen::VectorXd::Zero(2 * m_C);
     for(int k = 0; k < m_C; k++)
     {
+      dcm_ref_traj.push_back(dcm_traj.segment(2 * k ,2)); 
       m_ZMP_u(k) = QP_Output(2 * k);
       m_ZMP_u(k + m_C) = QP_Output(2 * k + 1);
       if(UseAngularMomentumDot)

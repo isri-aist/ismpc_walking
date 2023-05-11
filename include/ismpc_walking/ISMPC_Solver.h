@@ -425,26 +425,21 @@ private:
    * @param dcm_delay 
    * @param indx 
    */
-  void compute_dcm(Eigen::MatrixXd & A_out, Eigen::VectorXd & b_out, const Eigen::Vector2d & dcm_delay, const int indx);
+  void compute_dcm(Eigen::MatrixXd & A_out, Eigen::Vector2d & b_out, const Eigen::Vector2d & dcm_delay, const int indx);
 
   /**
    * @brief Create a dcm cost function such as 
    * dcm = M_dcm * x + b_dcm
+   * and generate the ref traj vector such as 
+   * dcm_traj = M_traj * x + b_traj
+   *  
    * where x is the decision variables
-   * and generate the ref traj vector
    * 
    * @param M_out 
    * @param b_out 
    */
-  void create_dcm_cost_function(Eigen::MatrixXd & M_dcm, Eigen::VectorXd & b_dcm, Eigen::VectorXd & b_traj);
+  void create_dcm_cost_function(Eigen::MatrixXd & M_dcm, Eigen::VectorXd & b_dcm, Eigen::MatrixXd & M_traj , Eigen::VectorXd & b_traj);
 
-  /**
-   * @brief Create a dcm traj weights
-   * 
-   * @param weights ouputs weights
-   * @param s pahse (between 0 and 1)
-   */
-  void create_dcm_traj_weights(std::vector<double> weights, double s );
 
   Eigen::MatrixXd create_zmp_matrix(bool addDelay  );
   Eigen::MatrixXd create_u_matrix();

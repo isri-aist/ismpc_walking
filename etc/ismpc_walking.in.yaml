@@ -53,6 +53,8 @@ ismpc:
   Tp: 10
   delta: 0.05
   beta_u: 1
+  beta_dcm: 0
+  beta_dcm_static: 0
   beta_step: 1e3
   beta_stab: 1e5
   beta_traj : 1e1
