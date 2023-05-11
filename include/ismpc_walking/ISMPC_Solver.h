@@ -8,7 +8,6 @@
 #include "eigen-quadprog/QuadProg.h"
 #include "eigen-quadprog/eigen_quadprog_api.h"
 #include <thread>
-#include "Polynomials.h"
 
 class ISMPC_Solver
 {

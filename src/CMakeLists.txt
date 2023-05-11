@@ -17,7 +17,6 @@ set(controller_HDR
   ../include/ismpc_walking/ControllerConfiguration.h
   ../include/ismpc_walking/MPC_state.h
   ../include/ismpc_walking/Polygon.h
-    ../include/ismpc_walking/Polynomials.h
 )
 
 set(CONTROLLER_NAME ismpc_walking)
