@@ -1566,26 +1566,45 @@ bool ISMPC_Solver::GetWalkingParameters(bool stop)
   Eigen::MatrixXd M_dcmVelRef = m_eta * (M_dcm_traj - M_refDcm_zmp_traj);
   Eigen::VectorXd b_dcmVelRef = m_eta * (b_dcm_traj - b_refDcm_zmp_traj);
   
-  Eigen::MatrixXd M_steps = Eigen::MatrixXd::Zero(2*j_Max_C, N_variable);
-  M_steps.block(0, 2 * m_C, 2 * j_Max_C, 2 * j_Max_C) = Eigen::MatrixXd::Identity(2 * j_Max_C, 2 * j_Max_C);
+  // Eigen::MatrixXd M_steps = Eigen::MatrixXd::Zero(2*j_Max_C, N_variable);
+  // M_steps.block(0, 2 * m_C, 2 * j_Max_C, 2 * j_Max_C) = Eigen::MatrixXd::Identity(2 * j_Max_C, 2 * j_Max_C);
+  Eigen::MatrixXd M_steps = Eigen::MatrixXd::Zero(2, N_variable);
+  M_steps.block(0, 2 * m_C, 2 * j_Max_C, 2 ) = Eigen::MatrixXd::Identity(2, 2 * j_Max_C);
+  // Eigen::VectorXd b_steps = Eigen::VectorXd::Zero(2*j_Max_C);
+  Eigen::VectorXd b_steps = Eigen::VectorXd::Zero(2);
+
+  Eigen::MatrixXd M_stepsDelta = Eigen::MatrixXd::Zero(2*(j_Max_C-1), N_variable);
+  M_stepsDelta.block(0, 2 * m_C, 2 * (j_Max_C-1), 2 * (j_Max_C-1)) = Eigen::MatrixXd::Identity(2 * (j_Max_C-1), 2 * (j_Max_C -1));
   
-  Eigen::VectorXd b_steps = Eigen::VectorXd::Zero(2*j_Max_C);
+  
+  Eigen::VectorXd b_stepsDelta = Eigen::VectorXd::Zero(2*(j_Max_C-1));
 
   for(int i = 0; i < j_Max_C; i++)
   {
-    b_steps.segment(2 * i, 2) = input_steps_[i].translation().segment(0, 2);
+    if(i == 0)
+    {
+      b_steps.segment(2 * i, 2) = input_steps_[i].translation().segment(0, 2);
+    }
+    if( i < j_Max_C - 1)
+    {
+      M_stepsDelta.block(2 * i, 2 * (m_C + i + 1),2,2) = -Eigen::Matrix2d::Identity();
+      b_stepsDelta.segment(2 * i, 2) = (input_steps_[i].translation() - input_steps_[i+1].translation() ).segment(0, 2);
+
+    }
   }
 
   // t_clock = std::chrono::high_resolution_clock::now();
 
   m_Q = Eigen::MatrixXd::Identity(N_variable, N_variable) * 1e-12 + 
          m_Beta_u*(M_u.transpose() * M_u) + 
-         m_Beta_step *  (M_steps.transpose() * M_steps) + 
+         m_Beta_step *  (M_stepsDelta.transpose() * M_stepsDelta) + 
+         m_Beta_step *  (M_steps.transpose() * M_steps) +
          m_Beta_traj *  (M_zmp_traj.transpose() * M_zmp_traj) +
          beta_dcm  *    (M_dcm - M_dcm_traj).transpose() * (M_dcm - M_dcm_traj) +
          beta_dcm_vel * (M_dcmVel - M_dcmVelRef).transpose() * (M_dcmVel - M_dcmVelRef);
          
   m_p = m_Beta_u*(-M_u.transpose() * b_u) + 
+        m_Beta_step * (-M_stepsDelta.transpose() * b_stepsDelta) + 
         m_Beta_step * (-M_steps.transpose() * b_steps) + 
         m_Beta_traj * (-M_zmp_traj.transpose() * b_zmp_traj)+
         beta_dcm  * (M_dcm - M_dcm_traj).transpose() * (b_dcm - b_dcm_traj ) +
