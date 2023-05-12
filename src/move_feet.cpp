@@ -15,7 +15,6 @@ bool Walking_controller::MoveFeet(double t)
   //   X_0_SwingFootInitial = mpc_state_.Get_CorrectedFootstep(kfoot-1) ;
   // }
 
-  sva::PTransformd X_0_SwingFootTarget;
   if(kfoot < mpc_state_.optimal_steps_.size())
   {
     X_0_SwingFootTarget = mpc_state_.Get_CorrectedFootstep(kfoot);

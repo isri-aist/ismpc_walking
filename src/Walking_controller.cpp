@@ -770,6 +770,7 @@ void Walking_controller::UpdateInitialVectors()
   mpc_state_.t_lift = t_lift;
   mpc_state_.doubleSupport = DoubleSupport_state;
   mpc_state_.t = static_cast<double>(count) * controller_timestep;
+  mpc_state_.X_0_Step_Target = X_0_SwingFootTarget;
 
   Eigen::Vector3d FilteredNetForce = stabTask->measuredFilteredNetForces();
   mpc_state_.input_mass = FilteredNetForce.z() / mc_rtc::constants::GRAVITY;

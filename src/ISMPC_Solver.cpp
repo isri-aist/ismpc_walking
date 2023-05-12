@@ -101,6 +101,7 @@ void ISMPC_Solver::init_MPC(const MPC_state & mpc_state,
   Lc_k = mpc_state.Lck;
   m_mass = mpc_state.input_mass;
 
+  X_0_swing_foot_target = mpc_state.X_0_Step_Target;
 
   DoubleSupport = mpc_state.doubleSupport;
   m_t_lift = mpc_state.t_lift;
@@ -1400,23 +1401,27 @@ bool ISMPC_Solver::GetWalkingParameters(bool stop)
   std::chrono::high_resolution_clock::time_point t_clock = std::chrono::high_resolution_clock::now();
   if(UsePendulumSolver)
   {
-    double Ts = m_timestamp[0];
-    m_feasibilitySolver.configure(m_eta,
-                                m_delta_control,
-                                m_tds_range,
-                                m_tss_range,
-                                m_ts_range,
-                                Eigen::Vector2d{m_dx_f,2*m_dy_f},
-                                Eigen::Vector2d{m_dx * 0.7  , m_dy},
-                                m_feet_distance,8);
-    std::vector<sva::PTransformd> & stepsRef = corr_steps_.size() != 0 ? corr_steps_ : input_steps_;
+    m_feas_res = true;
+    if( (NextOptimalTs - m_tk) > 0.3 )
+    {
+      double Ts = m_timestamp[0];
+      m_feasibilitySolver.configure(m_eta,
+                                  m_delta_control,
+                                  m_tds_range,
+                                  m_tss_range,
+                                  m_ts_range,
+                                  Eigen::Vector2d{m_dx_f,2*m_dy_f},
+                                  Eigen::Vector2d{m_dx * 0.7  , m_dy},
+                                  m_feet_distance,8);
+      std::vector<sva::PTransformd> & stepsRef = corr_steps_.size() != 0 ? corr_steps_ : input_steps_;
 
-    m_feas_res = m_feasibilitySolver.solve(m_tk,m_t_lift,DoubleSupport,P_u_k.segment(0,2),P_z_k.segment(0,2),
-                                            m_support_foot,
-                                            X_0_support_foot,
-                                            X_0_swing_foot_initial,
-                                            m_input_Tds,input_steps_,
-                                            m_timestamp);
+      m_feas_res = m_feasibilitySolver.solve(m_tk,m_t_lift,DoubleSupport,P_u_k.segment(0,2),P_z_k.segment(0,2),
+                                              m_support_foot,
+                                              X_0_support_foot,
+                                              X_0_swing_foot_initial,
+                                              m_input_Tds,input_steps_,
+                                              m_timestamp);
+    }
     
     std::vector<double> optimalTs = m_feasibilitySolver.get_optimal_steps_timings() ;
     std::vector<double> optimalTds = m_feasibilitySolver.get_optimal_steps_ds_duration() ;
@@ -1456,7 +1461,7 @@ bool ISMPC_Solver::GetWalkingParameters(bool stop)
     m_feas_res = false;
     m_Tds = m_input_Tds;
   }
-  
+  NextOptimalTs = m_timestamp[0];
   QPsuccess = false;
   InStabilityRange = false;
   m_stop = stop;
@@ -1586,26 +1591,27 @@ bool ISMPC_Solver::GetWalkingParameters(bool stop)
         beta_dcm  * (M_dcm - M_dcm_traj).transpose() * (b_dcm - b_dcm_traj ) +
         beta_dcm_vel * (M_dcmVel - M_dcmVelRef).transpose() * (b_dcmVel - b_dcmVelRef) ;
      
+  Aeq = Eigen::MatrixXd::Zero(4, N_variable);
+  beq = Eigen::VectorXd::Zero(Aeq.rows());
 
-
-  if(m_Tail == "None")
-  {
-    // m_p += m_Beta_stab * (-A_stab.transpose() * b_stab);
-    // m_Q += m_Beta_stab * (A_stab.transpose() * A_stab);
-    Aeq = Eigen::MatrixXd::Zero(1, N_variable);
-    beq = Eigen::VectorXd::Zero(1);
-  }
-  else if(Use_Stability_Task)
+  if(m_Tail != "None" && Use_Stability_Task)
   {
     m_p += m_Beta_stab * (-A_stab.transpose() * b_stab);
     m_Q += m_Beta_stab * (A_stab.transpose() * A_stab);
-    Aeq = Eigen::MatrixXd::Zero(1, N_variable);
-    beq = Eigen::VectorXd::Zero(1);
   }
-  else
+  else if(m_Tail != "None")
   {
-    Aeq = A_stab;
-    beq = b_stab;
+    Aeq.block(0,0,2,N_variable) = A_stab;
+    beq.segment(0,2) = b_stab;
+  }
+
+  if(m_timestamp[0] - m_tk < 0.3)
+  {
+    Aeq.block(2,2 * m_C , 2 , 2) = Eigen::Matrix2d::Identity();
+    beq.segment(2,2) = X_0_swing_foot_target.translation().segment(0,2);
+    Aineq_steps.block(0,0,4,N_variable).setZero();
+    bineq_steps.segment(0,4).setZero();
+
   }
 
   Aineq_Ld = Eigen::MatrixXd::Zero(0, N_variable);
@@ -1671,8 +1677,8 @@ bool ISMPC_Solver::GetWalkingParameters(bool stop)
     Stability_Constraints();
     m_p += m_Beta_stab * (-A_stab.transpose() * b_stab);
     m_Q += m_Beta_stab * (A_stab.transpose() * A_stab);
-    Aeq = Eigen::MatrixXd::Zero(1, N_variable);
-    beq = Eigen::VectorXd::Zero(1);
+    Aeq.block(0,0,2,N_variable).setZero();
+    beq.segment(0,2).setZero();
     QP_Output = solveQP();
     stab_error = (A_stab * QP_Output - b_stab);
     mc_rtc::log::warning("[ISMPC] stab error {}",stab_error);

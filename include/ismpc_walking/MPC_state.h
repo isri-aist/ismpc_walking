@@ -207,9 +207,10 @@ struct MPC_state
   std::string input_Support_FootName;
   Eigen::Vector3d input_P_fm1;
   Eigen::Vector3d SupportFootPose;
-  sva::PTransformd X_0_SupportFoot;
-  sva::PTransformd X_0_Initial_SwingFoot;
-  
+  sva::PTransformd X_0_SupportFoot = sva::PTransformd::Identity();
+  sva::PTransformd X_0_Initial_SwingFoot = sva::PTransformd::Identity();
+  sva::PTransformd X_0_Step_Target = sva::PTransformd::Identity();
+
   double tds = 0.25;
   double input_tds = 0.25;
   double optimal_tds = 0.25;

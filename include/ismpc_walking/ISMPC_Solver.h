@@ -481,10 +481,13 @@ private:
   Eigen::VectorXd m_ZMP_u = Eigen::VectorXd::Zero(0); // Computed ZMP velocity in world frame
   Eigen::VectorXd m_Ldot_c = Eigen::VectorXd::Zero(0); // Computed Centroidal AngularMomemtum dot in world frame ori
   std::vector<double> m_timestamp; // Step TimesStamp Computed at the footStep Generation
-  
+  double NextOptimalTs = 10;
+
 
   sva::PTransformd X_0_support_foot = sva::PTransformd::Identity();
   sva::PTransformd X_0_swing_foot_initial = sva::PTransformd::Identity();
+  sva::PTransformd X_0_swing_foot_target = sva::PTransformd::Identity();
+
   std::vector<sva::PTransformd> input_steps_;
   std::vector<sva::PTransformd> corr_steps_;
 

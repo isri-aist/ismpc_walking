@@ -607,6 +607,7 @@ private:
   Eigen::Matrix3d R_swing_0 = Eigen::Matrix3d::Identity();
   Eigen::Matrix3d R_0_swing = Eigen::Matrix3d::Identity();
   Eigen::Vector3d T_swing_0 = Eigen::Vector3d::Zero();
+  sva::PTransformd X_0_SwingFootTarget = sva::PTransformd::Identity();
 
   Eigen::Matrix3d floatingbaseWorldOri = Eigen::Matrix3d::Identity();
   Eigen::Vector3d floatingbaseWorldPos = Eigen::Vector3d::Zero();
