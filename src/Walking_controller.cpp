@@ -742,11 +742,10 @@ void Walking_controller::MoveCoM()
   comTask->refVel(Vc);
   comTask->refAccel(Ac_com);
   sva::ForceVecd RealRobot_LcDot = rbd::computeCentroidalMomentumDot(realRobot().mb(), realRobot().mbc(), realRobot().com(),realRobot().comVelocity());
-  MomentumTask->weight(0);
-  MomentumTask->stiffness(1);
-  MomentumTask->damping(0);
+
   if(UseAngularMomentum)
   {
+    solver().addTask(MomentumTask);
     MomentumTask->weight(controller_config_.momentumTaskWeight);
     MomentumTask->refAccel(sva::MotionVecd(LcDotTarget,Eigen::Vector3d::Zero()).vector());
     
@@ -755,6 +754,10 @@ void Walking_controller::MoveCoM()
     //   MomentumTask->stiffness(10);
     //   MomentumTask->refAccel(Eigen::Vector6d::Zero());
     // }
+  }
+  else
+  {
+    solver().removeTask(MomentumTask);
   }
 
   mc_tasks::lipm_stabilizer::ContactState supportFoot = supportFootName == leftFootName_ ? mc_tasks::lipm_stabilizer::ContactState::Left : mc_tasks::lipm_stabilizer::ContactState::Right;
