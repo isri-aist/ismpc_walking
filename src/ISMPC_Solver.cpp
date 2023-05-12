@@ -568,7 +568,7 @@ void ISMPC_Solver::Static_ZMP_Constraints()
 
   Aineq_zmp << ZMP_Cstr * Delta ;// , ZMP_Cstr * DeltaNoDelay;
   bineq_zmp << b_zmp ;//, b_zmp;
-  A_zmp = Delta;
+  A_zmp = Delta.block(0,0,2 * m_C , N_variable);
   b_zmp_traj = Eigen::Map<Eigen::VectorXd>(ZMP_ref_traj.data(), ZMP_ref_traj.size());
   M_zmp_traj = Eigen::MatrixXd::Zero(b_zmp_traj.rows(), N_variable);
   M_zmp_traj.block(0, 0, b_zmp_traj.rows(), b_zmp_traj.rows()) = Delta.block(0, 0, b_zmp_traj.rows(), b_zmp_traj.rows());
