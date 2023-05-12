@@ -503,6 +503,8 @@ void Walking_controller::addToGUI()
                                                                    [this]() ->Eigen::Vector3d{return debugCoM;}),
                  mc_rtc::gui::NumberInput("t_k",[this]() -> const double {return debugTk;},
                                             [this](const double p) {debugTk = p;}),
+                 mc_rtc::gui::Checkbox("Stop",[this]()-> bool {return debugStop;}, 
+                                                [this](){debugStop = !debugStop;}),
                  mc_rtc::gui::Checkbox("Double Support",[this]()-> bool {return debugDblSupp;}, 
                                                 [this](){debugDblSupp = !debugDblSupp;})
       );  

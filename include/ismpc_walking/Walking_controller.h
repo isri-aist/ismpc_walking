@@ -646,4 +646,5 @@ private:
   Eigen::Vector3d debugZMP = Eigen::Vector3d::Zero();
   double debugTk = 0;
   bool debugDblSupp = true;
+  bool debugStop = false;
 };
