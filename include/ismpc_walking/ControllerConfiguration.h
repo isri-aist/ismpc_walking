@@ -44,6 +44,8 @@ struct ControllerConfiguration
   double foot_landing_offset = 0.;
   double Double_Step_Ratio = 0.25;
   double impact_threshold = 30;
+  double max_stability_error = 0.01; //If the stability error is beyond that value, stop will be called
+  double max_swing_foot_velocity = 2.5;
 
   double MPC_ZMP_Constraint_max_size = 0.2;
   double MPC_ZMP_Constraint_min_size = 0.01;

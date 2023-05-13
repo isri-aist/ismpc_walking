@@ -176,6 +176,8 @@ walking_controller:
   wrench_filter_cutoff_T: 2
   gamma_filter_cutoff_T: 0.2
   safety_foot_roll_error: 0.1
+  max_swing_foot_velocity: 1.6
+  stability_error_threshold: 0.2
   robot:
     hrp4:
       torsoBodyName: "torso"

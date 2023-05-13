@@ -69,6 +69,7 @@ void ISMPC_Solver::configure(const ControllerConfiguration & config)
   m_ts_range = config.ts_range;
   m_tss_range = config.tss_range;
   m_tds_range = config.tds_range;
+  m_foot_max_vel = config.max_swing_foot_velocity;
 
 
 
@@ -102,6 +103,7 @@ void ISMPC_Solver::init_MPC(const MPC_state & mpc_state,
   m_mass = mpc_state.input_mass;
 
   X_0_swing_foot_target = mpc_state.X_0_Step_Target;
+  X_0_swing_foot = mpc_state.X_0_SwingFoot;
 
   DoubleSupport = mpc_state.doubleSupport;
   m_t_lift = mpc_state.t_lift;
@@ -1669,10 +1671,25 @@ bool ISMPC_Solver::GetWalkingParameters(bool stop)
 
   }
 
-  Aineq = Eigen::MatrixXd::Zero(Aineq_steps.rows() + Aineq_zmp.rows() + Aineq_Ld.rows(), N_variable);
+
+  Eigen::MatrixXd A_swingVel_cstr = Eigen::MatrixXd::Zero(0,N_variable);
+  Eigen::VectorXd b_swingVel_cstr = Eigen::VectorXd::Zero(0);
+  if(!DoubleSupport)
+  {
+    Eigen::MatrixXd N = Eigen::MatrixXd::Zero(4,2);
+    N << 1 , 0 ,
+        -1 , 0 , 
+         0 , 1 , 
+         0 , -1;
+    b_swingVel_cstr =  Eigen::VectorXd::Ones(4) * m_foot_max_vel + N * X_0_swing_foot.translation().segment(0,2) / (m_timestamp[0] - m_tk);
+    A_swingVel_cstr = Eigen::MatrixXd::Zero(4,N_variable);
+    A_swingVel_cstr.block(0,2 * m_C,4,2) = N / (m_timestamp[0] - m_tk);
+  }
+
+  Aineq = Eigen::MatrixXd::Zero(Aineq_steps.rows() + Aineq_zmp.rows() + Aineq_Ld.rows() + A_swingVel_cstr.rows(), N_variable);
   bineq = Eigen::VectorXd::Zero(Aineq.rows());
-  Aineq << Aineq_zmp, Aineq_steps , Aineq_Ld;
-  bineq << bineq_zmp, bineq_steps , bineq_Ld;
+  Aineq << Aineq_zmp, Aineq_steps , Aineq_Ld , A_swingVel_cstr;
+  bineq << bineq_zmp, bineq_steps , bineq_Ld , b_swingVel_cstr;
 
   QP_Output = solveQP();
   stab_error = (A_stab * QP_Output - b_stab).block(0,0,2,1);
@@ -1712,9 +1729,10 @@ bool ISMPC_Solver::GetWalkingParameters(bool stop)
   if(!QPsuccess)
   {
 
-    // mc_rtc::log::error_and_throw<std::runtime_error>("QP Failed");
+    // mc_m_Ldot_crtc::log::error_and_throw<std::runtime_error>("QP Failed");
     mc_rtc::log::warning("[ISMPC] Ignoring QP");
-    Eigen::VectorXd ineq = Aineq * QP_Output - bineq;
+
+    //Eigen::VectorXd ineq = Aineq * QP_Output - bineq;
     // for (int i = 0 ; i < ineq.rows() ; i++)
     // {
     //   double in(ineq(i));

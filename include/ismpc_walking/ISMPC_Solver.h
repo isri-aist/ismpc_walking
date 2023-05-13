@@ -492,6 +492,7 @@ private:
 
   sva::PTransformd X_0_support_foot = sva::PTransformd::Identity();
   sva::PTransformd X_0_swing_foot_initial = sva::PTransformd::Identity();
+  sva::PTransformd X_0_swing_foot = sva::PTransformd::Identity();
   sva::PTransformd X_0_swing_foot_target = sva::PTransformd::Identity();
 
   std::vector<sva::PTransformd> input_steps_;
@@ -551,6 +552,7 @@ private:
   double m_dy = 0.1; // ZMP square size at one timestep
   double m_dx_u = 0.1;
   double m_dy_u = 0.1; // ZMP square size at one timestep
+  double m_foot_max_vel = 2.;
   Eigen::Vector2d m_ts_range{0.6,2};
   Eigen::Vector2d m_tds_range{0.2,1.5};
   Eigen::Vector2d m_tss_range{0.4,1.5};

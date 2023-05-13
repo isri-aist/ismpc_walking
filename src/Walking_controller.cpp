@@ -367,6 +367,14 @@ void Walking_controller::ComputeWalkingTrajectory()
     mpc_thread_state.mpc_Lc_dot_ = MPCSolver.Lc_dot();
     kfoot = 0;
     NewThreadState = true;
+
+    if( std::abs(MPCSolver.stability_error().x()) > controller_config_.max_stability_error || 
+        std::abs(MPCSolver.stability_error().y()) > controller_config_.max_stability_error   && 
+        !StepRecoveryState)
+    {
+      mc_rtc::log::error("MPC result is too far from stability condition, stopping");
+      Stop = true;    
+    }
     
   }
   else
@@ -507,9 +515,9 @@ void Walking_controller::CheckStepRecovery()
       const double l = t_supp_swing.norm();
       const Eigen::Vector2d t_supp_dcm = stabTask->measuredDCM().segment(0,2) - robot().frame(supportFootName).position().translation().segment(0, 2);
       const double d_proj = t_supp_dcm.dot(t_supp_swing.normalized()) / l;
-
-      if(  d_proj < 0.25 
-           && std::abs( (ff.rotation() * (robot().frame(supportFootName).position().translation() - robot().frame(swingFootName).position().translation())).x()) < 0.15 )
+      mc_rtc::log::info(d_proj);
+      if(  d_proj < 0.3
+           && std::abs( (ff.rotation() * (robot().frame(supportFootName).position().translation() - robot().frame(swingFootName).position().translation())).x()) < 0.05 )
       {
         SwitchFootSupport_manual();
       }

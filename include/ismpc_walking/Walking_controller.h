@@ -117,6 +117,15 @@ public:
     {
       controller_config_.foot_landing_offset = config("walking_controller")("foot_landing_offset");
     }
+    if(config("walking_controller").has("stability_error_threshold"))
+    {
+      controller_config_.max_stability_error = config("walking_controller")("stability_error_threshold");
+    }
+    if(config("walking_controller").has("max_swing_foot_velocity"))
+    {
+      controller_config_.max_swing_foot_velocity = config("walking_controller")("max_swing_foot_velocity");
+    }
+
 
     controller_config_.ts_range = config("ismpc")("ts_range");
     controller_config_.tss_range = config("ismpc")("tss_range");

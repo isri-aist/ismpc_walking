@@ -207,10 +207,9 @@ struct MPC_state
   std::vector<sva::PTransformd> optimal_steps_; //Outputs steps from the
   std::vector<double> optimal_timesteps_; //Outputs timesteps from the mpc
   std::string input_Support_FootName;
-  Eigen::Vector3d input_P_fm1;
-  Eigen::Vector3d SupportFootPose;
   sva::PTransformd X_0_SupportFoot = sva::PTransformd::Identity();
   sva::PTransformd X_0_Initial_SwingFoot = sva::PTransformd::Identity();
+  sva::PTransformd X_0_SwingFoot = sva::PTransformd::Identity();
   sva::PTransformd X_0_Step_Target = sva::PTransformd::Identity();
 
   double tds = 0.25;
