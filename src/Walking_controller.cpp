@@ -508,7 +508,8 @@ void Walking_controller::CheckStepRecovery()
       const Eigen::Vector2d t_supp_dcm = stabTask->measuredDCM().segment(0,2) - robot().frame(supportFootName).position().translation().segment(0, 2);
       const double d_proj = t_supp_dcm.dot(t_supp_swing.normalized()) / l;
 
-      if(  d_proj < 0.25  )
+      if(  d_proj < 0.25 
+           && std::abs( (ff.rotation() * (robot().frame(supportFootName).position().translation() - robot().frame(swingFootName).position().translation())).x()) < 0.15 )
       {
         SwitchFootSupport_manual();
       }
