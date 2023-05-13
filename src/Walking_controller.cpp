@@ -747,6 +747,8 @@ void Walking_controller::MoveCoM()
   if(UseAngularMomentum)
   {
     solver().addTask(MomentumTask);
+    MomentumTask->stiffness(1);
+    MomentumTask->damping(0);
     MomentumTask->weight(controller_config_.momentumTaskWeight);
     MomentumTask->refAccel(sva::MotionVecd(LcDotTarget,Eigen::Vector3d::Zero()).vector());
     

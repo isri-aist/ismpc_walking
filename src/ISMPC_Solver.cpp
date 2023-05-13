@@ -1659,13 +1659,13 @@ bool ISMPC_Solver::GetWalkingParameters(bool stop)
       {
         Delta_Lc.block(2 * i,2 * k , 2 , 2) = Eigen::Matrix2d::Identity() * m_delta;
       }
-      b_L.segment(2 * i , 2 ) = - Lc_k.segment(0,2);
+      b_L.segment(2 * i , 2 ) = Lc_k.segment(0,2);
       bineq_Ld.segment(2 * i,2) = Eigen::Vector2d::Ones() * m_Ld_max;
       bineq_Ld.segment(2 * ( m_C + i),2) = Eigen::Vector2d::Ones() * m_Ld_max;
     }
     M_L.block(0,2 * (m_C + j_Max_C) , 2 * m_C , 2 * m_C) = Delta_Lc;
-    m_Q += m_Beta_Lc * M_Ld.transpose() * M_Ld + 1e3 * M_L.transpose() * M_L;
-    m_p += 1e3 * M_L.transpose() * b_L;
+    m_Q += m_Beta_Lc * M_Ld.transpose() * M_Ld + 0.1 * m_Beta_Lc * M_L.transpose() * M_L;
+    m_p += 0.1 * m_Beta_Lc * M_L.transpose() * b_L;
 
   }
 
