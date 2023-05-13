@@ -553,14 +553,14 @@ void ISMPC_Solver::Static_ZMP_Constraints()
   // mc_rtc::log::success("ZMP cstr computed, Ncstr = {}", N_zmp_cstr);
   Eigen::MatrixXd ZMP_Cstr = Eigen::MatrixXd::Zero(N_zmp_cstr, N_variable);
   Eigen::VectorXd b_zmp = Eigen::VectorXd::Zero(ZMP_Cstr.rows());
-  Eigen::MatrixXd U_Cstr = Eigen::MatrixXd::Zero(N_u_cstr, N_variable);
-  Eigen::VectorXd b_u = Eigen::VectorXd::Zero(U_Cstr.rows());
+  // Eigen::MatrixXd U_Cstr = Eigen::MatrixXd::Zero(N_u_cstr, N_variable);
+  // Eigen::VectorXd b_u = Eigen::VectorXd::Zero(U_Cstr.rows());
 
   // std::cout << "ZMP_cstr_rows" << ZMP_Cstr.rows() << std::endl;
 
   create_cstr_matrices(ZMP_Cstr,b_zmp,zmp_cstr_polygons,b_zmp_ineq);
 
-  create_cstr_matrices(U_Cstr,b_u,u_cstr_polygons,b_u_ineq);
+  // create_cstr_matrices(U_Cstr,b_u,u_cstr_polygons,b_u_ineq);
 
 
 
@@ -998,10 +998,10 @@ void ISMPC_Solver::ZMP_Constraints()
   Eigen::MatrixXd U_Cstr = Eigen::MatrixXd::Zero(N_u_cstr, N_variable);
 
   Eigen::VectorXd b_zmp = Eigen::VectorXd::Zero(ZMP_Cstr.rows());
-  Eigen::VectorXd b_u = Eigen::VectorXd::Zero(U_Cstr.rows());
+  // Eigen::VectorXd b_u = Eigen::VectorXd::Zero(U_Cstr.rows());
 
   create_cstr_matrices(ZMP_Cstr,b_zmp,zmp_cstr_polygons,b_zmp_ineq);
-  create_cstr_matrices(U_Cstr,b_u,u_cstr_polygons,b_u_ineq);
+  // create_cstr_matrices(U_Cstr,b_u,u_cstr_polygons,b_u_ineq);
 
   // Eigen::MatrixXd u_Delta = Delta;
   // u_Delta.block(0,0,2*m_C,2*m_C) = create_u_matrix();
