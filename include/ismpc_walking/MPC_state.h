@@ -176,6 +176,8 @@ struct MPC_state
   int Index = 0;
 
   Eigen::Vector3d initial_zmp_ = Eigen::Vector3d::Zero();
+  Eigen::Vector3d delayed_zmp_ = Eigen::Vector3d::Zero();
+
 
   double t_k = 0;
   double t;

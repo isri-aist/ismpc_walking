@@ -41,9 +41,10 @@ constraints:
   #  applies to main robot
   - type: kinematics
     damper: [0.1, 0.01, 0.5]
+  # - type: dynamics
 collisions:
   - type: collision
-    useMinimal: true
+    useCommon: true
 robots:
   ground:
     module: env/ground
@@ -52,7 +53,7 @@ ismpc:
   Tc: 1.5
   Tp: 10
   delta: 0.05
-  beta_u: 1
+  beta_zmp_vel: 0.001
   beta_dcm: 0
   beta_dcm_static: 0
   beta_step: 1e3

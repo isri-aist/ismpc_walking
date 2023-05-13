@@ -18,7 +18,7 @@ struct ControllerConfiguration
 
   Eigen::Vector2d Footsteps_Generation_Kinematics_cstr{0.3, 0.1};
 
-  double Beta_u = 1;
+  double Beta_zmp_vel = 1;
   double Beta_step = 1e4; // 1e4;
   double Beta_stab = 1e7;
   double Beta_traj = 0.;

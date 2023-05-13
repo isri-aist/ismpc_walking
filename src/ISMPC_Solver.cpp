@@ -37,7 +37,7 @@ void ISMPC_Solver::configure(const ControllerConfiguration & config)
   m_dx_static = config.MPC_ZMP_cstr_square_static.x();
   m_dy_static = config.MPC_ZMP_cstr_square_static.y();
   m_Beta_step = config.Beta_step;
-  m_Beta_u = config.Beta_u;
+  m_Beta_zmp_vel = config.Beta_zmp_vel;
   m_Beta_stab = config.Beta_stab;
   m_Beta_traj = config.Beta_traj;
   m_Beta_Lc = config.Beta_Ld;
@@ -1453,7 +1453,6 @@ bool ISMPC_Solver::GetWalkingParameters(bool stop)
     {
       mc_rtc::log::warning("[ISMPC {}] Step feasibility QP fail",m_t_global);
       m_Tds = m_input_Tds;
-
     }
   }
   else
@@ -1542,9 +1541,16 @@ bool ISMPC_Solver::GetWalkingParameters(bool stop)
   }
 
  
-  Eigen::MatrixXd M_u = Eigen::MatrixXd::Zero(2*m_C, N_variable);
-  Eigen::VectorXd b_u = Eigen::VectorXd::Zero(M_u.rows());
-  M_u.block(0, 0, 2 * m_C, 2 * m_C) = Eigen::MatrixXd::Identity(2 * m_C , 2 * m_C);
+  Eigen::MatrixXd M_zmp_vel = - m_lambda * A_zmp;
+  Eigen::VectorXd b_zmp_vel = Eigen::VectorXd::Zero(M_zmp_vel.rows());
+  for(int i = 0 ; i < m_C ; i++)
+  {
+    for(int j = 0 ; j <= i ; j++)
+    {
+      M_zmp_vel.block(2 * i , 2 * j , 2, 2) += m_lambda * Eigen::Matrix2d::Identity();
+    }
+  }
+  // M_zmp_vel.block(0, 0, 2 * m_C, 2 * m_C) = Eigen::MatrixXd::Identity(2 * m_C , 2 * m_C);
 
   Eigen::MatrixXd M_dcm = Eigen::MatrixXd::Zero(0,N_variable);
   Eigen::VectorXd b_dcm = Eigen::VectorXd::Zero(0);
@@ -1596,14 +1602,14 @@ bool ISMPC_Solver::GetWalkingParameters(bool stop)
   // t_clock = std::chrono::high_resolution_clock::now();
 
   m_Q = Eigen::MatrixXd::Identity(N_variable, N_variable) * 1e-12 + 
-         m_Beta_u*(M_u.transpose() * M_u) + 
+         m_Beta_zmp_vel*(M_zmp_vel.transpose() * M_zmp_vel) + 
          m_Beta_step *  (M_stepsDelta.transpose() * M_stepsDelta) + 
          m_Beta_step *  (M_steps.transpose() * M_steps) +
          m_Beta_traj *  (M_zmp_traj.transpose() * M_zmp_traj) +
          beta_dcm  *    (M_dcm - M_dcm_traj).transpose() * (M_dcm - M_dcm_traj) +
          beta_dcm_vel * (M_dcmVel - M_dcmVelRef).transpose() * (M_dcmVel - M_dcmVelRef);
          
-  m_p = m_Beta_u*(-M_u.transpose() * b_u) + 
+  m_p = m_Beta_zmp_vel*(M_zmp_vel.transpose() * b_zmp_vel) + 
         m_Beta_step * (-M_stepsDelta.transpose() * b_stepsDelta) + 
         m_Beta_step * (-M_steps.transpose() * b_steps) + 
         m_Beta_traj * (-M_zmp_traj.transpose() * b_zmp_traj)+

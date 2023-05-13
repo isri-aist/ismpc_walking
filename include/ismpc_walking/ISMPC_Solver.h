@@ -256,6 +256,12 @@ public:
     return P_z_k;
   }
 
+  const Eigen::Vector3d & Delayed_ZMP() const noexcept
+  {
+    return P_z_k_delayed;
+  }
+
+
   double get_lambda()
   {
     return m_lambda;
@@ -563,8 +569,8 @@ private:
   double m_dy_f = 0.1; // Step kinematic admissible Region
   double m_dx_f_rect = 0.1;
   double m_dy_f_rect = 0.1; // Step admissible region
-  double m_Ld_max = 5;
-  double m_Beta_u = 1;
+  double m_Ld_max = 10;
+  double m_Beta_zmp_vel = 1;
   double m_Beta_step = 1e1;
   double m_Beta_stab = 1e5;
   double m_Beta_traj = 0.;

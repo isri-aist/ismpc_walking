@@ -53,7 +53,7 @@ public:
   void Configure(const mc_rtc::Configuration & config)
   {
 
-    controller_config_.Beta_u = config("ismpc")("beta_u");
+    controller_config_.Beta_zmp_vel = config("ismpc")("beta_zmp_vel");
     controller_config_.Beta_step = config("ismpc")("beta_step");
     controller_config_.Beta_range = config("ismpc")("safety_thresholds")("beta_range");
     controller_config_.MPC_ZMP_Constraint_min_size = config("ismpc")("safety_thresholds")("zmp_cstr_square_min");
@@ -140,8 +140,8 @@ public:
   void reconfigure(const mc_rtc::Configuration & config)
   {
 
-    std::vector<double> qp_weight = config("QP Weight (u ; step ; zmp traj ; stab ; Ld ; dcm ; dcm_vel)");
-    controller_config_.Beta_u = qp_weight[0]; 
+    std::vector<double> qp_weight = config("QP Weight (zmp_vel ; step ; zmp traj ; stab ; Ld ; dcm ; dcm_vel)");
+    controller_config_.Beta_zmp_vel = qp_weight[0]; 
     controller_config_.Beta_step = qp_weight[1]; 
     controller_config_.Beta_traj = qp_weight[2];
     controller_config_.Beta_stab = qp_weight[3]; 

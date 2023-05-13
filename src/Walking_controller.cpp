@@ -344,7 +344,7 @@ void Walking_controller::ComputeWalkingTrajectory()
     mpc_thread_state.FeasibilityPolygonStandingSwitch = MPCSolver.feasibility_region_switched();
     mpc_thread_state.X_MPC = MPCSolver.X_MPC();
     mpc_thread_state.Y_MPC = MPCSolver.Y_MPC();
-    mpc_thread_state.Index = static_cast<int>(mpc_thread_process_time * 1e-3 / controller_timestep);
+    mpc_thread_state.Index = 1 + static_cast<int>(mpc_thread_process_time * 1e-3 / controller_timestep);
     mpc_thread_state.SupPolygon = MPCSolver.get_polynome_support();
     mpc_thread_state.Traj_ant = MPCSolver.GetAfterTc_ZMP_trajectory();
     mpc_thread_state.Tail = MPCSolver.Tail() != "None";
@@ -353,6 +353,7 @@ void Walking_controller::ComputeWalkingTrajectory()
     mpc_thread_state.Pu_min = MPCSolver.Puk_min().segment(0, 2);
     mpc_thread_state.mpc_u_ = MPCSolver.ZMP_vel();
     mpc_thread_state.initial_zmp_ = MPCSolver.Initial_ZMP();
+    mpc_thread_state.delayed_zmp_ = MPCSolver.Delayed_ZMP();
     mpc_thread_state.standing_mode = MPCSolver.stop();
     mpc_thread_state.FeasibilityPolygon = MPCSolver.feasibility_region();
     mpc_thread_state.alpha = MPCSolver.support_state();
@@ -684,8 +685,8 @@ void Walking_controller::MoveCoM()
   Eigen::Vector3d Ac_com = std::pow(mpc_state_.eta, 2) * (Pcom - zmpTarget);
 
   Ac_com.z() = 0;
-  admittanceTarget = mpc_state_.initial_zmp_;
-  int n = static_cast<int>(controller_config_.delta/controller_timestep);
+  admittanceTarget = mpc_state_.delayed_zmp_;
+  const int n = static_cast<int>(controller_config_.delta/controller_timestep);
   for (int k = 0 ; k <= mpc_state_.Index/n ; k++)
   {
     // mc_rtc::log::info("index {} , k {}",mpc_state_.Index,k);
