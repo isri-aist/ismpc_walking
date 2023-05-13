@@ -323,9 +323,11 @@ void Walking_controller::ComputeWalkingTrajectory()
   if(Use_w)
   {
 
-    double t_perturbation = 0.1;
-    if(DoubleSupport_state || debugDblSupp){t_perturbation = 0.1;}
-    MPCSolver.Disturbance(w_,kappa_,t_perturbation);
+    double t_perturbation = std::max(0., 0.1 - t_lift);
+    if(( !DoubleSupport_state) || debugDblSupp)
+    {
+      MPCSolver.Disturbance(w_,kappa_,t_perturbation);
+    }
 
   }
 
