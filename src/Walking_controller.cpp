@@ -443,12 +443,8 @@ void Walking_controller::UpdatePlanner_input()
   mpc_state_.X_0_Initial_SwingFoot =
       sva::PTransformd(sva::RotZ(mc_rbdyn::rpyFromMat(robot().surfacePose(swingFootName).rotation()).z()),
                        robot().surfacePose(swingFootName).translation());
-  mpc_state_.SupportFootPose = robot().surfacePose(supportFootName).translation();
-  mpc_state_.SupportFootPose.z() = mc_rbdyn::rpyFromMat(robot().surfacePose(supportFootName).rotation()).z();
 
-  Eigen::Vector3d Pf_m1(SwingFootInitialPose);
-  Pf_m1.z() = SupportFootPose.z();
-  mpc_state_.input_P_fm1 = Pf_m1;
+  mpc_state_.X_0_SwingFoot = X_0_swing;
   mpc_state_.stop = !Robot_Walking;
   if(DebugMode){mpc_state_.stop = debugStop;}
 }
