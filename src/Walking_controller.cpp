@@ -180,7 +180,8 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, c
   {
     activate();
     Stop = false;
-    N_Steps_Desired = config("walking_controller")("auto_start")("steps");
+    N_Steps_Desired_std = config("walking_controller")("auto_start")("steps");
+    N_Steps_Desired = N_Steps_Desired_std;
     double t_step = config("walking_controller")("auto_start")("ts");
     ts(t_step);
     reference_velocity = config("walking_controller")("auto_start")("speed");
@@ -323,7 +324,7 @@ void Walking_controller::ComputeWalkingTrajectory()
   if(Use_w)
   {
 
-    double t_perturbation = std::max(0., 0.1 - t_lift);
+    double t_perturbation = std::max(0., 0.1);
     if(( !DoubleSupport_state) || debugDblSupp)
     {
       MPCSolver.Disturbance(w_,kappa_,t_perturbation);
@@ -397,6 +398,10 @@ void Walking_controller::UpdatePlanner_input()
   mpc_state_.input_v_.clear();
   Eigen::Vector3d step_velocity = reference_velocity;
   double step_time = T_Steps;
+  if(StepRecoveryState)
+  {
+    step_velocity.setZero();
+  }
 
   // if(supportFootName == leftFootName_)
   // {
@@ -482,6 +487,7 @@ void Walking_controller::CheckStepRecovery()
     if(!ok || !ok_switch)
     {
       mc_rtc::log::warning("Can't Stop, stepping");
+      N_Steps_Desired = N_Steps_Desired_recovery;
       // if(!ok_switch)
       // {
       //   SwitchFootSupport_manual();
@@ -490,7 +496,6 @@ void Walking_controller::CheckStepRecovery()
 
       // mc_rtc::log::info("Pu {} ; Pu max {}",stabTask->measuredDCM(),MPCSolver.Puk_max());
       // mc_rtc::log::info("Pu {} ; Pu min {}",stabTask->measuredDCM(),MPCSolver.Puk_min());      
-      N_Steps_Desired = 2;   
    
       sva::PTransformd ff = robot().posW();
       if( (ff.rotation() * stabTask->measuredCoMd()).x() < 0 && !StepRecoveryState)
@@ -587,7 +592,8 @@ bool Walking_controller::run()
       MoveFeet(0);
     }
     updateTasks();
-
+    N_Steps = 0;
+    N_Steps_Desired = N_Steps_Desired_std;
     t_stop = (count - count_stop) * controller_timestep;
     if(UseRealRobot && mpc_state_.standing_mode)
     {
@@ -604,7 +610,6 @@ bool Walking_controller::run()
 
     t_k = - controller_config_.delta;
     kfoot = 0;
-    N_Steps = 0;
     countStart = count + 1;
 
     Robot_Walking = false;

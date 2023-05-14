@@ -798,7 +798,7 @@ void ISMPC_Solver::ZMP_Constraints()
         S_Support_Poly = SupportPolygon(Rect_j);
         S_Support_Poly_u = SupportPolygon(Rect_j_u);
       }
-      if(N_Steps == N_Steps_Desired && i == 0)
+      if( (N_Steps >= N_Steps_Desired && N_Steps_Desired >= 0) && i == 0)
       {
         sva::PTransformd X_0_step_stop_j =
             sva::PTransformd(X_0_step_j.rotation(), (X_0_step_j.translation() + X_0_step_jm1.translation()) * 0.5);
@@ -1142,7 +1142,7 @@ void ISMPC_Solver::AntTailTrajectory()
       X_0_step_jm1 = input_steps_[j_f - 2];
     }
 
-    if(N_Steps + j_f == N_Steps_Desired)
+    if(N_Steps + j_f >= N_Steps_Desired && N_Steps_Desired >=0)
     {
       X_0_step_j = sva::PTransformd(X_0_step_j.rotation(), (X_0_step_j.translation() + X_0_step_jm1.translation()) / 2);
     }

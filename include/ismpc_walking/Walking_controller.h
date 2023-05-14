@@ -243,11 +243,11 @@ public:
   }
   int n_steps() noexcept
   {
-    return N_Steps_Desired;
+    return N_Steps_Desired_std;
   }
   void n_steps(int steps) noexcept
   {
-    N_Steps_Desired = steps;
+    N_Steps_Desired_std = steps;
   }
   void SwitchFootSupport_manual()
   {
@@ -370,7 +370,7 @@ protected:
     datastore().make_call("ismpc_walking::set_ts", [this](double t) { return ts(t); });
     datastore().make_call("ismpc_walking::set_tds", [this](double t) { return tds(t); });
     datastore().make_call("ismpc_walking::get_tds", [this]() -> double { return input_tds; });
-    datastore().make_call("ismpc_walking::set_n_step", [this](int n) { N_Steps_Desired = n; });
+    datastore().make_call("ismpc_walking::set_n_step", [this](int n) { N_Steps_Desired_std = n; });
     datastore().make_call("ismpc_walking::set_ref_vel", [this](Eigen::Vector3d vel) { reference_velocity = vel; });
     datastore().make_call("ismpc_walking::tds_by_ratio", [this](bool val) { Tds_by_ratio = val; });
     datastore().make_call("ismpc_walking::arm_swing_off", [this]() { armTask->weight(0); });
@@ -520,6 +520,8 @@ private:
 
   int N_Steps = 0;
   int N_Steps_Desired = -1;
+  int N_Steps_Desired_std = -1;
+  int N_Steps_Desired_recovery = 2;
   sva::PTransformd target_pose_ = sva::PTransformd::Identity();
 
   double t_stop = 0;
