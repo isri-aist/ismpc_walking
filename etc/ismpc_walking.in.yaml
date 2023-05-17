@@ -389,7 +389,8 @@ stabilizer:
         tasks:
           contact:
             constrainCoP: false
-            damping: 300.
+            damping: 150.
+            stiffness: [0,0,0,0,0,0]
           torso:
             stiffness: 2
             weight: 100
