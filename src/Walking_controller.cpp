@@ -559,6 +559,7 @@ bool Walking_controller::run()
     {
       mpc_state_ = mpc_thread_state;
       NewThreadState = false;
+      updateAdmittance = true;
     }
     MoveCoM();
     // mc_rtc::log::info("indx {} for N {}",mpc_state_.Index,static_cast<int>(controller_config_.delta/controller_timestep));
@@ -690,54 +691,57 @@ void Walking_controller::MoveCoM()
   
   LcDotTarget = mpc_state_.get_Lc_dot(0);
 
-    
+  const int n = static_cast<int>(controller_config_.delta/controller_timestep);
+
   // mc_rtc::log::info("//Index : {}, z_y {}",mpc_state_.Index,zmpTarget.y());
 
 
   Eigen::Vector3d Ac_com = std::pow(mpc_state_.eta, 2) * (Pcom - zmpTarget);
+  Ac_com = std::pow(mpc_state_.eta, 2) * (Pcom - mpc_state_.Get_ZMP_planarTarget(mpc_state_.Index + n));
 
   Ac_com.z() = 0;
-  admittanceTarget = mpc_state_.delayed_zmp_;
-  const int n = static_cast<int>(controller_config_.delta/controller_timestep);
-  for (int k = 0 ; k <= mpc_state_.Index/n ; k++)
-  {
-    // mc_rtc::log::info("index {} , k {}",mpc_state_.Index,k);
-    admittanceTarget += mpc_state_.get_u(k);
-  }
+  admittanceTarget = mpc_state_.delayed_zmp_ + mpc_state_.get_u(0);
+  // for (int k = 0 ; k <= mpc_state_.Index/n ; k++)
+  // {
+  //   // mc_rtc::log::info("index {} , k {}",mpc_state_.Index,k);
+  //   admittanceTarget += mpc_state_.get_u(k);
+  // }
   // mc_rtc::log::info("//");
 
   admittanceTarget.z() = 0;
 
-  if(DoubleSupport_state && mpc_state_.get_tds() - t_k > 0 && mpc_state_.zmp_references().size() != 0)
-  {
-    size_t n_indx = static_cast<int>((mpc_state_.get_tds() - t_k) / controller_config_.delta);
-    n_indx = std::max(std::min(n_indx,size_t(20)),size_t(1));
-    const size_t indx_start = static_cast<size_t>(mpc_state_.Index);
-    std::vector<Eigen::Vector2d> zmp_ref;
+  // if(DoubleSupport_state && updateAdmittance && mpc_state_.get_tds() - t_k > 0 && mpc_state_.zmp_references().size() != 0)
+  // {
+  //   size_t n_indx = static_cast<int>((mpc_state_.get_tds() - t_k) / controller_config_.delta);
+  //   n_indx = std::max(std::min(n_indx,size_t(20)),size_t(1));
+  //   const size_t indx_start = static_cast<size_t>(mpc_state_.Index);
+  //   std::vector<Eigen::Vector2d> zmp_ref;
 
-    const size_t n = static_cast<size_t>(controller_config_.delta / controller_timestep); 
+  //   const size_t n = static_cast<size_t>(controller_config_.delta / controller_timestep); 
+  //   for (size_t i = 1 ; i < n_indx + 1 ; i++)
+  //   {
+  //     zmp_ref.push_back(mpc_state_.Get_ZMP_planarTarget( indx_start + i * n ).segment(0,2));
+  //   }
 
-    for (size_t i = 1 ; i < n_indx + 1 ; i++)
-    {
-      zmp_ref.push_back(mpc_state_.Get_ZMP_planarTarget( indx_start + i * n ).segment(0,2));
-    }
-
-    stabTask->horizonReference(zmp_ref, controller_config_.delta);
-  }
+  //   stabTask->horizonReference(zmp_ref, controller_config_.delta);
+  //   updateAdmittance = false;
+  // }
 
 
-  Eigen::Vector3d Ac_wrench = std::pow(mpc_state_.eta , 2) * (Pcom - admittanceTarget);
+  Eigen::Vector3d Ac_wrench = std::pow(mpc_state_.eta , 2) * (mpc_state_.Get_CoM_planarTarget(0) - admittanceTarget);
   Ac_wrench.z() = 0;
 
   target_force_ = robot().mass() * (Ac_wrench + mc_rtc::constants::gravity);
-  target_wrench_ = sva::ForceVecd{Pcom.cross(target_force_),target_force_};
+  target_wrench_ = sva::ForceVecd{mpc_state_.Get_CoM_planarTarget(0).cross(target_force_),target_force_};
+
+  if(DoubleSupport_state){Ac_wrench = Ac_com;}
 
   // mc_rtc::log::info("zmp diff {}", admittanceTarget -  mc_rbdyn::zmp(target_wrench_, sva::PTransformd::Identity()) );
 
   Ac_wrench.z() = 0;
   dcmTarget = Pcom + Vc / mpc_state_.eta;
 
-  stabTask->target(Pcom, Vc, Ac_wrench, admittanceTarget);
+  stabTask->target(Pcom, Vc, Ac_wrench, zmpTarget);
   if(!active || DebugMode)
   {
     Pcom.segment(0,2) = sva::interpolate(robot().surfacePose(leftFootName_),robot().surfacePose(rightFootName_),0.5).translation().segment(0,2);

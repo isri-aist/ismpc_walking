@@ -494,6 +494,8 @@ private:
   bool UsePendulumSolver = true;
   bool Tds_by_ratio = true;
   bool force_contact_safety_ = true;
+  bool updateAdmittance = false;
+
 
   double LeftFootRatio = 0.5;
   double maxRatioDelta = 0.2;
