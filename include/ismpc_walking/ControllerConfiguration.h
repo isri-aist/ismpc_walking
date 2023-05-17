@@ -21,7 +21,8 @@ struct ControllerConfiguration
   double Beta_zmp_vel = 1;
   double Beta_step = 1e4; // 1e4;
   double Beta_stab = 1e7;
-  double Beta_traj = 0.;
+  double Beta_zmp_traj = 0.;
+  double Beta_zmp_traj_static = 10;
   double Beta_Ld = 1.;
   double Beta_dcm_static = 200;
   double Beta_dcm_vel = 0;

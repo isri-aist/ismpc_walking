@@ -75,7 +75,7 @@ public:
     controller_config_.delta = config("ismpc")("delta");
     controller_config_.use_stability_task = config("ismpc")("use_stability_task");
     controller_config_.Beta_stab = config("ismpc")("beta_stab");
-    controller_config_.Beta_traj = config("ismpc")("beta_traj");
+    controller_config_.Beta_zmp_traj = config("ismpc")("beta_traj");
     controller_config_.lambda_sg_supp = config("ismpc")("lambda");
     controller_config_.lambda_dbl_supp = controller_config_.lambda_sg_supp;
     if(config("ismpc").has("lambda_dbl_supp"))
@@ -152,7 +152,7 @@ public:
     std::vector<double> qp_weight = config("QP Weight (zmp_vel ; step ; zmp traj ; stab ; Ld ; dcm ; dcm_vel)");
     controller_config_.Beta_zmp_vel = qp_weight[0]; 
     controller_config_.Beta_step = qp_weight[1]; 
-    controller_config_.Beta_traj = qp_weight[2];
+    controller_config_.Beta_zmp_traj = qp_weight[2];
     controller_config_.Beta_stab = qp_weight[3]; 
     controller_config_.Beta_Ld = qp_weight[4];
     controller_config_.Beta_dcm = qp_weight[5];
@@ -160,6 +160,7 @@ public:
     std::vector<double> static_weight = config("Beta dcm static (pos , vel)");
     controller_config_.Beta_dcm_static = static_weight[0];
     controller_config_.Beta_dcm_vel_static = static_weight[1];
+    controller_config_.Beta_zmp_traj_static = config("Beta zmp static (pos)");
     controller_config_.Tc = config("Tc");
     controller_config_.delta = config("delta");
     controller_config_.MPC_Footsteps_kin_Constraint_size = config("step kinematics cstr");

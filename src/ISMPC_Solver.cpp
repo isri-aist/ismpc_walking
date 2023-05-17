@@ -39,7 +39,8 @@ void ISMPC_Solver::configure(const ControllerConfiguration & config)
   m_Beta_step = config.Beta_step;
   m_Beta_zmp_vel = config.Beta_zmp_vel;
   m_Beta_stab = config.Beta_stab;
-  m_Beta_traj = config.Beta_traj;
+  m_Beta_zmp_traj = config.Beta_zmp_traj;
+  m_Beta_zmp_traj_stop = config.Beta_zmp_traj_static;
   m_Beta_Lc = config.Beta_Ld;
   m_Beta_dcm = config.Beta_dcm;
   m_Beta_dcm_stop = config.Beta_dcm_static;
@@ -1507,10 +1508,12 @@ bool ISMPC_Solver::GetWalkingParameters(bool stop)
   // mc_rtc::log::info("m_C {}",m_C); t_clock = std::chrono::high_resolution_clock::now();
   double beta_dcm = m_Beta_dcm;
   double beta_dcm_vel = m_Beta_dcm_vel;
+  double beta_zmp_traj = m_Beta_zmp_traj;
   if(m_stop)
   {
     beta_dcm = m_Beta_dcm_stop; 
     beta_dcm_vel = m_Beta_dcm_vel_stop;
+    beta_zmp_traj = m_Beta_zmp_traj_stop;
     Static_ZMP_Constraints();
     if(UsePendulumSolver)
     {
@@ -1607,14 +1610,14 @@ bool ISMPC_Solver::GetWalkingParameters(bool stop)
          m_Beta_zmp_vel*(M_zmp_vel.transpose() * M_zmp_vel) + 
          m_Beta_step *  (M_stepsDelta.transpose() * M_stepsDelta) + 
          m_Beta_step *  (M_steps.transpose() * M_steps) +
-         m_Beta_traj *  (M_zmp_traj.transpose() * M_zmp_traj) +
+         beta_zmp_traj *  (M_zmp_traj.transpose() * M_zmp_traj) +
          beta_dcm  *    (M_dcm - M_dcm_traj).transpose() * (M_dcm - M_dcm_traj) +
          beta_dcm_vel * (M_dcmVel - M_dcmVelRef).transpose() * (M_dcmVel - M_dcmVelRef);
          
   m_p = m_Beta_zmp_vel*(M_zmp_vel.transpose() * b_zmp_vel) + 
         m_Beta_step * (-M_stepsDelta.transpose() * b_stepsDelta) + 
         m_Beta_step * (-M_steps.transpose() * b_steps) + 
-        m_Beta_traj * (-M_zmp_traj.transpose() * b_zmp_traj)+
+        beta_zmp_traj * (-M_zmp_traj.transpose() * b_zmp_traj)+
         beta_dcm  * (M_dcm - M_dcm_traj).transpose() * (b_dcm - b_dcm_traj ) +
         beta_dcm_vel * (M_dcmVel - M_dcmVelRef).transpose() * (b_dcmVel - b_dcmVelRef) ;
      

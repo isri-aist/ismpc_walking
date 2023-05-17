@@ -522,10 +522,11 @@ void Walking_controller::add_ISMPC_Config_GUI()
           "Configure", [this](const mc_rtc::Configuration & conf) { reconfigure(conf);},
           mc_rtc::gui::FormArrayInput("QP Weight (zmp_vel ; step ; zmp traj ; stab ; Ld ; dcm ; dcm_vel)", false,
                                       [this]() -> std::array<double, 7> {
-                                        return {controller_config_.Beta_zmp_vel, controller_config_.Beta_step,controller_config_.Beta_traj,
+                                        return {controller_config_.Beta_zmp_vel, controller_config_.Beta_step,controller_config_.Beta_zmp_traj,
                                                 controller_config_.Beta_stab, controller_config_.Beta_Ld, controller_config_.Beta_dcm, controller_config_.Beta_dcm_vel};
                                       }),
           mc_rtc::gui::FormArrayInput("Beta dcm static (pos , vel)", false, [this]() -> std::array<double,2> { return {controller_config_.Beta_dcm_static,controller_config_.Beta_dcm_vel_static}; }),
+          mc_rtc::gui::FormNumberInput("Beta zmp static (pos)", false, [this]() { return controller_config_.Beta_zmp_traj_static; }),
           mc_rtc::gui::FormNumberInput("Tc", false, [this]() { return controller_config_.Tc; }),
           mc_rtc::gui::FormNumberInput("delta", false, [this]() { return controller_config_.delta; }),
           mc_rtc::gui::FormArrayInput("step kinematics cstr", false,

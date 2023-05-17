@@ -524,6 +524,7 @@ private:
   bool DoubleSupport = true;
   bool m_stop = true;
 
+
   /**
    *Only during the first double support phase : If enabled, the admissible region is a sliding square,
    *otherwise it is a polygone defined by two  rectangle on both feets.
@@ -575,7 +576,8 @@ private:
   double m_Beta_zmp_vel = 1;
   double m_Beta_step = 1e1;
   double m_Beta_stab = 1e5;
-  double m_Beta_traj = 0.;
+  double m_Beta_zmp_traj = 0.;
+  double m_Beta_zmp_traj_stop = 0;
   double m_Beta_Lc = 1e-2;
   double m_Beta_dcm = 1e2;
   double m_Beta_dcm_stop =1000;
