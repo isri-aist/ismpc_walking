@@ -710,22 +710,22 @@ void Walking_controller::MoveCoM()
 
   admittanceTarget.z() = 0;
 
-  // if(DoubleSupport_state && updateAdmittance && mpc_state_.get_tds() - t_k > 0 && mpc_state_.zmp_references().size() != 0)
-  // {
-  //   size_t n_indx = static_cast<int>((mpc_state_.get_tds() - t_k) / controller_config_.delta);
-  //   n_indx = std::max(std::min(n_indx,size_t(20)),size_t(1));
-  //   const size_t indx_start = static_cast<size_t>(mpc_state_.Index);
-  //   std::vector<Eigen::Vector2d> zmp_ref;
+  if(DoubleSupport_state && updateAdmittance && mpc_state_.get_tds() - t_k > 0 && mpc_state_.zmp_references().size() != 0)
+  {
+    size_t n_indx = static_cast<int>((mpc_state_.get_tds() - t_k) / controller_config_.delta);
+    n_indx = std::max(std::min(n_indx,size_t(20)),size_t(1));
+    const size_t indx_start = static_cast<size_t>(mpc_state_.Index);
+    std::vector<Eigen::Vector2d> zmp_ref;
 
-  //   const size_t n = static_cast<size_t>(controller_config_.delta / controller_timestep); 
-  //   for (size_t i = 1 ; i < n_indx + 1 ; i++)
-  //   {
-  //     zmp_ref.push_back(mpc_state_.Get_ZMP_planarTarget( indx_start + i * n ).segment(0,2));
-  //   }
+    const size_t n = static_cast<size_t>(controller_config_.delta / controller_timestep); 
+    for (size_t i = 1 ; i < n_indx + 1 ; i++)
+    {
+      zmp_ref.push_back(mpc_state_.Get_ZMP_planarTarget( indx_start + i * n ).segment(0,2));
+    }
 
-  //   stabTask->horizonReference(zmp_ref, controller_config_.delta);
-  //   updateAdmittance = false;
-  // }
+    stabTask->horizonReference(zmp_ref, controller_config_.delta);
+    updateAdmittance = false;
+  }
 
 
   Eigen::Vector3d Ac_wrench = std::pow(mpc_state_.eta , 2) * (mpc_state_.Get_CoM_planarTarget(0) - admittanceTarget);
