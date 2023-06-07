@@ -11,9 +11,9 @@
 #include <mc_rtc/logging.h>
 #include <mc_solver/ConstraintSetLoader.h>
 #include <mc_tasks/AddRemoveContactTask.h>
-#include <mc_tasks/SurfaceTransformTask.h>
 #include <mc_tasks/CoPTask.h>
 #include <mc_tasks/MomentumTask.h>
+#include <mc_tasks/SurfaceTransformTask.h>
 #include <mc_tasks/lipm_stabilizer/StabilizerTask.h>
 #include <Tasks/QPContactConstr.h>
 #include "ControllerConfiguration.h"
@@ -39,7 +39,10 @@ enum class StabilizerState
 struct Walking_controller_DLLAPI Walking_controller : public mc_control::fsm::Controller
 {
 public:
-  Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, const mc_rtc::Configuration & config);
+  Walking_controller(mc_rbdyn::RobotModulePtr rm,
+                     double dt,
+                     const mc_rtc::Configuration & config,
+                     mc_control::ControllerParameters params = {});
 
   ~Walking_controller() override;
 
@@ -126,7 +129,6 @@ public:
       controller_config_.max_swing_foot_velocity = config("walking_controller")("max_swing_foot_velocity");
     }
 
-
     controller_config_.ts_range = config("ismpc")("ts_range");
     controller_config_.tss_range = config("ismpc")("tss_range");
     controller_config_.tds_range = config("ismpc")("tds_range");
@@ -150,10 +152,10 @@ public:
   {
 
     std::vector<double> qp_weight = config("QP Weight (zmp_vel ; step ; zmp traj ; stab ; Ld ; dcm ; dcm_vel)");
-    controller_config_.Beta_zmp_vel = qp_weight[0]; 
-    controller_config_.Beta_step = qp_weight[1]; 
+    controller_config_.Beta_zmp_vel = qp_weight[0];
+    controller_config_.Beta_step = qp_weight[1];
     controller_config_.Beta_zmp_traj = qp_weight[2];
-    controller_config_.Beta_stab = qp_weight[3]; 
+    controller_config_.Beta_stab = qp_weight[3];
     controller_config_.Beta_Ld = qp_weight[4];
     controller_config_.Beta_dcm = qp_weight[5];
     controller_config_.Beta_dcm_vel = qp_weight[6];
@@ -173,7 +175,6 @@ public:
     controller_config_.MPC_ZMP_ref_offset_end_step = config("zmp ref end step");
     controller_config_.MPC_ZMP_ref_offset_start_step = config("zmp ref start step");
     Configure(controller_config_);
-
   }
 
   void Configure(const ControllerConfiguration & config)
@@ -181,8 +182,8 @@ public:
     controller_config_ = config;
     controller_config_.Stab_config_sg_supp.copFzLambda = controller_config_.lambda_sg_supp * Eigen::Vector3d::Ones();
 
-    controller_config_.Beta_step =
-        std::min(controller_config_.Beta_range(1), std::max(controller_config_.Beta_range(0), controller_config_.Beta_step));
+    controller_config_.Beta_step = std::min(controller_config_.Beta_range(1),
+                                            std::max(controller_config_.Beta_range(0), controller_config_.Beta_step));
     controller_config_.MPC_ZMP_Constraint_size.x() = std::min(
         controller_config_.MPC_ZMP_Constraint_max_size,
         std::max(controller_config_.MPC_ZMP_Constraint_min_size, controller_config_.MPC_ZMP_Constraint_size.x()));
@@ -229,9 +230,8 @@ public:
   }
   void tds(double t_ds)
   {
-    input_tds =
-        mc_filter::utils::clampAndWarn(t_ds, controller_config_.tds_range(0),
-                                       controller_config_.tds_range(1), "Tds capped");
+    input_tds = mc_filter::utils::clampAndWarn(t_ds, controller_config_.tds_range(0), controller_config_.tds_range(1),
+                                               "Tds capped");
   }
   double ts() noexcept
   {
@@ -239,8 +239,8 @@ public:
   }
   void ts(double ts)
   {
-    T_Steps = mc_filter::utils::clampAndWarn(ts, controller_config_.ts_range(0),
-                                             controller_config_.ts_range(1), "Ts capped");
+    T_Steps =
+        mc_filter::utils::clampAndWarn(ts, controller_config_.ts_range(0), controller_config_.ts_range(1), "Ts capped");
   }
   int n_steps() noexcept
   {
@@ -270,17 +270,19 @@ public:
   /**
    * @brief Compute lambda such as zmp is under the model
    * v_z = -lambda(z - z_0 - u_0\lambda )
-   * 
-   * @return double 
+   *
+   * @return double
    */
   Eigen::Vector2d estimated_lambda()
   {
     if(mpc_state_.mpc_u_.size() != 0)
     {
-      double lambda_x = -zmp_vel_.eval().x() / (mpc_state_.Pzk.x() - mpc_state_.initial_zmp_.x() - mpc_state_.get_u(0).x());
-      double lambda_y = -zmp_vel_.eval().y() / (mpc_state_.Pzk.y() - mpc_state_.initial_zmp_.y() - mpc_state_.get_u(0).y());
+      double lambda_x =
+          -zmp_vel_.eval().x() / (mpc_state_.Pzk.x() - mpc_state_.initial_zmp_.x() - mpc_state_.get_u(0).x());
+      double lambda_y =
+          -zmp_vel_.eval().y() / (mpc_state_.Pzk.y() - mpc_state_.initial_zmp_.y() - mpc_state_.get_u(0).y());
 
-      return Eigen::Vector2d{lambda_x,lambda_y};
+      return Eigen::Vector2d{lambda_x, lambda_y};
     }
     return Eigen::Vector2d::Zero();
   }
@@ -291,7 +293,11 @@ protected:
   Eigen::Vector3d computeInSupportFootFlat(const Eigen::Vector3d & t_world);
   Eigen::Vector3d computeVelocityInSupportFoot(const Eigen::Vector3d & v_world);
   sva::ForceVecd measuredContactWrench();
-  void computeExternalContact(const std::string & surfaceName, const sva::ForceVecd & surfaceWrenchW, Eigen::Vector3d & pos, Eigen::Vector3d & force, Eigen::Vector3d & moment);
+  void computeExternalContact(const std::string & surfaceName,
+                              const sva::ForceVecd & surfaceWrenchW,
+                              Eigen::Vector3d & pos,
+                              Eigen::Vector3d & force,
+                              Eigen::Vector3d & moment);
   Eigen::Vector3d computeZMP();
   /**
    * Update the stabilizer task with the ISMPC outputs stored in X_MPC and Y_MPC vectors
@@ -344,13 +350,15 @@ protected:
     datastore().make_call("ismpc_walking::stop_phase", [this]() -> bool { return Stop; });
     datastore().make_call("ismpc_walking::robot_walking", [this]() -> bool { return Robot_Walking; });
     datastore().make_call("ismpc_walking::double_support", [this]() -> bool { return DoubleSupport_state; });
-    datastore().make_call("ismpc_walking::start/stop", [this]() {
-      if(stabilizer_active_ && Stop)
-      {
-        compute_trajectory_once.notify_all();
-      }
-      Stop = !Stop;
-    });
+    datastore().make_call("ismpc_walking::start/stop",
+                          [this]()
+                          {
+                            if(stabilizer_active_ && Stop)
+                            {
+                              compute_trajectory_once.notify_all();
+                            }
+                            Stop = !Stop;
+                          });
     datastore().make_call("ismpc_walking::configure",
                           [this](const ControllerConfiguration & config) { Configure(config); });
     datastore().make_call("ismpc_walking::get_config",
@@ -385,8 +393,7 @@ protected:
     controller_config_.Stab_config_sg_supp.comHeight = h;
     controller_config_.Stab_config_standing.comHeight = h;
     stabilizer_state_ = StabilizerState::None;
-    //mc_rtc::log::info("height t {}",h);
-
+    // mc_rtc::log::info("height t {}",h);
   }
   void torsoPitch(double p)
   {
@@ -394,7 +401,7 @@ protected:
     controller_config_.Stab_config_sg_supp.torsoPitch = p;
     controller_config_.Stab_config_standing.torsoPitch = p;
     stabilizer_state_ = StabilizerState::None;
-    //mc_rtc::log::info("pitch t {}",p);;
+    // mc_rtc::log::info("pitch t {}",p);;
   }
 
   void activate()
@@ -409,7 +416,7 @@ protected:
   }
   void deactivate()
   {
-    if (!Robot_Walking)
+    if(!Robot_Walking)
     {
       stabTask->disable();
       // comTask->weight(0);
@@ -445,7 +452,7 @@ private:
   std::thread WalkingTrajectoryThread;
 
   Eigen::Vector3d dcmTarget = Eigen::Vector3d::Zero();
-  Eigen::Vector3d dcmMeasured= Eigen::Vector3d::Zero();
+  Eigen::Vector3d dcmMeasured = Eigen::Vector3d::Zero();
   Eigen::Vector3d zmpCorr = Eigen::Vector3d::Zero();
   Eigen::Vector3d zmpTarget = Eigen::Vector3d::Zero();
   Eigen::Vector3d admittanceTarget = Eigen::Vector3d::Zero();
@@ -478,11 +485,11 @@ private:
   double y = 0.1;
   double z = 30; // Coordinate for a specified footstep position
 
-  bool active = false; //MPC stabilization on or not
+  bool active = false; // MPC stabilization on or not
   bool UseRealRobot = true; // To use the real robots data
   bool UseMPCState = false;
   bool UseStepRecovery = false;
-  bool IncreaseUpdate = false; //Call the MPC at controller sampling during double support
+  bool IncreaseUpdate = false; // Call the MPC at controller sampling during double support
   bool Stop = true; // If true, the robot is at stop or the robot is about to stop at next step;
   bool Robot_Walking = false; // If false, the robot is not moving;
   std::mutex compute_trajectory_once_mtx;
@@ -495,7 +502,6 @@ private:
   bool Tds_by_ratio = true;
   bool force_contact_safety_ = true;
   bool updateAdmittance = false;
-
 
   double LeftFootRatio = 0.5;
   double maxRatioDelta = 0.2;
@@ -514,7 +520,6 @@ private:
 
   Eigen::Vector3d target_force_ = Eigen::Vector3d::Zero();
   sva::ForceVecd target_wrench_ = sva::ForceVecd::Zero();
-  
 
   double maxStiffTimeThreshold_ = 3; // Time after which hand task gain reach max [s]
   double linearStiffTimeThreshold_ = 1.5; // Time after which hand task gain switch from min to gradually reach max [s]
@@ -537,7 +542,8 @@ private:
   sva::PTransformd X_0_SwingFootInitial = sva::PTransformd::Identity(); // Swing Foot Pose Before Swinging
   sva::PTransformd X_0_SwingFootInitial_real = sva::PTransformd::Identity();
 
-  Eigen::Vector3d SwingFootInitialPose = Eigen::Vector3d::Zero(); // Previous Swing Foot pose at the time of the MPC computation
+  Eigen::Vector3d SwingFootInitialPose =
+      Eigen::Vector3d::Zero(); // Previous Swing Foot pose at the time of the MPC computation
 
   double SwingFootInitialAngle = 0.0;
   double input_tds = 0.25; // Double Step Time duration
@@ -551,13 +557,12 @@ private:
   bool StepRecoveryState = false;
   bool AutoStart = false;
 
-  
   bool Use_w = true;
   Eigen::Vector3d w_ = Eigen::Vector3d::Zero();
   double kappa_ = 1;
   double eta2_cstr;
-  Eigen::Vector3d Ldot_offset = Eigen::Vector3d::Zero(); //offset due to angular momentum
-  Eigen::Vector3d Ldot = Eigen::Vector3d::Zero(); //current angular momentum
+  Eigen::Vector3d Ldot_offset = Eigen::Vector3d::Zero(); // offset due to angular momentum
+  Eigen::Vector3d Ldot = Eigen::Vector3d::Zero(); // current angular momentum
   std::string Tail = "Anticipative"; // Velocity tail, either "Periodic" Or "Truncated"
 
   Eigen::Vector3d SupportFootPose; // Initial  Foot Support at the time of computation
