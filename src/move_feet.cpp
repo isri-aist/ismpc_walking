@@ -149,9 +149,12 @@ bool Walking_controller::MoveFeet(double t)
 
       mc_rtc::log::success("Locked " + swingFootName);
 
-      // if( std::abs( mc_rbdyn::rpyFromMat(realRobot().surfacePose(swingFootName).rotation()).x() -
-      // mc_rbdyn::rpyFromMat(robot().surfacePose(swingFootName).rotation()).x() ) >
-      // controller_config_.safety_roll_error_ )
+      if( (X_0_SwingFootTarget.translation() - robot().surfacePose(swingFootName).translation()).norm() > 0.25 && !StepRecoveryState )
+      {
+        mc_rtc::log::error("Contact occured too far from reference, stoping");
+        Stop = true;
+      }
+      // if( std::abs( mc_rbdyn::rpyFromMat(realRobot().surfacePose(swingFootName).rotation()).x() - mc_rbdyn::rpyFromMat(robot().surfacePose(swingFootName).rotation()).x() ) > controller_config_.safety_roll_error_ )
       // {
       //   mc_rtc::log::error("Robot is about to fall, stoping");
       //   Stop = true;

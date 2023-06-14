@@ -1584,12 +1584,17 @@ bool ISMPC_Solver::GetWalkingParameters(bool stop)
   // Eigen::VectorXd b_steps = Eigen::VectorXd::Zero(2*j_Max_C);
   Eigen::VectorXd b_steps = Eigen::VectorXd::Zero(2);
 
-  Eigen::MatrixXd M_stepsDelta = Eigen::MatrixXd::Zero(2*(j_Max_C-1), N_variable);
-  M_stepsDelta.block(0, 2 * m_C, 2 * (j_Max_C-1), 2 * (j_Max_C-1)) = Eigen::MatrixXd::Identity(2 * (j_Max_C-1), 2 * (j_Max_C -1));
-  
-  
-  Eigen::VectorXd b_stepsDelta = Eigen::VectorXd::Zero(2*(j_Max_C-1));
 
+  Eigen::MatrixXd M_stepsDelta = Eigen::MatrixXd::Zero(0, N_variable);
+  Eigen::VectorXd b_stepsDelta = Eigen::VectorXd::Zero(0);
+  if(j_Max_C > 0)
+  {
+    M_stepsDelta = Eigen::MatrixXd::Zero(2*(j_Max_C-1), N_variable);
+    b_stepsDelta = Eigen::VectorXd::Zero(2*(j_Max_C-1));
+    M_stepsDelta.block(0, 2 * m_C, 2 * (j_Max_C-1), 2 * (j_Max_C-1)) = Eigen::MatrixXd::Identity(2 * (j_Max_C-1), 2 * (j_Max_C -1));
+  } 
+    
+  
   for(int i = 0; i < j_Max_C; i++)
   {
     if(i == 0)
