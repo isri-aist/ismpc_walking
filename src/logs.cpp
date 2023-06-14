@@ -36,6 +36,7 @@ void Walking_controller::AddToLog()
     return 0.;
   });
   logger().addLogEntry("ISMPC_t", [this]() -> const double & { return t; });
+  logger().addLogEntry("ISMPC_tk", [this]() -> const double & { return mpc_state_.t_k; });
   logger().addLogEntry("ISMPC_CoMAccZ", [this]() -> const double & { return comAccZ; });
   logger().addLogEntry("ISMPC_stab-error", [this]() -> const Eigen::Vector2d & { return this->mpc_state_.stab_error; });
   logger().addLogEntry("perf_ISMPC", [this]() -> const double { return this->mpc_thread_process_time; });
@@ -100,7 +101,10 @@ void Walking_controller::AddToLog()
   logger().addLogEntry("ISMPC_perturbation_omega", [this]() -> const double  {
     return sqrt(eta2_cstr);
   });
-  logger().addLogEntry("ISMPC_perturbation_Ldot/mH", [this]() -> const  Eigen::Vector3d & {
+  logger().addLogEntry("ISMPC_perturbation_kappa", [this]() -> const double  {
+    return kappa_;
+  });
+  logger().addLogEntry("ISMPC_perturbation_Ldot/mHw2", [this]() -> const  Eigen::Vector3d & {
     return Ldot_offset;
   });
 
@@ -113,7 +117,7 @@ void Walking_controller::AddToLog()
   logger().addLogEntry("ISMPC_State_DCM", [this]() -> Eigen::Vector3d {
     if(MPC_thread_on)
     {
-      return  (mpc_state_.Pck + mpc_state_.getVck() / eta());
+      return  (mpc_state_.getPuk());
     }
     return Eigen::Vector3d::Zero();
   });

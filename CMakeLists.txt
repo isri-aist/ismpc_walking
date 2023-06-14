@@ -32,5 +32,7 @@ add_subdirectory(src)
 
 set(AROBASE "@")
 configure_file(etc/ismpc_walking.in.yaml "${CMAKE_CURRENT_BINARY_DIR}/etc/ismpc_walking.yaml")
-install(FILES "${CMAKE_CURRENT_BINARY_DIR}/etc/ismpc_walking.yaml" DESTINATION "${MC_CONTROLLER_RUNTIME_INSTALL_PREFIX}/etc")
-
+install_controller_configuration("${CMAKE_CURRENT_BINARY_DIR}/etc/ismpc_walking.yaml")
+foreach(ROBOT hrp4cr hrp4 hrp2_drc hrp5_p rhps1)
+  install_controller_robot_configuration(ismpc_walking etc/robots/${ROBOT}.yaml)
+endforeach()

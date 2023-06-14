@@ -128,6 +128,10 @@ struct MPC_state
   {
     return Vck;
   }
+  Eigen::Vector3d getPuk()
+  {
+    return Pck + Vck/eta;
+  }
 
 
   Eigen::Vector3d get_u(int indx)
@@ -172,6 +176,8 @@ struct MPC_state
   int Index = 0;
 
   Eigen::Vector3d initial_zmp_ = Eigen::Vector3d::Zero();
+  Eigen::Vector3d delayed_zmp_ = Eigen::Vector3d::Zero();
+
 
   double t_k = 0;
   double t;
@@ -185,9 +191,11 @@ struct MPC_state
   std::vector<Eigen::Vector3d> admittance_ref_;
   Eigen::Vector3d Pu = Eigen::Vector3d::Zero();
   Eigen::Vector3d w; // Perturbation
+  double kappa = 1;
   Eigen::VectorXd mpc_u_;
   Eigen::VectorXd mpc_Lc_dot_;
   std::vector<Eigen::Vector3d> QP_zmp;
+  std::vector<Eigen::Vector3d> QP_dcm;
   std::vector<sva::MotionVecd> input_v_;
   double input_eta = 3.5;
   double input_mass = 40;
@@ -199,11 +207,11 @@ struct MPC_state
   std::vector<sva::PTransformd> optimal_steps_; //Outputs steps from the
   std::vector<double> optimal_timesteps_; //Outputs timesteps from the mpc
   std::string input_Support_FootName;
-  Eigen::Vector3d input_P_fm1;
-  Eigen::Vector3d SupportFootPose;
-  sva::PTransformd X_0_SupportFoot;
-  sva::PTransformd X_0_Initial_SwingFoot;
-  
+  sva::PTransformd X_0_SupportFoot = sva::PTransformd::Identity();
+  sva::PTransformd X_0_Initial_SwingFoot = sva::PTransformd::Identity();
+  sva::PTransformd X_0_SwingFoot = sva::PTransformd::Identity();
+  sva::PTransformd X_0_Step_Target = sva::PTransformd::Identity();
+
   double tds = 0.25;
   double input_tds = 0.25;
   double optimal_tds = 0.25;

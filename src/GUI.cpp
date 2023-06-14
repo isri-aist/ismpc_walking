@@ -71,15 +71,6 @@ inline void AddStabilizerConfigToGUI(mc_rtc::gui::StateBuilder & gui,
           "Foot force difference Damping", {"Fx", "Fy", "Fz"},
           [&c_]() -> Eigen::Vector3d { return c_.dfDamping; },
           [&c_](const Eigen::Vector3d & a) { c_.dfDamping = a; }),
-      // mc_rtc::gui::ArrayInput(
-      //     "DCM P gains", {"x", "y"}, [&c_]() -> const Eigen::Vector2d & { return c_.dcmPropGain; },
-      //     [&c_](const Eigen::Vector2d & gains) { c_.dcmPropGain = gains; }),
-      // mc_rtc::gui::ArrayInput(
-      //     "DCM I gains", {"x", "y"}, [&c_]() -> const Eigen::Vector2d & { return c_.dcmIntegralGain; },
-      //     [&c_](const Eigen::Vector2d & gains) { c_.dcmIntegralGain = gains; }),
-      // mc_rtc::gui::ArrayInput(
-      //     "DCM D gains", {"x", "y"}, [&c_]() -> const Eigen::Vector2d & { return c_.dcmDerivGain; },
-      //     [&c_](const Eigen::Vector2d & gains) { c_.dcmDerivGain = gains; }),
       mc_rtc::gui::NumberInput(
           "CoMd Error gain", [&c_]() { return c_.comdErrorGain; }, [&c_](double a) { c_.comdErrorGain = a; }),
       mc_rtc::gui::NumberInput(
@@ -264,7 +255,7 @@ void Walking_controller::addToGUI()
       mc_rtc::gui::ArrayInput(
           "Input Disturbance", [this]() { return w_; }, [this](const Eigen::Vector3d & in) { w_ = in; }),
       mc_rtc::gui::NumberInput(
-          "Input Omega", [this]() -> double { return sqrt(eta2_cstr); }, [this](double w) { eta2_cstr = std::pow(w,2); }),
+          "Input Kappa", [this]() -> double { return kappa_; }, [this](double w) { kappa_ = w; }),
       mc_rtc::gui::Checkbox(
           "Force Contact Safety", [this]() { return force_contact_safety_; },
           [this]() { force_contact_safety_ = !force_contact_safety_; }),
@@ -289,7 +280,9 @@ void Walking_controller::addToGUI()
       mc_rtc::gui::NumberInput(
           "Tds/Ts", [this]() -> double { return controller_config_.Double_Step_Ratio; }, [this](const double t) {  controller_config_.Double_Step_Ratio = t; }),
       mc_rtc::gui::NumberInput(
-          "Steps", [this]() -> int { return N_Steps_Desired; }, [this](const double n) { N_Steps_Desired = static_cast<int>(n); }),
+          "Desired Steps", [this]() -> int { return N_Steps_Desired; }, [this](const double n) { N_Steps_Desired_std = static_cast<int>(n); }),
+      mc_rtc::gui::Label(
+          "Steps Done", [this]() -> int { return N_Steps; }),
 
       mc_rtc::gui::Transform("Steps desired pose",
                            [this]() {
@@ -382,6 +375,18 @@ void Walking_controller::addToGUI()
                                 return mpc_state_.admittance_ref_;
                               }),
 
+      mc_rtc::gui::Trajectory("DCM ref Trajectory", mc_rtc::gui::LineConfig(mc_rtc::gui::Color(0., 1., 1),0.02,mc_rtc::gui::LineStyle::Dotted),
+                              [this]() -> std::vector<Eigen::Vector3d> {                                
+                                std::vector<Eigen::Vector3d> output;
+                                std::vector<Eigen::Vector2d> traj = MPCSolver.dcmRefTrajectory();
+
+                                for (auto & p : traj)
+                                {
+                                  output.push_back(Eigen::Vector3d{p.x(),p.y(),mpc_state_.Pck.z()});
+                                }
+                                return output;
+                              }),
+
       mc_rtc::gui::Trajectory("Predicted CoM Trajectory", mc_rtc::gui::Color(1., 0., 0.),
                               [this]() -> std::vector<Eigen::Vector3d> {
                                 std::vector<Eigen::Vector3d> Output;
@@ -391,6 +396,24 @@ void Walking_controller::addToGUI()
                                                    + Eigen::Vector3d{0, 0, controller_config_.Stab_config.comHeight});
                                 }
                                 return Output;
+                              }),
+
+      mc_rtc::gui::Trajectory("Predicted DCM Trajectory", mc_rtc::gui::Color(0., 1., 0.),
+                              [this]() -> std::vector<Eigen::Vector3d> {
+                                std::vector<Eigen::Vector3d> Output;
+                                for(size_t k = 0; k < mpc_state_.X_MPC.size(); k++)
+                                {
+                                  Output.push_back(mpc_state_.Get_CoM_planarTarget(k) + mpc_state_.Get_CoMVel_planarTarget(k) / mpc_state_.eta
+                                                   + Eigen::Vector3d{0, 0, controller_config_.Stab_config.comHeight});
+                                }
+                                return Output;
+                              }),
+
+      mc_rtc::gui::Trajectory("DCM QP Trajectory", mc_rtc::gui::LineConfig(mc_rtc::gui::Color(0., 1., 0.),0.02,mc_rtc::gui::LineStyle::Dotted),
+                              [this]() -> std::vector<Eigen::Vector3d> {
+                                
+                                std::vector<Eigen::Vector3d> ref_traj = mpc_state_.QP_dcm;                   
+                                return ref_traj;
                               }),
       
 
@@ -420,12 +443,16 @@ void Walking_controller::addToGUI()
                                   mc_rtc::gui::plot::Y(
                                       "u", [this]() { return admittanceTarget.x(); }, mc_rtc::gui::Color::Red),
                                   mc_rtc::gui::plot::Y(
+                                      "mpc zmp ref", [this]() { return mpc_state_.ref_zmp_.x(); }, mc_rtc::gui::Color::Green, mc_rtc::gui::plot::Style::Solid),
+                                  mc_rtc::gui::plot::Y(
                                       "zmp_mes", [this]() { return mpc_state_.getPzk().x(); }, mc_rtc::gui::Color::Blue, mc_rtc::gui::plot::Style::Dashed),
+                                  mc_rtc::gui::plot::Y(
+                                      "dcm_mes", [this]() { return mpc_state_.getPuk().x(); }, mc_rtc::gui::Color::Magenta, mc_rtc::gui::plot::Style::Solid),
                                   mc_rtc::gui::plot::Y(
                                       "zmp modelled", [this]() { return zmpTarget.x(); }, mc_rtc::gui::Color::Blue));
                             }
                             ),
-                    mc_rtc::gui::Button("Stop ZMP (x)", [this]() { gui()->removePlot("DCM-ZMP Tracking (x)"); })
+                    mc_rtc::gui::Button("Stop ZMP (x)", [this]() { gui()->removePlot("ZMP Model Tracking (x)"); })
                   );
       
       gui()->addElement({"Walking","Plots"}, mc_rtc::gui::ElementsStacking::Horizontal,              
@@ -436,15 +463,31 @@ void Walking_controller::addToGUI()
                                   mc_rtc::gui::plot::Y(
                                       "u", [this]() { return admittanceTarget.y(); }, mc_rtc::gui::Color::Red),
                                   mc_rtc::gui::plot::Y(
+                                      "mpc zmp ref", [this]() { return mpc_state_.ref_zmp_.y(); }, mc_rtc::gui::Color::Green, mc_rtc::gui::plot::Style::Solid),
+                                  mc_rtc::gui::plot::Y(
                                       "zmp_mes", [this]() { return mpc_state_.getPzk().y(); }, mc_rtc::gui::Color::Blue, mc_rtc::gui::plot::Style::Dashed),
+                                  mc_rtc::gui::plot::Y(
+                                      "dcm_mes", [this]() { return mpc_state_.getPuk().y(); }, mc_rtc::gui::Color::Magenta, mc_rtc::gui::plot::Style::Solid),
                                   mc_rtc::gui::plot::Y(
                                       "zmp modelled", [this]() { return zmpTarget.y(); }, mc_rtc::gui::Color::Blue));
                             }
                             ),
-                    mc_rtc::gui::Button("Stop ZMP (y)", [this]() { gui()->removePlot("DCM-ZMP Tracking (y)"); })
+                    mc_rtc::gui::Button("Stop ZMP (y)", [this]() { gui()->removePlot("ZMP Model Tracking (y)"); })
                     
                     
                     );
+  constexpr double ARROW_HEAD_DIAM = 0.015;
+  constexpr double ARROW_HEAD_LEN = 0.05;
+  constexpr double ARROW_SHAFT_DIAM = 0.06;
+  constexpr double FORCE_SCALE = 0.0015;
+  mc_rtc::gui::ArrowConfig pendulumArrowConfig;
+  pendulumArrowConfig.color = mc_rtc::gui::Color::Yellow;
+  pendulumArrowConfig.end_point_scale = 0.02;
+  pendulumArrowConfig.head_diam = .1 * ARROW_HEAD_DIAM;
+  pendulumArrowConfig.head_len = .1 * ARROW_HEAD_LEN;
+  pendulumArrowConfig.scale = 1.;
+  pendulumArrowConfig.shaft_diam = .1 * ARROW_SHAFT_DIAM;
+  pendulumArrowConfig.start_point_scale = 0.02;
       gui()->addElement({"Walking","Debug"},
                  mc_rtc::gui::Checkbox("Active",[this]()-> bool {return DebugMode;}, 
                                                 [this](){
@@ -458,8 +501,12 @@ void Walking_controller::addToGUI()
                                             [this](const Eigen::Vector3d & p) {debugCoM = p;}),
                  mc_rtc::gui::Point3D("ZMP",[this]() -> const Eigen::Vector3d & {return debugZMP;},
                                             [this](const Eigen::Vector3d & p) {debugZMP = p;}),
+                 mc_rtc::gui::Arrow("Pendulum",pendulumArrowConfig,[this]() ->Eigen::Vector3d{return debugZMP;},
+                                                                   [this]() ->Eigen::Vector3d{return debugCoM;}),
                  mc_rtc::gui::NumberInput("t_k",[this]() -> const double {return debugTk;},
                                             [this](const double p) {debugTk = p;}),
+                 mc_rtc::gui::Checkbox("Stop",[this]()-> bool {return debugStop;}, 
+                                                [this](){debugStop = !debugStop;}),
                  mc_rtc::gui::Checkbox("Double Support",[this]()-> bool {return debugDblSupp;}, 
                                                 [this](){debugDblSupp = !debugDblSupp;})
       );  
@@ -473,11 +520,13 @@ void Walking_controller::add_ISMPC_Config_GUI()
       {"Walking", "ISMPC Configuration"},
       mc_rtc::gui::Form(
           "Configure", [this](const mc_rtc::Configuration & conf) { reconfigure(conf);},
-          mc_rtc::gui::FormArrayInput("QP Weight (u ; step ; zmp traj ; stab ; Ld)", false,
-                                      [this]() -> std::array<double, 5> {
-                                        return {controller_config_.Beta_u, controller_config_.Beta_step,controller_config_.Beta_traj,controller_config_.Beta_stab, controller_config_.Beta_Ld};
+          mc_rtc::gui::FormArrayInput("QP Weight (zmp_vel ; step ; zmp traj ; stab ; Ld ; dcm ; dcm_vel)", false,
+                                      [this]() -> std::array<double, 7> {
+                                        return {controller_config_.Beta_zmp_vel, controller_config_.Beta_step,controller_config_.Beta_zmp_traj,
+                                                controller_config_.Beta_stab, controller_config_.Beta_Ld, controller_config_.Beta_dcm, controller_config_.Beta_dcm_vel};
                                       }),
-          
+          mc_rtc::gui::FormArrayInput("Beta dcm static (pos , vel)", false, [this]() -> std::array<double,2> { return {controller_config_.Beta_dcm_static,controller_config_.Beta_dcm_vel_static}; }),
+          mc_rtc::gui::FormNumberInput("Beta zmp static (pos)", false, [this]() { return controller_config_.Beta_zmp_traj_static; }),
           mc_rtc::gui::FormNumberInput("Tc", false, [this]() { return controller_config_.Tc; }),
           mc_rtc::gui::FormNumberInput("delta", false, [this]() { return controller_config_.delta; }),
           mc_rtc::gui::FormArrayInput("step kinematics cstr", false,
