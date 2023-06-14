@@ -25,22 +25,22 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm,
       robot().module().defaultLIPMStabilizerConfiguration());
   mc_rbdyn::lipm_stabilizer::StabilizerConfiguration Stabiconfig_dbl_supp(
       robot().module().defaultLIPMStabilizerConfiguration());
-  if(config("stabilizer")("robot").has(robot().name()))
+  if(config.has("stabilizer"))
   {
-    const auto & s_config = config("stabilizer")("robot")(robot().name())("stabilizer");
+    const auto & s_config = config("stabilizer");
 
     Stabiconfig_standing.load(s_config);
     Stabiconfig_sg_supp.load(s_config);
     Stabiconfig_dbl_supp.load(s_config);
 
-    if(config("stabilizer")("robot")(robot().name()).has("stabilizer_sgsupp"))
+    if(config.has("stabilizer_sgsupp"))
     {
-      const auto & s_config_sg = config("stabilizer")("robot")(robot().name())("stabilizer_sgsupp");
+      const auto & s_config_sg = config("stabilizer_sgsupp");
       Stabiconfig_sg_supp.load(s_config_sg);
     }
-    if(config("stabilizer")("robot")(robot().name()).has("stabilizer_dblsupp"))
+    if(config.has("stabilizer_dblsupp"))
     {
-      const auto & s_config_dbl = config("stabilizer")("robot")(robot().name())("stabilizer_dblsupp");
+      const auto & s_config_dbl = config("stabilizer_dblsupp");
       Stabiconfig_dbl_supp.load(s_config_dbl);
     }
   }
@@ -61,7 +61,7 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm,
   Configure(controller_config_);
   Configure(config);
 
-  auto rConfig = config("walking_controller")("robot")(robot().name());
+  auto rConfig = config("walking_controller");
   rConfig("torsoBodyName", torsoBodyName_);
   rConfig("rightFootLink", RightFootLinkName_);
   rConfig("leftFootLink", LeftFootLinkName_);
@@ -922,16 +922,6 @@ void Walking_controller::reset(const mc_control::ControllerResetData & reset_dat
   mc_rbdyn::lipm_stabilizer::StabilizerConfiguration config_stab = controller_config_.Stab_config;
   config_stab.comWeight = 0;
   stabTask->configure(config_stab);
-
-  // if(config()("stabilizer")("robot")(robot().name())("stabilizer").has("external_wrench"))
-  // {
-  //     Eigen::Vector3d ext_wrench_gain_v =
-  //     config()("stabilizer")("robot")(robot().name())("stabilizer")("external_wrench")("ext_wrench_gain");
-  //     sva::MotionVecd ext_wrench_gain{ext_wrench_gain_v, ext_wrench_gain_v};
-  //     stabTask->setExternalWrenches({leftHandName_, rightHandName_}, {sva::ForceVecd::Zero(),
-  //     sva::ForceVecd::Zero()},
-  //                                   {ext_wrench_gain, ext_wrench_gain});
-  // }
 
   SwingFootTask.reset();
   SupportFootTask.reset();
