@@ -1,8 +1,8 @@
 ismpc:
-  lambda: 25
-  zmp_delay: 0.02
+  lambda: 15
+  zmp_delay: 0.025
   u_cstr_square: [0.2,0.13]
-  zmp_cstr_square: [0.2,0.12]
+  zmp_cstr_square: [0.18,0.12]
   zmp_ref_offset: [0.0,0.03]
   offset: [0.0,0.0]
   zmp_cstr_square_static: [0.2,0.1]
@@ -31,8 +31,8 @@ stabilizer:
   admittance:
     df: [0.002,0.001,0.0001]
     cop: [0.01, 0.01]
-    copFzLambda: [20,20,20]
-    copFzDelay: 0.015
+    copFzLambda: [30,30,30]
+    copFzDelay: 0.0
     maxVel:
       angular: [3., 3., 3.]
       linear: [1., 1., 1.]
@@ -84,13 +84,10 @@ stabilizer:
     ext_wrench_gain: [1, 1, 1]
 stabilizer_sgsupp:
   admittance:
-    dfz: 0.0002
-    cop: [0.015, 0.015]
-  tasks:
-    torso:
-      weight: 500
-    pelvis:
-      weight: 500
+    cop: [0.01, 0.01]
+stabilizer_dblsupp:
   admittance:
-    dfz: 0.0001
-    cop: [0.03, 0.03]
+    cop: [0.01, 0.01]
+    df: [0.002,0.001,0.0001]
+    copFzLambda: [15,15,20]
+

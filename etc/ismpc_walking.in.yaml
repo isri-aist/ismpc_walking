@@ -79,27 +79,27 @@ footsteps_planner:
   kinematics_cstr: [0.6,0.08]
   mean_speed: 0.1
   robot_height: 150
-  max_rotation: 0.17
+  max_rotation: 0.1
 
 tasks:
   swingfoot_stiffness: 50
   swingfoot_weight: 1000
-  swingfoot_dimweight: [1.,1.,1.,1.,1.,1.]
-  swingfoot_dimstiffness: [1.,1.,1.,1.,1.,1.]
-
+  momentum_task_weight: 100000
 
 walking_controller:
   auto_start:
     activate: false
-    steps: 10
-    speed: [0,0.0,0]
-    t_steps: 1.1
+    steps: 100
+    speed: [0.25,0.0,0.1]
+    ts: 1.1
+    double_support_ratio: 0.25
+
   min_sg_suport_duration: 0.75
   min_dbl_suport_duration: 0.25
   foot_landing_offset: -3e-3
   max_step_duration: 2
   impact_threshold: 40
-  footstep_height: 0.05
+  footstep_height: 0.08
   wrench_filter_cutoff_T: 2
   gamma_filter_cutoff_T: 0.2
   safety_foot_roll_error: 0.1

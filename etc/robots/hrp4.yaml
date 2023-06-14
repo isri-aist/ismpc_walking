@@ -6,12 +6,12 @@ ismpc:
   zmp_cstr_square_static: [0.2,0.09]
   offset_static: [0.0,0]
   next_stp_cstr_ratio: 1
-  lambda: 35
-  lambda_dbl_supp: 35
-  zmp_delay: 0.01
-  feet_distance: 0.17
+  lambda: 11
+  lambda_dbl_supp: 11
+  zmp_delay: 0.035
+  feet_distance: 0.19
 footsteps_planner:
-  feet_distance: 0.17
+  feet_distance: 0.19
 walking_controller:
   torsoBodyName: "torso"
   leftFootLink: "l_ankle"
@@ -28,22 +28,22 @@ stabilizer:
       deriv: [0., 0.]
       comdError: 0.
   admittance:
-    copFzLambda: [35,35,35]
-    copFzDelay: 0.015
-    df: [0.0001,0.0001,0.00015]
-    cop: [0.02, 0.02]
+    copFzLambda: [40,40,40]
+    copFzDelay: 0.0
+    df: [0.000,0.000,0.00015]
+    cop: [0.01, 0.01]
     maxVel:
       angular: [3., 3., 3.]
       linear: [1., 1., 1.]
   tasks:
     contact:
       constrainCoP: false
-      damping: 300.
+      damping: 150.
     com:
       stiffness: [100.,100.,100.]
       dimWeight: [1 , 1 , 1]
-      weight: 5000.
-      height: 0.76
+      weight: 1000.
+      # height: 0.76
   dcm_bias:
     dcmMeasureErrorStd: 0.001
     biasDriftPerSecondStd: 0.0001
@@ -71,11 +71,12 @@ stabilizer:
     ## gain (not loaded automatically) ##
     ext_wrench_gain: [1, 1, 1]
 stabilizer_sgsupp:
-  tasks:
-    com:
-      weight: 500
   admittance:
-    cop: [0.02, 0.02]
+    cop: [0.015, 0.015]
 stabilizer_dblsupp:
   admittance:
+    copFzLambda: [15,15,15]
+    df: [0.000,0.000,0.00015]
     cop: [0.02, 0.02]
+safety_tresholds:
+  MIN_DS_PRESSURE: 0
