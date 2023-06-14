@@ -1,6 +1,6 @@
 #include "../include/ismpc_walking/FootTrajectory.h"
 
-FootTrajectory::FootTrajectory(){};
+FootTrajectory::FootTrajectory(){}
 
 // std::vector<Eigen::Vector3d> FootTrajectory::TrajGUI(){
 //   int N = 100;
@@ -76,11 +76,9 @@ std::vector<Eigen::Vector3d> FootTrajectory::getSwingFootTrajectory(const sva::P
 
   t -= (t0);
 
-  double tinit = 0;
-
   std::vector<Eigen::Vector3d> Output;
 
-  if(t < 0)
+  if(t <= 0)
   {
     duration = dur;
     prev_dur = dur;
@@ -160,7 +158,7 @@ std::vector<Eigen::Vector3d> FootTrajectory::getSwingFootTrajectory(const sva::P
       New_traj = true;
     }
 
-    if((m_t < duration_Z + delta && m_t > duration_Z) && !Z_up)
+    if(m_t >= duration_Z && !Z_up)
     {
       New_traj = true;
       Z_up = true;
@@ -192,6 +190,11 @@ std::vector<Eigen::Vector3d> FootTrajectory::getSwingFootTrajectory(const sva::P
 
         pitch_f = 0;
       }
+  
+      if(duration < 0.2){std::cout << "WARNING DANGEROUS SWING DURATION" << std::endl;}
+      if(duration_Z < 0.15){std::cout << "WARNING DANGEROUS SWING Z DURATION" << std::endl;}
+      duration = std::max(duration,0.2);
+      duration_Z = std::max(duration_Z,0.15);
 
       std::cout << "change traj, new duration Z: " << duration_Z << std::endl;
 

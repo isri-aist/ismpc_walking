@@ -1,220 +1,13 @@
 #pragma once
 #include <mc_control/api.h>
 #include <mc_control/mc_controller.h>
+#include <pendulum_feasibility_solver/feasibility_solver.h>
 #include "ControllerConfiguration.h"
 #include "MPC_state.h"
+#include "Polygon.h"
 #include "eigen-quadprog/QuadProg.h"
 #include "eigen-quadprog/eigen_quadprog_api.h"
-#include <Eigen/StdVector>
-#include <eigen3/Eigen/Dense>
 #include <thread>
-
-struct Rectangle
-{
-
-public:
-  Rectangle(double ori, const Eigen::Vector2d & size, const Eigen::Vector3d & offset = Eigen::Vector3d::Zero())
-  {
-    _center = offset;
-    _angle = ori;
-    _size.segment(0, 2) = size;
-    compute_rect();
-  }
-
-  Rectangle(const sva::PTransformd & pose,
-            const Eigen::Vector2d & size,
-            const Eigen::Vector3d & offset = Eigen::Vector3d::Zero())
-  {
-    _center = pose.translation() + offset;
-    _center.z() = 0;
-    _angle = mc_rbdyn::rpyFromMat(pose.rotation()).z();
-    _size.segment(0, 2) = size;
-    compute_rect();
-  }
-
-  Rectangle(const Eigen::Vector3d & center,
-            const Eigen::Vector2d & size,
-            const Eigen::Vector3d & offset = Eigen::Vector3d::Zero())
-  {
-    _center = center + offset;
-    _angle = _center.z();
-    _size.segment(0, 2) = size;
-    _center.z() = 0;
-    compute_rect();
-  }
-  void compute_rect()
-  {
-
-    R << cos(_angle), -sin(_angle), 0, sin(_angle), cos(_angle), 0, 0, 0, 1;
-
-    upper_left_corner = _center + R * Eigen::Vector3d{-_size.x() / 2, _size.y() / 2, 0};
-    upper_right_corner = _center + R * Eigen::Vector3d{_size.x() / 2, _size.y() / 2, 0};
-    lower_left_corner = _center + R * Eigen::Vector3d{-_size.x() / 2, -_size.y() / 2, 0};
-    lower_right_corner = _center + R * Eigen::Vector3d{_size.x() / 2, -_size.y() / 2, 0};
-    corners = {upper_left_corner, upper_right_corner, lower_right_corner, lower_left_corner};
-  }
-  void add_offset(const Eigen::Vector3d offset)
-  {
-    _center += Eigen::Vector3d{offset.x(), offset.y(), 0};
-    compute_rect();
-  }
-  ~Rectangle() = default;
-
-  std::vector<Eigen::Vector3d> & Get_corners()
-  {
-    return corners;
-    // return {upper_left_corner,lower_left_corner,lower_right_corner,upper_right_corner};
-  }
-  const Eigen::Vector3d & Up_Left_corner() const noexcept
-  {
-    return upper_left_corner;
-  }
-  const Eigen::Vector3d & Up_Right_corner() const noexcept
-  {
-    return upper_right_corner;
-  }
-  const Eigen::Vector3d & Dwn_Right_corner() const noexcept
-  {
-    return lower_right_corner;
-  }
-  const Eigen::Vector3d & Dwn_Left_corner() const noexcept
-  {
-    return lower_left_corner;
-  }
-
-  double get_yaw()
-  {
-    return _angle;
-  }
-  Eigen::Vector3d get_center()
-  {
-    return _center;
-  }
-
-private:
-  Eigen::Vector3d _center;
-  Eigen::Vector3d _size;
-  double _angle;
-  Eigen::Matrix3d R;
-  Eigen::Vector3d upper_left_corner;
-  Eigen::Vector3d upper_right_corner;
-  Eigen::Vector3d lower_left_corner;
-  Eigen::Vector3d lower_right_corner;
-  std::vector<Eigen::Vector3d> corners;
-};
-
-struct vec3d_x_comp
-{
-  inline bool operator()(const Eigen::Vector3d & struct1, const Eigen::Vector3d & struct2)
-  {
-    return (struct1.x() < struct2.x());
-  }
-};
-
-struct SupportPolygon
-{
-
-public:
-  SupportPolygon(const Rectangle Rect1, const Rectangle Rect2)
-  {
-    _Rectangles = {Rect1, Rect2};
-    Compute_polygone();
-  }
-  SupportPolygon(const Rectangle Rect1)
-  {
-    _Rectangles = {Rect1};
-    Compute_polygone();
-  }
-
-  ~SupportPolygon()
-  {
-    _Rectangles.clear();
-    _corners.clear();
-    SupportPolygone_Corners.clear();
-  }
-
-  void jarvis_march();
-  void convex_hull();
-
-  std::vector<Eigen::Vector3d> & Get_Polygone_Corners()
-  {
-    return SupportPolygone_Corners;
-  }
-
-  const Eigen::MatrixX2d & normals()
-  {
-    return SupportPolygone_Normals;
-  }
-
-  const Eigen::VectorXd & offsets()
-  {
-    return Offset;
-  }
-
-  Rectangle & get_Rectangle(int indx)
-  {
-    if(indx < _Rectangles.size() - 1)
-    {
-      return _Rectangles[indx];
-    }
-    else
-    {
-      return _Rectangles[0];
-    }
-  }
-
-private:
-  void Compute_polygone()
-  {
-
-    if(_Rectangles.size() > 1)
-    {
-      // for (int r = 0 ; r < _Rectangles.size() ; r++)
-      // {
-      //     std::vector<Eigen::Vector3d> corners = _Rectangles[r].Get_corners();
-      //     _corners.insert(_corners.end(),corners.begin(),corners.end());
-      // }
-      // jarvis_march();
-      convex_hull();
-    }
-    else
-    {
-      SupportPolygone_Corners = _Rectangles[0].Get_corners();
-    }
-    SupportPolygone_Normals.resize(SupportPolygone_Corners.size(), 2);
-    SupportPolygone_Edges_Center.resize(SupportPolygone_Corners.size(), 2);
-    SupportPolygone_Vertices.resize(SupportPolygone_Corners.size(), 2);
-    Offset.resize(SupportPolygone_Corners.size());
-    Eigen::Matrix2d R_Vertices_0;
-
-    for(int c = 0; c < SupportPolygone_Corners.size(); c++)
-    {
-      const Eigen::Vector3d & point_1 = SupportPolygone_Corners[c];
-      const Eigen::Vector3d & point_2 = SupportPolygone_Corners[(c + 1) % SupportPolygone_Corners.size()];
-      const Eigen::Vector3d vertice = (point_2 - point_1).normalized();
-      const Eigen::Vector3d normal = vertical_vec.cross(vertice);
-      SupportPolygone_Normals(c, 0) = normal.x();
-      SupportPolygone_Normals(c, 1) = normal.y();
-      SupportPolygone_Vertices(c, 0) = vertice.x();
-      SupportPolygone_Vertices(c, 1) = vertice.y();
-      SupportPolygone_Edges_Center(c, 0) = (((point_2 + point_1) / 2)).x();
-      SupportPolygone_Edges_Center(c, 1) = (((point_2 + point_1) / 2)).y();
-
-      R_Vertices_0 << SupportPolygone_Normals(c, 0), SupportPolygone_Vertices(c, 0), SupportPolygone_Normals(c, 1),
-          SupportPolygone_Vertices(c, 1);
-
-      Offset(c) = (R_Vertices_0.transpose() * SupportPolygone_Edges_Center.block(c, 0, 1, 2).transpose())(0);
-    }
-  }
-  Eigen::Vector3d vertical_vec = Eigen::Vector3d{0, 0, 1};
-  std::vector<Rectangle> _Rectangles;
-  std::vector<Eigen::Vector3d> _corners;
-  std::vector<Eigen::Vector3d> SupportPolygone_Corners;
-  Eigen::MatrixX2d SupportPolygone_Vertices;
-  Eigen::MatrixX2d SupportPolygone_Edges_Center;
-  Eigen::MatrixX2d SupportPolygone_Normals;
-  Eigen::VectorXd Offset;
-};
 
 class ISMPC_Solver
 {
@@ -242,8 +35,6 @@ public:
   void Init(double delta_controller, double delta, double Tp, double Tc, double Beta);
 
   void init_MPC(const MPC_state & mpc_state,
-                const std::vector<sva::PTransformd> & steps,
-                const std::vector<double> & timesstp,
                 std::string Tail,
                 int Steps_Desired,
                 int Step);
@@ -267,11 +58,8 @@ public:
 
   /**
    * Compute the CoM, CoMd, ZMP trajectory for previously set Walking parameters
-   * @tparam PrevStepTime, previous footsteps timing
-   * @tparam t_k, time of the computation
-   * @tparam Tds,  double support duration
    */
-  void GetWalkingParameters(double t_k, double Tds, bool stop);
+  bool GetWalkingParameters(bool stop);
 
   /**
    * @brief Set The constraints region for the ZMP (during each delta time) and the footsteps in the robot frame
@@ -332,6 +120,16 @@ public:
     return corr_steps_;
   }
 
+  const std::vector<double> timesteps()
+  {
+    return m_timestamp;
+  }
+
+  double Tds()
+  {
+    return m_Tds;
+  }
+
   /**
    * Returns the computed trajectory, each vector3d in the vector contains the CoM , CoMd and ZMP value for a time step
    */
@@ -352,7 +150,7 @@ public:
    */
   const Eigen::Vector3d & Puk_min()
   {
-    return P_u_k_min; //+ R_0_support * Offset;
+    return P_u_k_min;
   }
 
   /**
@@ -360,7 +158,7 @@ public:
    */
   const Eigen::Vector3d & Puk_max() const noexcept
   {
-    return P_u_k_max; //+ R_0_support * Offset;
+    return P_u_k_max; 
   }
 
   const Eigen::Matrix3d & Support_ori() const noexcept
@@ -373,9 +171,17 @@ public:
     return w_k;
   }
 
-  void Disturbance(const Eigen::Vector3d w) noexcept
+  void Disturbance(const Eigen::Vector3d w, const double kappa = 1,const double d = 1e3) noexcept
   {
-    w_k = w;
+    w_k  = w;
+    m_kappa = kappa;
+    Compute_Integration_Matrix(m_eta);
+    perturbation_duration = d;
+  }
+
+  double eta()
+  {
+    return m_eta;
   }
 
   /**
@@ -383,12 +189,37 @@ public:
    */
   const Eigen::Vector3d & Puk() const noexcept
   {
-    return P_u_k; //+ Offset;
+    return P_u_k; 
   }
 
-  double stability_error() const noexcept
+  const Eigen::Vector3d & Uk()
+  {
+    return U_k;
+  }
+
+  const Eigen::Vector2d & stability_error() const noexcept
   {
     return stab_error;
+  }
+
+  const std::vector<Eigen::Vector3d> QP_zmp()
+  {
+    std::vector<Eigen::Vector3d> out;
+    for (Eigen::Index i = 0 ; i < m_QP_zmp.size()/2 ; i++)
+    {
+      out.push_back(P_z_k_delayed + Eigen::Vector3d{m_QP_zmp(2*i),m_QP_zmp(2*i + 1) , 0});
+    }
+    return out;
+  }
+
+  const std::vector<Eigen::Vector3d> QP_dcm()
+  {
+    std::vector<Eigen::Vector3d> out;
+    for (Eigen::Index i = 0 ; i < m_QP_dcm.size()/2 ; i++)
+    {
+      out.push_back(Eigen::Vector3d{m_QP_dcm(2*i),m_QP_dcm(2*i + 1) , CoM_height});
+    }
+    return out;
   }
 
   /**
@@ -396,32 +227,106 @@ public:
    */
   void Puk(Eigen::Vector3d puk)
   {
-    P_u_k = puk - Offset;
+    P_u_k = puk ;
     P_u_k.z() = 0;
   }
 
   const Eigen::VectorXd & GetAfterTc_ZMP_trajectory()
   {
-    // int Size = (int) AfterTc_ZMP_trajectory.size()/2;
-    // Eigen::VectorXd Output =AfterTc_ZMP_trajectory;
-    // for(int i = 0; i < Size ; i++){
-    //     Output(i) += Offset.x();
-    //     Output(i + Size) += Offset.y();
-    // }
     return AfterTc_ZMP_trajectory;
+  }
+
+  const std::vector<Eigen::Vector2d> & dcmRefTrajectory()
+  {
+    return dcm_ref_traj;
   }
 
   const Eigen::VectorXd & ZMP_vel() const noexcept
   {
-    return m_ZMP_vel;
+    return m_ZMP_u;
+  }
+
+  const Eigen::VectorXd & Lc_dot()
+  {
+    return m_Ldot_c;
+  }
+
+  const Eigen::Vector3d & Initial_ZMP() const noexcept
+  {
+    return P_z_k;
+  }
+
+  const Eigen::Vector3d & Delayed_ZMP() const noexcept
+  {
+    return P_z_k_delayed;
+  }
+
+
+  double get_lambda()
+  {
+    return m_lambda;
+  }
+
+  double support_state()
+  {
+    return m_support_state;
+  }
+
+  Eigen::Vector3d zmp_ref() 
+  {
+    return m_ref_zmp;
+  }
+
+  void set_lambda(const double in)
+  {
+    m_lambda = in;
+  }
+
+  double zmp_delay()
+  {
+    return m_delay;
+  }
+
+  void zmp_delay(const double t)
+  {
+    m_delay = std::max(0.,std::min(m_delta,t));
+  }
+
+  std::vector<Eigen::Vector3d> feasibility_region()
+  {
+    if(m_stop)
+    {
+      return m_feasibility_standing_region.Get_Polygone_Corners();
+    }
+    else
+    {
+      if(m_feasibility_region.size() != 0)
+      {
+        return m_feasibility_region;
+      }
+      Eigen::Vector3d p0 =  Puk_min();
+      Eigen::Vector3d p2 =  Puk_max();
+      Eigen::Vector3d p1 =
+          p0 + R_support_0 * Eigen::Vector3d{ (R_0_support * (Puk_max() - Puk_min())).x(), 0, 0};
+      Eigen::Vector3d p3 =
+          p0 + R_support_0 * Eigen::Vector3d{ 0, (R_0_support * (Puk_max() - Puk_min())).y(), 0};
+      return {p0, p1, p2, p3};
+    }
+  } 
+
+  const SupportPolygon & feasibility_region_switched()
+  {
+    return m_feasibility_standing_region_swing;
+  }
+
+  SupportPolygon & standing_feasibility_polygone()
+  {
+    return m_feasibility_standing_region;
   }
 
   const std::vector<Eigen::Vector3d> & get_polynome_support()
   {
-    // std::vector<Eigen::Vector3d> Output;
-    // for (int k = 0; k < SuppPolyCorners.size() ; k++){
-    //     Output.push_back(SuppPolyCorners[k] + Offset);
-    // }
+
     return SuppPolyCorners;
   }
 
@@ -435,44 +340,56 @@ public:
   std::vector<Eigen::Vector3d> zmp_ref_traj()
   {
     std::vector<Eigen::Vector3d> Output;
-    int n = (int)(b_zmp_traj.size() / 2);
+    int n = static_cast<int>(b_zmp_traj.size() / 2);
     for(int i = 0; i < n; i++)
     {
-      Output.push_back(Eigen::Vector3d{b_zmp_traj(2 * i), b_zmp_traj(2 * i + 1), 0} + P_z_k + Offset);
+      Output.push_back(Eigen::Vector3d{b_zmp_traj(2 * i), b_zmp_traj(2 * i + 1), 0} + P_z_k_delayed);
     }
     return Output;
   }
+  const std::vector<Eigen::Vector3d> & admittance_references()
+  {
+    return m_admittance_targets;
+  }
 
   bool AutoFootstepPlacement = false;
+  bool UsePendulumSolver = false;
+  bool UseAngularMomentumDot = false;
 
   std::vector<std::vector<Eigen::Vector3d>> All_poly;
 
   const std::vector<std::vector<Eigen::Vector3d>> & get_allpolys()
   {
-    // std::vector<std::vector<Eigen::Vector3d>> Output;
-    // for (int k = 0; k < All_poly.size() ; k++){
-    //     std::vector<Eigen::Vector3d> poly;
-    //     for (int i = 0 ; i < All_poly[k].size() ; i++)
-    //     {
-    //         poly.push_back(All_poly[k][i] + Offset);
-    //     }
-    //     Output.push_back(poly);
-    // }
+
     return All_poly;
   }
+
+
+
+  bool stop()
+  {
+    return m_stop;
+  }
+  bool ComputeTrajectory = true;
 
 private:
   /**
    * ZMP Trajectory constraints :
    * QP is build such as the output vector contains :
-   * -The ZMP velocities in x and y (world frame) ordered by timesteps then x then y
+   * -The ZMP reference in x and y (world frame) ordered by timesteps then x then y
    * -The Optimized Footstep (if computed) in x and y ordered by timesteps then x then y
    * -The inequality constraints are set in the constraints matrix such as the first part represent the zmp position
    * constraints and then the Footsteps position constraints
    */
   void ZMP_Constraints();
 
+  void ZMP_Transition_Constraint(Eigen::MatrixXd & A_out,Eigen::VectorXd & b_out,SupportPolygon PolySS);
+
   void Static_ZMP_Constraints();
+
+  void Compute_Stability_Range();
+
+  void Compute_Standing_Stability_Range();
 
   void FootSteps_Constraints();
 
@@ -481,12 +398,69 @@ private:
    */
   void Stability_Constraints();
 
-  void Compute_Stability_Range();
+  /**
+   * @brief 
+   *  Compute the stability condition such as x_u_star = A * x + b 
+   * 
+   * @param A_out 
+   * @param b_out 
+   * @param eta 
+   * @param indx_start 
+   */
+  void Stability_Condition(Eigen::MatrixXd & A_out, Eigen::VectorXd & b_out,const double eta,const int indx_start,const Eigen::Vector2d w);
+
+
+  void create_cstr_matrices(Eigen::MatrixXd & A_out, Eigen::VectorXd & b_out, std::vector<SupportPolygon> & A_in, const std::vector<Eigen::VectorXd> & b_in);
+
+  void create_cstr_matrices(Eigen::MatrixXd & A_out, Eigen::VectorXd & b_out, std::vector<Eigen::MatrixX2d> & A_in, const std::vector<Eigen::VectorXd> & b_in);
+  
+  /**
+   * @brief Compute the dcm after the delayed reference have been applied
+   * 
+   * @return Eigen::Vector2d 
+   */
+  Eigen::Vector2d compute_dcm_delay();
+
+  /**
+   * @brief Compute A and b such as for tj = j * m_delta ; dcm_j = A * x + b
+   * where x the decision variables
+   * 
+   * @param A_out 
+   * @param b_out 
+   * @param dcm_delay 
+   * @param indx 
+   */
+  void compute_dcm(Eigen::MatrixXd & A_out, Eigen::Vector2d & b_out, const Eigen::Vector2d & dcm_delay, const int indx);
+
+  /**
+   * @brief Create a dcm cost function such as 
+   * dcm = M_dcm * x + b_dcm
+   * and generate the ref traj vector such as 
+   * dcm_traj = M_traj * x + b_traj
+   *  
+   * where x is the decision variables
+   * 
+   * @param M_dcm Matrix to compute dcm
+   * @param b_dcm Vector to compute dcm
+   * @param M_traj_dcm Matrix to compute dcm ref traj
+   * @param b_traj_dcm Vector to compute dcm ref traj
+   * @param M_traj_zmp Matrix to compute zmp ref traj
+   * @param b_traj_zmp Vector to compute zmp ref traj
+   */
+  void create_dcm_cost_function(Eigen::MatrixXd & M_dcm, Eigen::VectorXd & b_dcm, Eigen::MatrixXd & M_traj_dcm ,Eigen::VectorXd & b_traj_dcm,Eigen::MatrixXd & M_traj_zmp ,Eigen::VectorXd & b_traj_zmp);
+
+
+  Eigen::MatrixXd create_zmp_matrix(bool addDelay  );
+  Eigen::MatrixXd create_u_matrix();
+
+  void Compute_Integration_Matrix(const double eta);
 
   /**
    * Integrate The ZMP velocity to compute the CoM, CoMd and ZMP trajectory
    */
-  void IntegrateZMPVel();
+  void Integrate();
+
+  void Compute_Integration_Vector(const double eta,const Eigen::Vector2d & zmp0,const Eigen::Vector2d & zmpref, const double t0,const double tk);
 
   /**
    * Generate a ZMP trajectory that is the middle point of the zmp square constraints between the preview and control
@@ -496,27 +470,36 @@ private:
 
   Eigen::VectorXd solveQP();
 
-  Eigen::Vector3d P_z_k; // Initial ZMP position
-  Eigen::Vector3d P_c_k; // Initial CoM Position
-  Eigen::Vector3d V_c_k; // Initial CoM Velocity
-  Eigen::Vector3d P_u_k; // Initial Unstable Component/DCM
-  Eigen::Vector3d m_Pfm1; // Swing Foot Pose Before Swinging orientation in z
-  Eigen::Vector3d w_k; // Perturbance
+  Eigen::Vector3d P_z_k = Eigen::Vector3d::Zero(); // Initial ZMP position
+  Eigen::Vector3d P_z_k_delayed = Eigen::Vector3d::Zero(); //ZMP pose after input U_k during input delay
+  Eigen::Vector3d P_c_k = Eigen::Vector3d::Zero(); // Initial CoM Position
+  Eigen::Vector3d V_c_k = Eigen::Vector3d::Zero(); // Initial CoM Velocity
+  Eigen::Vector3d P_u_k = Eigen::Vector3d::Zero(); // Initial Unstable Component/DCM
+  Eigen::Vector3d U_k = Eigen::Vector3d::Zero(); //Current admittance acting on the pendulum (z_0 + u_0)
+  Eigen::Vector3d w_k = Eigen::Vector3d::Zero(); // Perturbance
+  double m_kappa = 1;
+  Eigen::Vector3d Lc_k = Eigen::Vector3d::Zero(); //Initial Angular Momemtum
+  double perturbation_duration = 0;
 
-  Eigen::Vector3d Offset; // Offset added to coordinated such as trajectory are computed using the support foot as origin
 
   Eigen::Matrix3d R_support_0 = Eigen::Matrix3d::Identity();
   Eigen::Matrix3d R_0_support = Eigen::Matrix3d::Identity();
-  Eigen::VectorXd m_ZMP_vel; // Computed ZMP velocity in world frame
+  Eigen::VectorXd m_ZMP_u = Eigen::VectorXd::Zero(0); // Computed ZMP velocity in world frame
+  Eigen::VectorXd m_Ldot_c = Eigen::VectorXd::Zero(0); // Computed Centroidal AngularMomemtum dot in world frame ori
   std::vector<double> m_timestamp; // Step TimesStamp Computed at the footStep Generation
+  double NextOptimalTs = 10;
 
-  sva::PTransformd X_0_support_foot;
-  sva::PTransformd X_0_swing_foot_initial;
+
+  sva::PTransformd X_0_support_foot = sva::PTransformd::Identity();
+  sva::PTransformd X_0_swing_foot_initial = sva::PTransformd::Identity();
+  sva::PTransformd X_0_swing_foot = sva::PTransformd::Identity();
+  sva::PTransformd X_0_swing_foot_target = sva::PTransformd::Identity();
+
   std::vector<sva::PTransformd> input_steps_;
   std::vector<sva::PTransformd> corr_steps_;
 
-  Eigen::Vector3d P_u_k_min; // Min initial DCM coordinates in support Foot Frame
-  Eigen::Vector3d P_u_k_max; // Max initial DCM coordinates in support Foot Frame
+  Eigen::Vector3d P_u_k_min = Eigen::Vector3d::Zero(); // Min initial DCM coordinates in support Foot Frame
+  Eigen::Vector3d P_u_k_max = Eigen::Vector3d::Zero(); // Max initial DCM coordinates in support Foot Frame
 
   Eigen::VectorXd QP_Output;
 
@@ -530,10 +513,17 @@ private:
   int N_Steps = 0;
 
   bool QPsuccess = false;
-  double stab_error = 0.;
+  bool m_feas_res = false;
+  Eigen::Vector2d stab_error = Eigen::Vector2d::Zero();
+  Eigen::VectorXd m_QP_zmp;
+  Eigen::VectorXd m_QP_dcm;
+  std::vector<Eigen::Vector3d> m_admittance_targets;
   bool Use_Stability_Task = false;
   bool Allow_None = true;
   bool InStabilityRange = false;
+  bool DoubleSupport = true;
+  bool m_stop = true;
+
 
   /**
    *Only during the first double support phase : If enabled, the admissible region is a sliding square,
@@ -541,39 +531,71 @@ private:
    */
   bool Slide_ZMP_region = false;
 
-  double m_eta; // Prendulum frequency
+  double m_eta = 1; // Prendulum frequency
+  double m_eta_free = 1; // Prendulum frequency disturbance free
+  double m_mass = 40.;
   double CoM_height = 0.78;
   double g = 9.8; // Gravity acceleration
-  double m_tk;
-  double m_Tc;
-  double m_Tp; // Control & Preview horizon time
-  double m_Tds; // Double Support Duration
+  double m_tk = 0; //Represent the initial time in the MPC horizon
+  double m_t_global = 0; //Global time of the control scheme
+  double m_Tc = 2;
+  double m_Tp = 5; // Control & Preview horizon time
+  double m_Tds = 0.24; // Double Support Duration
+  double m_input_Tds = 0;
   int Tds_offset = 0;
-  double m_Dstep_ratio; // T_DoubleStep/T_Step
-  double m_delta; // t_k - t_k-1
-  double m_delta_control; // Controller timestep
-  double m_dx;
-  double m_dy; // ZMP square size at one timestep
-  double m_dx_sg_s;
-  double m_dy_sg_s; // ZMP square size at one timestep in single support;
-  Eigen::Vector2d rect_pose_offset; // cstr zone offset in the foot frame for y axis, positive offset is an offset
+  double m_Dstep_ratio = 0.3; // T_DoubleStep/T_Step
+  double m_delta = 0.05; // t_k - t_k-1
+  double m_delta_control = 0.005; // Controller timestep
+  double N_integration = 1;
+  double m_dx_static = 0.1;
+  double m_dy_static = 0.1;
+  double m_dx = 0.1;
+  double m_dy = 0.1; // ZMP square size at one timestep
+  double m_dx_u = 0.1;
+  double m_dy_u = 0.1; // ZMP square size at one timestep
+  double m_foot_max_vel = 2.;
+  Eigen::Vector2d m_ts_range{0.6,2};
+  Eigen::Vector2d m_tds_range{0.2,1.5};
+  Eigen::Vector2d m_tss_range{0.4,1.5};
+
+  Eigen::Vector2d rect_pose_offset = Eigen::Vector2d::Zero(); // cstr zone offset in the foot frame for y axis, positive offset is an offset
                                     // toward the other feet;
-  Eigen::Vector2d rect_pose_offset_sg_supp; // ss cstr zone offset in the foot frame for y axis, positive offset is an
-                                            // offset toward the other feet;
-  Eigen::Vector2d zmp_ref_offset;          
+  Eigen::Vector2d rect_pose_offset_static = Eigen::Vector2d::Zero(); // cstr zone offset in the foot frame for y axis, positive offset is an offset
+                                    // toward the other feet;
+
+  Eigen::Vector2d zmp_ref_offset = Eigen::Vector2d::Zero();   
+  Eigen::Vector2d zmp_ref_offset_end_step = Eigen::Vector2d::Zero(); //adds to the zmp_ref_offset and applied in sg supp, x sign depends on step target 
+  Eigen::Vector2d zmp_ref_offset_start_step = Eigen::Vector2d::Zero(); //adds to the zmp_ref_offset and applied in sg supp, x sign depends on step target          
   
   double zmp_cstr_next_stp_ratio = 2;
-  double m_dx_f;
-  double m_dy_f; // Step kinematic admissible Region
-  double m_dx_f_rect;
-  double m_dy_f_rect; // Step admissible region
-  double m_Beta = 1e1;
+  double m_dx_f = 0.1;
+  double m_dy_f = 0.1; // Step kinematic admissible Region
+  double m_dx_f_rect = 0.1;
+  double m_dy_f_rect = 0.1; // Step admissible region
+  double m_Ld_max = 10;
+  double m_Beta_zmp_vel = 1;
+  double m_Beta_step = 1e1;
   double m_Beta_stab = 1e5;
-  double m_Beta_traj = 0.;
-  int j_Max_C = 0; // Number of footsteps in the Control Horizon
-  int j_f; // Index of the actual support foot
-  int j_fm1; // Index of the previous support foot
+  double m_Beta_zmp_traj = 0.;
+  double m_Beta_zmp_traj_stop = 0;
+  double m_Beta_Lc = 1e-2;
+  double m_Beta_dcm = 1e2;
+  double m_Beta_dcm_stop =1000;
+  double m_Beta_dcm_vel = 0;
+  double m_Beta_dcm_vel_stop =1000;
+  double m_lambda = 100;
+  double m_delay = 0; //delay ( < m_delta ) during which zmp is under previous input Uk
+  double m_delay_elapsed = 0; //Between 0 and m_delay represent the remaining time the delay must be applied
+  double m_t_delay = 0; // represent when the delay has been applied
+  double m_t_lift = 0; //time when the foot contact has been released
 
+  double m_feet_distance = 0.2; 
+  std::string m_support_foot = "LeftFoot";
+  int j_Max_C = 0; // Number of footsteps in the Control Horizon
+  int j_f = 0; // Index of the actual support foot
+  int j_fm1 = 0; // Index of the previous support foot
+  double m_support_state = 0;
+  Eigen::Vector3d m_ref_zmp = Eigen::Vector3d::Zero(); //first ref zmp in the horizon
   int kfoot = 0;
 
   std::string m_Tail; // Velocity Tailing desired
@@ -588,9 +610,16 @@ private:
   Eigen::MatrixXd M_zmp_traj;
   Eigen::VectorXd b_zmp_traj;
 
+  std::vector<Eigen::Vector2d> dcm_ref_traj;
+
   // CoM,CoMd,ZMP Integration
-  Eigen::Matrix3d Integration_Mat;
-  Eigen::Vector3d Integration_Vec;
+  Eigen::Matrix2d Integration_Mat;
+  Eigen::Vector2d Integration_Vec_x;
+  Eigen::Vector2d Integration_Vec_y;
+
+  //Pendulum dynamic to integrate state : \dot{s} = A * s + B * U 
+  Eigen::Matrix3d m_dynamic_matrix_A;
+  Eigen::MatrixXd m_dynamic_matrix_B;
 
   Eigen::VectorXd Pzk_Offset; // Vector that represent the intial position of the ZMP
   Eigen::MatrixXd C; // Temporary matrix to compute ZMP constraints with footsteps placements
@@ -599,20 +628,32 @@ private:
   int m_C; // Number of indexs in the Control time length Tc = m_C * m_delta
   int m_P; // Number of indexs in the Preview time length Tp = m_P * m_delta
   int m_D; // Number of Iteration on the double steps period
-  int count_Dstep; // Number bounded between 1 and m_D describing the position of the zone during the doubleStep timing
+  double count_Dstep; // Number bounded between 1 and m_D describing the position of the zone during the doubleStep timing
 
   std::vector<SupportPolygon> zmp_cstr_polygons;
+
+  SupportPolygon m_double_support_polygon;
+  SupportPolygon m_feasibility_standing_region;
+
+  std::vector<Eigen::Vector3d> m_feasibility_region;
+
+  SupportPolygon m_feasibility_standing_region_swing; //standing feasibility region if support foot is switched
 
   std::vector<Eigen::Vector3d> SuppPolyCorners;
 
   Eigen::MatrixXd Aineq_zmp; // Inequality ZMP Matrix
   Eigen::VectorXd bineq_zmp; // Inequality ZMP Vector
 
+  Eigen::MatrixXd Aineq_Ld; // Inequality ZMP Matrix
+  Eigen::VectorXd bineq_Ld; // Inequality ZMP Vector
+
   Eigen::MatrixXd A_stab; // Equality stability cstr matrix
   Eigen::VectorXd b_stab; // Equality stability cstr vector
 
   Eigen::MatrixXd Aineq_steps; // Inequality Steps Matrix
   Eigen::VectorXd bineq_steps; // Inequality Steps Vector
+
+  Eigen::MatrixXd A_zmp; // Matrix that computes the zmp from the QP output;
 
   // QP Problem
   Eigen::QuadProgDense QP;
@@ -627,4 +668,6 @@ private:
 
   Eigen::MatrixXd Aineq; // Inequality Matrix
   Eigen::VectorXd bineq; // Inequality Vector
+
+  feasibility_solver m_feasibilitySolver;
 };

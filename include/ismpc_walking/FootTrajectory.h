@@ -36,11 +36,6 @@ public:
     z_offset = z;
   }
 
-  void set_Z_ContactOffset(double z)
-  {
-    Z_contact_offset = z;
-  }
-
   void Update_Traj()
   {
     New_traj = true;

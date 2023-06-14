@@ -5,27 +5,33 @@ struct ControllerConfiguration
 {
   double SwingFootWeight = 5000;
   double SwingFootStiffness = 300;
-  double CoM_Stiff = 100;
-  double CoM_Weight = 1000;
-  Eigen::Vector2d Std_Admittance = {1e-2, 1e-2};
-  Eigen::Vector2d Impact_Admittance = {1e-2, 1e-2};
 
   double Controller_timestep = 5e-3;
 
-  Eigen::Vector3d CoMWeight_Dim{1, 1, 1};
-  Eigen::Vector6d SwingFootWeight_Dim = Eigen::Vector6d::Ones();
-  Eigen::Vector6d SwingFootStiffness_Dim = Eigen::Vector6d::Ones();
+  double momentumTaskWeight = 10000;
 
-  double Ts_max = 2;
-  double T_ds_min = 0.25;
-  double T_ss_min = 0.75;
-  double Ts_min = T_ds_min + T_ss_min;
+  //range is min max
+  Eigen::Vector2d ts_range{0.6,2};
+  Eigen::Vector2d tds_range{0.2,1.5};
+  Eigen::Vector2d tss_range{0.4,1.5};
+
 
   Eigen::Vector2d Footsteps_Generation_Kinematics_cstr{0.3, 0.1};
 
-  double Beta = 1e4; // 1e4;
+  double Beta_zmp_vel = 1;
+  double Beta_step = 1e4; // 1e4;
   double Beta_stab = 1e7;
-  double Beta_traj = 0.;
+  double Beta_zmp_traj = 0.;
+  double Beta_zmp_traj_static = 10;
+  double Beta_Ld = 1.;
+  double Beta_dcm_static = 200;
+  double Beta_dcm_vel = 0;
+  double Beta_dcm_vel_static = 0;
+  double Beta_dcm = 1;
+  double lambda_ = 100.;
+  double lambda_sg_supp = 100;
+  double lambda_dbl_supp = 100;
+  double zmp_delay = 1e-2;
   Eigen::Vector2d Beta_range{1e10, 1e2};
   bool sliding_zmp_cstr_region = false;
   bool use_stability_task = false;
@@ -35,18 +41,26 @@ struct ControllerConfiguration
   double delta = 5e-2; // MPC TimeStep;
   double Tc = 1.5; // Control Time
   double Tp = 4; // Preview Time
+  double feet_ditance_ = 0.2;
+  double foot_landing_offset = 0.;
   double Double_Step_Ratio = 0.25;
   double impact_threshold = 30;
+  double max_stability_error = 0.01; //If the stability error is beyond that value, stop will be called
+  double max_swing_foot_velocity = 2.5;
 
   double MPC_ZMP_Constraint_max_size = 0.2;
   double MPC_ZMP_Constraint_min_size = 0.01;
   Eigen::Vector2d MPC_ZMP_Constraint_size{0.1, 0.08};
-  Eigen::Vector2d MPC_ZMP_Constraint_size_sg_supp{0.1, 0.08};
+  Eigen::Vector2d MPC_U_Constraint_size{0.2, 0.2};
+  Eigen::Vector2d MPC_ZMP_cstr_square_static = {0.1,0.1};
+
   double MPC_ZMP_next_stp_cstr_ratio = 2;
   bool MPC_allow_None = true;
   Eigen::Vector2d MPC_ZMP_cstr_square_offset = Eigen::Vector2d::Zero();
-  Eigen::Vector2d MPC_ZMP_cstr_square_offset_sg_supp = Eigen::Vector2d::Zero();
+  Eigen::Vector2d MPC_ZMP_static_cstr_square_offset = Eigen::Vector2d::Zero();
   Eigen::Vector2d MPC_ZMP_ref_offset_sg_supp = Eigen::Vector2d::Zero();
+  Eigen::Vector2d MPC_ZMP_ref_offset_end_step = {0.02,0};
+  Eigen::Vector2d MPC_ZMP_ref_offset_start_step = {0.02,0};
   Eigen::Vector2d MPC_Footsteps_Constraint_size{0.1, 0.1};
   Eigen::Vector2d MPC_Footsteps_kin_Constraint_size{0.1, 0.1};
 
