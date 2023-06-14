@@ -3,7 +3,6 @@
 bool Walking_controller::MoveFeet(double t)
 {
 
-
   PrevStepTiming = 0;
   double NextTimeStep(0);
 
@@ -64,23 +63,22 @@ bool Walking_controller::MoveFeet(double t)
 
       removeContact({robot().name(), "ground", swingFootName, "AllGround", 0.7, footcontact_dof});
 
-      Eigen::Vector3d ext_wrench_gain_v = config()("stabilizer")("robot")(robot().name())("stabilizer")("external_wrench")("ext_wrench_gain");
+      Eigen::Vector3d ext_wrench_gain_v = config()("stabilizer")("external_wrench")("ext_wrench_gain");
       sva::MotionVecd ext_wrench_gain{ext_wrench_gain_v, ext_wrench_gain_v};
       // if(Use_w)
       // {
       //   stabTask->setExternalWrenches({swingFootName}, {sva::ForceVecd::Zero()}, {ext_wrench_gain});
       // }
-      
+
       t_lift = t;
 
       DoubleSupport_state = false;
       Swing_Foot_Contact = false;
-      //Recompute MPC once contact is released
+      // Recompute MPC once contact is released
       //{
-      t_k += t - t_k; 
+      t_k += t - t_k;
       compute_trajectory_once.notify_all();
       //}
-
     }
   }
 
@@ -131,8 +129,7 @@ bool Walking_controller::MoveFeet(double t)
                       > controller_config_.impact_threshold);
     // TouchDown = false;
 
-    if( ((Step_Time > 0.2 && TouchDown)
-        || Step_Time >= SingleSupportDuration) && !Swing_Foot_Contact)
+    if(((Step_Time > 0.2 && TouchDown) || Step_Time >= SingleSupportDuration) && !Swing_Foot_Contact)
 
     {
 
@@ -141,9 +138,8 @@ bool Walking_controller::MoveFeet(double t)
 
       landingTask->targetPose(landingTask->surfacePose());
       landingTask->targetCoP(Eigen::Vector2d::Zero());
-      landingTask->targetForce(Eigen::Vector3d{0,0,5});
+      landingTask->targetForce(Eigen::Vector3d{0, 0, 5});
       solver().addTask(landingTask);
-
 
       Swing_Foot_Contact = true;
       mc_rtc::log::info("height : {} ", swing_foot_height);
@@ -153,7 +149,9 @@ bool Walking_controller::MoveFeet(double t)
 
       mc_rtc::log::success("Locked " + swingFootName);
 
-      // if( std::abs( mc_rbdyn::rpyFromMat(realRobot().surfacePose(swingFootName).rotation()).x() - mc_rbdyn::rpyFromMat(robot().surfacePose(swingFootName).rotation()).x() ) > controller_config_.safety_roll_error_ )
+      // if( std::abs( mc_rbdyn::rpyFromMat(realRobot().surfacePose(swingFootName).rotation()).x() -
+      // mc_rbdyn::rpyFromMat(robot().surfacePose(swingFootName).rotation()).x() ) >
+      // controller_config_.safety_roll_error_ )
       // {
       //   mc_rtc::log::error("Robot is about to fall, stoping");
       //   Stop = true;
@@ -166,7 +164,7 @@ bool Walking_controller::MoveFeet(double t)
       // }
     }
 
-    if(Swing_Foot_Contact && !DoubleSupport_state && (t - t_contact >= 0. || Step_Time >= SingleSupportDuration ) )
+    if(Swing_Foot_Contact && !DoubleSupport_state && (t - t_contact >= 0. || Step_Time >= SingleSupportDuration))
     {
       solver().removeTask(landingTask);
       Eigen::Vector3d supp_pose;
@@ -226,7 +224,6 @@ bool Walking_controller::MoveFeet(double t)
     filter_gamma_.reset(Eigen::Vector3d::Zero());
     solver().removeTask(leftSwingFootTask);
     solver().removeTask(rightSwingFootTask);
-
   }
 
   return 0;
@@ -265,7 +262,8 @@ void Walking_controller::switchFootSupport()
     supportFootName = leftFootName_;
     swingFootName = rightFootName_;
   }
-  mc_tasks::lipm_stabilizer::ContactState supportFoot = supportFootName == leftFootName_ ? mc_tasks::lipm_stabilizer::ContactState::Left : mc_tasks::lipm_stabilizer::ContactState::Right;
+  mc_tasks::lipm_stabilizer::ContactState supportFoot = supportFootName == leftFootName_
+                                                            ? mc_tasks::lipm_stabilizer::ContactState::Left
+                                                            : mc_tasks::lipm_stabilizer::ContactState::Right;
   stabTask->supportFoot(supportFoot);
-
 }

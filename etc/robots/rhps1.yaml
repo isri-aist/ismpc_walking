@@ -1,0 +1,81 @@
+ismpc:
+  u_cstr_square: [10,10]
+  zmp_cstr_square: [0.2,0.12]
+  zmp_ref_offset: [0.0,0.03]
+  offset: [0.0,0.0]
+  zmp_cstr_square_static: [0.2,0.09]
+  offset_static: [0.0,0]
+  next_stp_cstr_ratio: 1
+  lambda: 20
+  lambda_dbl_supp: 20
+  zmp_delay: 0.01
+  feet_distance: 0.17
+footsteps_planner:
+  feet_distance: 0.2
+walking_controller:
+  torsoBodyName: "CHEST_P_LINK"
+  leftFootLink: "L_ANKLE_P"
+  rightFootLink: "R_ANKLE_P"
+  left_hand_surface: "LeftHandWrench"
+  right_hand_surface: "RightHandWrench"
+  right_foot_surface: "RightFootCenter"
+  left_foot_surface: "LeftFootCenter"
+stabilizer:
+  dcm_tracking:
+    gains:
+      prop: [0,0]
+      integral: [0,0]
+      deriv: [0., 0.]
+      comdError: 0.
+  admittance:
+    copFzLambda: [20,20,20]
+    copFzDelay: 0.015
+    df: [0.0001,0.0001,0.00015]
+    cop: [0.01, 0.01]
+    maxVel:
+      angular: [3., 3., 3.]
+      linear: [1., 1., 1.]
+  tasks:
+    contact:
+      constrainCoP: false
+      damping: 300.
+    com:
+      stiffness: [100.,100.,100.]
+      dimWeight: [1 , 1 , 1]
+      weight: 5000.
+      height: 0.84
+  dcm_bias:
+    dcmMeasureErrorStd: 0.001
+    biasDriftPerSecondStd: 0.0001
+    zmpMeasureErrorStd: 0.0005
+    comBiasLimit: [0.1,0.1]
+    biasLimit: [0.05, 0.02]
+    withDCMBias: true
+    correctCoMPos: true
+  external_wrench:
+    ## general ##
+    add_expected_com_offset: false
+    subtract_measured_value: false
+    exclude_from_dcm_bias_est : true
+    ## com offset ##
+    modify_com_error: true
+    modify_zmp_error: false
+    modify_zmp_error_d: false
+    com_offset_err_com_limit: 0.05
+    com_offset_err_zmp_limit: 0.05
+    ## filter ##
+    ext_wrench_sum_cutoff: 0.05
+    com_offset_cutoff: 0.05
+    com_offset_com_cutoff: 10.0
+    derivator_time_constant: 1.0
+    ## gain (not loaded automatically) ##
+    ext_wrench_gain: [1, 1, 1]
+stabilizer_sgsupp:
+  tasks:
+    com:
+      weight: 500
+  admittance:
+    cop: [0.02, 0.02]
+stabilizer_dblsupp:
+  admittance:
+    cop: [0.01, 0.01]
