@@ -401,11 +401,20 @@ protected:
   std::shared_ptr<mc_tasks::SurfaceTransformTask> SwingFootTask;
   std::shared_ptr<mc_tasks::force::CoPTask> rightLandingTask;
   std::shared_ptr<mc_tasks::force::CoPTask> leftLandingTask;
+  // Ajout des nouvelles tasks pour le landing 
+  std::shared_ptr<mc_tasks::force::CoPTask> rightToeLandingTask;
+  std::shared_ptr<mc_tasks::force::CoPTask> leftToeLandingTask;
+  // ----
   std::shared_ptr<mc_tasks::force::CoPTask> landingTask;
 
   std::shared_ptr<mc_tasks::SurfaceTransformTask> SupportFootTask;
   std::shared_ptr<mc_tasks::SurfaceTransformTask> leftSwingFootTask;
   std::shared_ptr<mc_tasks::SurfaceTransformTask> rightSwingFootTask;
+  // Ajout des nouvelles tasks pour le swing 
+  std::shared_ptr<mc_tasks::SurfaceTransformTask> SwingHeelTask;
+  std::shared_ptr<mc_tasks::SurfaceTransformTask> leftSwingHeelTask;
+  std::shared_ptr<mc_tasks::SurfaceTransformTask> rightSwingHeelTask;
+  // ----
   std::shared_ptr<mc_tasks::PostureTask> armTask;
   std::shared_ptr<mc_tasks::MomentumTask> MomentumTask;
   std::shared_ptr<mc_tasks::CoMTask> comTask;
@@ -538,9 +547,18 @@ private:
 
   std::string leftFootName_ = "LeftFootCenter";
   std::string rightFootName_ = "RightFootCenter";
-
   std::string supportFootName = "RightFootCenter";
   std::string swingFootName = "LeftFootCenter";
+
+  std::string leftToeName_ = "LeftFootToe";
+  std::string rightToeName_ = "RightFootToe";
+  std::string supportToeName = "RightFootToe";
+  std::string swingToeName = "LeftFootToe";
+
+  std::string supportHeelName = "RightFootHeel";
+  std::string swingHeelName = "LeftFootHeel";
+  std::string rightHeelName_ = "RightFootHeel";
+  std::string leftHeelName_ = "LeftFootHeel";
 
   ISMPC_Solver MPCSolver;
   FootTrajectory SwingFootTrajectory;

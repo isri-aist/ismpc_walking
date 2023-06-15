@@ -540,6 +540,27 @@ void Walking_controller::add_FootSteps_GUI()
     }
     return polygon;
   };
+  auto toeStepPolygon = [this](const sva::PTransformd & X_0_step, const sva::PTransformd & X_0_support,
+                                std::string sup) {
+    // double x = step.translation().x() ;
+    // double y = step.translation().y() ;
+    // double theta = mc_rbdyn::rpyFromMat(step.rotation()).z();
+    // Eigen::Vector3d footPos;
+    // footPos << x, y, 0;
+    // Eigen::Matrix3d footOri = mc_rbdyn::rpyToMat(0, 0, theta);
+    // sva::PTransformd X_support_foot(footOri, footPos);
+    const auto & surface = robot().surface(sup);
+    const auto & points = surface.points();
+    std::vector<Eigen::Vector3d> polygon;
+    Eigen::Vector3d xoffset(0.136, 0.0, 0.0);
+    for(const auto & point : points)
+    {
+      const auto & X_foot_point = surface.X_b_s().inv() * point;
+      Eigen::Vector3d p = (X_foot_point * X_0_step).translation() + xoffset;
+      polygon.push_back(p);
+    }
+    return polygon;
+  };
 
   gui()->addElement(
       {"Walking", "Visualization", "FootStep"},
@@ -557,6 +578,26 @@ void Walking_controller::add_FootSteps_GUI()
                                else
                                {
                                  Output.push_back(footStepPolygon(steps[k], this->X_0_support, this->swingFootName));
+                               }
+                             }
+                             return Output;
+                           }));
+  gui()->addElement(
+      {"Walking", "Visualization", "ToeStep"},
+      mc_rtc::gui::Polygon("Planned Toesteps", mc_rtc::gui::Color(0., 1., 0.),
+                           [this, toeStepPolygon]() -> std::vector<std::vector<Eigen::Vector3d>> {
+                             const std::vector<sva::PTransformd> & steps = mpc_state_.planned_steps();
+                             //  mc_rtc::log::info("step {}",steps.size());
+                             std::vector<std::vector<Eigen::Vector3d>> Output;
+                             for(size_t k = 0; k < steps.size(); k++)
+                             {
+                               if(k % 2 == 1)
+                               {
+                                 Output.push_back(toeStepPolygon(steps[k], this->X_0_support, this->supportToeName));
+                               }
+                               else
+                               {
+                                 Output.push_back(toeStepPolygon(steps[k], this->X_0_support, this->swingToeName));
                                }
                              }
                              return Output;
@@ -582,6 +623,30 @@ void Walking_controller::add_FootSteps_GUI()
                             else
                             {
                               Output.push_back(footStepPolygon(steps_opti[k], this->X_0_support, this->swingFootName));
+
+                            }
+                          }
+                          return Output;
+                        }));
+  gui()->addElement({"Walking", "Visualization", "FootStep"},
+                    mc_rtc::gui::Polygon(
+                        "Corrected Toesteps", mc_rtc::gui::Color(0., 0., 1.),
+                        [this, toeStepPolygon]() -> std::vector<std::vector<Eigen::Vector3d>> {
+                          const std::vector<sva::PTransformd> & steps_opti = mpc_state_.optimal_steps();
+
+                          std::vector<std::vector<Eigen::Vector3d>> Output;
+                          //  mc_rtc::log::info("step opti {}",steps_opti.size());
+
+                          for(size_t k = 0; k < steps_opti.size(); k++)
+                          {
+
+                            if(k % 2 == 1)
+                            {
+                              Output.push_back(toeStepPolygon(steps_opti[k], this->X_0_support, this->supportToeName));
+                            }
+                            else
+                            {
+                              Output.push_back(toeStepPolygon(steps_opti[k], this->X_0_support, this->swingToeName));
                             }
                           }
                           return Output;

@@ -415,6 +415,8 @@ private:
 
   Eigen::Matrix3d R_support_0 = Eigen::Matrix3d::Identity();
   Eigen::Matrix3d R_0_support = Eigen::Matrix3d::Identity();
+  Eigen::Matrix3d R_support_0_toe = Eigen::Matrix3d::Identity();
+  Eigen::Matrix3d R_0_support_toe = Eigen::Matrix3d::Identity();
   Eigen::VectorXd m_ZMP_u = Eigen::VectorXd::Zero(0); // Computed ZMP velocity in world frame
   Eigen::VectorXd m_Ldot_c = Eigen::VectorXd::Zero(0); // Computed Centroidal AngularMomemtum dot in world frame ori
   std::vector<double> m_timestamp; // Step TimesStamp Computed at the footStep Generation
@@ -423,6 +425,10 @@ private:
   sva::PTransformd X_0_swing_foot_initial = sva::PTransformd::Identity();
   std::vector<sva::PTransformd> input_steps_;
   std::vector<sva::PTransformd> corr_steps_;
+
+  sva::PTransformd X_0_support_toe = sva::PTransformd::Identity();
+  sva::PTransformd X_0_swing_toe_initial = sva::PTransformd::Identity();
+  
 
   Eigen::Vector3d P_u_k_min = Eigen::Vector3d::Zero(); // Min initial DCM coordinates in support Foot Frame
   Eigen::Vector3d P_u_k_max = Eigen::Vector3d::Zero(); // Max initial DCM coordinates in support Foot Frame
@@ -469,12 +475,13 @@ private:
   double m_delta = 0.05; // t_k - t_k-1
   double m_delta_control = 0.005; // Controller timestep
   double N_integration = 1;
-  double m_dx_static = 0.1;
+  double m_dx_static = 0.3;
   double m_dy_static = 0.1;
   double m_dx = 0.1;
   double m_dy = 0.1; // ZMP square size at one timestep
   double m_dx_u = 0.1;
   double m_dy_u = 0.1; // ZMP square size at one timestep
+  Eigen::Vector3d ToeOff{-0.03, 0., 0.};
   Eigen::Vector2d m_ts_range{0.6,2};
   Eigen::Vector2d m_tds_range{0.2,1.5};
   Eigen::Vector2d m_tss_range{0.4,1.5};

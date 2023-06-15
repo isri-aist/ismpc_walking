@@ -123,11 +123,23 @@ void ISMPC_Solver::init_MPC(const MPC_state & mpc_state,
   m_support_foot = mpc_state.input_Support_FootName;
   
   P_u_k = P_c_k + (V_c_k / m_eta);
-  X_0_swing_foot_initial = mpc_state.X_0_Initial_SwingFoot;
+  // X_0_swing_foot_initial = mpc_state.X_0_Initial_SwingFoot;
+  // X_0_support_foot = mpc_state.X_0_SupportFoot;
+//  Ajout toe 
+  X_0_swing_toe_initial = mpc_state.X_0_Initial_SwingToe;
+  X_0_support_toe = mpc_state.X_0_SupportToe;
+// ----
 
-  X_0_support_foot = mpc_state.X_0_SupportFoot;
- 
-
+// Test
+  sva::PTransformd resultSwing;
+  resultSwing.translation() = 0.5 * (mpc_state.X_0_Initial_SwingFoot.translation() + mpc_state.X_0_Initial_SwingToe.translation());
+  resultSwing.rotation() = mpc_state.X_0_Initial_SwingFoot.rotation() ;
+  sva::PTransformd resultSupport;
+  resultSupport.translation() = 0.5 * (mpc_state.X_0_SupportFoot.translation() + mpc_state.X_0_SupportToe.translation());
+  resultSupport.rotation() = mpc_state.X_0_SupportFoot.rotation();
+  X_0_swing_foot_initial = resultSwing;
+  X_0_support_foot = resultSupport;
+// ----
   input_steps_ = mpc_state.planned_steps_;
   m_timestamp = mpc_state.planned_timesteps_;
   m_input_Tds = mpc_state.tds;
@@ -140,10 +152,14 @@ void ISMPC_Solver::init_MPC(const MPC_state & mpc_state,
   {
     mc_rtc::log::warning("[ISMPC] No Footsteps target provided");
     input_steps_.push_back(X_0_swing_foot_initial);
+    // input_steps_.push_back(X_0_swing_toe_initial);
   }
 
   R_0_support = X_0_support_foot.rotation();
   R_support_0 = R_0_support.transpose();
+
+  R_0_support_toe = X_0_support_toe.rotation();
+  R_support_0_toe = R_0_support_toe.transpose();
 
   w_k.setZero();
   m_eta = sqrt(mc_rtc::constants::GRAVITY/CoM_height);
@@ -241,20 +257,39 @@ void ISMPC_Solver::Static_ZMP_Constraints()
   if(m_support_foot == "RightFoot"){sgn = 1;} 
   const Eigen::Vector3d rect_offset_support =
       X_0_support_foot.rotation().transpose() * Eigen::Vector3d{rect_pose_offset_static.x(), sgn * rect_pose_offset_static.y(), 0};
-
-
   const Eigen::Vector3d rect_offset_swing =
       X_0_support_foot.rotation().transpose() * Eigen::Vector3d{rect_pose_offset_static.x(), -sgn * rect_pose_offset_static.y(), 0};
 
-  Rectangle Rect_jm1 = Rectangle(X_0_swing_foot_initial, Eigen::Vector2d{m_dx_static, m_dy_static}, rect_offset_swing);
-  Rectangle Rect_j = Rectangle(X_0_support_foot, Eigen::Vector2d{m_dx_static, m_dy_static}, rect_offset_support);
+//  Ajout des Toe
+  const Eigen::Vector3d rect_offset_support_toe =
+      X_0_support_toe.rotation().transpose() * Eigen::Vector3d{rect_pose_offset_static.x(), sgn * rect_pose_offset_static.y(), 0};
+  const Eigen::Vector3d rect_offset_swing_toe =
+      X_0_support_toe.rotation().transpose() * Eigen::Vector3d{rect_pose_offset_static.x(), -sgn * rect_pose_offset_static.y(), 0};
+// ----
+  
+  Rectangle Rect_jm1 = Rectangle(X_0_swing_foot_initial, Eigen::Vector2d{m_dx_static + 0.06, m_dy_static}, rect_offset_swing + ToeOff);
+  Rectangle Rect_j = Rectangle(X_0_support_foot, Eigen::Vector2d{m_dx_static + 0.06, m_dy_static}, rect_offset_support + ToeOff);
   Rectangle Rect_jm1_u = Rectangle(X_0_swing_foot_initial, Eigen::Vector2d{m_dx_u, m_dy_u});
   Rectangle Rect_j_u = Rectangle(X_0_support_foot, Eigen::Vector2d{m_dx_u, m_dy_u});
 
+// Ajout Toe
+  Rectangle Rect_jm1_toe = Rectangle(X_0_swing_toe_initial, Eigen::Vector2d{m_dx_static, m_dy_static}, rect_offset_swing);
+  Rectangle Rect_j_toe = Rectangle(X_0_support_toe, Eigen::Vector2d{m_dx_static, m_dy_static}, rect_offset_support);
+  Rectangle Rect_jm1_u_toe = Rectangle(X_0_swing_toe_initial, Eigen::Vector2d{m_dx_u, m_dy_u});
+  Rectangle Rect_j_u_toe = Rectangle(X_0_support_toe, Eigen::Vector2d{m_dx_u, m_dy_u});
+// ----
   SupportPolygon SuppPoly = SupportPolygon(Rect_jm1, Rect_j);
   SupportPolygon SuppPoly_u = SupportPolygon(Rect_jm1_u, Rect_j_u);
 
+  // ajout toe
+  SupportPolygon SuppPolyToe = SupportPolygon(Rect_jm1_toe, Rect_j_toe);
+  SupportPolygon SuppPolyToe_u = SupportPolygon(Rect_jm1_u_toe, Rect_j_u_toe);
+  // ----
+  SupportPolygon SuppPolyToeFeet = SupportPolygon(Rect_jm1, Rect_j,Rect_jm1_toe, Rect_j_toe);
+  SupportPolygon SuppPolyToeFeet_u = SupportPolygon(Rect_jm1_u, Rect_j_u,Rect_jm1_u_toe, Rect_j_u_toe);
+
   m_double_support_polygon = SuppPoly;
+  
 
   ZMP_ref_traj.clear();
   ZMP_max_ref_traj.clear();
@@ -291,6 +326,12 @@ void ISMPC_Solver::Static_ZMP_Constraints()
 
     ZMP_max_ref_traj.push_back(SuppPoly.get_center() + R_support_0 * Eigen::Vector3d{m_dx_static / 2, m_dy_static / 2, 0});
     ZMP_min_ref_traj.push_back(SuppPoly.get_center() - R_support_0 * Eigen::Vector3d{m_dx_static / 2, m_dy_static / 2, 0});
+
+    // zmp_cstr_polygons.push_back(SuppPolyToeFeet);
+    // u_cstr_polygons.push_back(SuppPolyToeFeet_u);
+
+    // ZMP_max_ref_traj.push_back(SuppPolyToeFeet.get_center() + R_support_0 * Eigen::Vector3d{m_dx_static / 2, m_dy_static / 2, 0});
+    // ZMP_min_ref_traj.push_back(SuppPolyToeFeet.get_center() - R_support_0 * Eigen::Vector3d{m_dx_static / 2, m_dy_static / 2, 0});
 
     if(i == 0)
     {
@@ -431,8 +472,8 @@ void ISMPC_Solver::ZMP_Constraints()
       Rectangle(mc_rbdyn::rpyFromMat(X_0_support_foot.rotation()).z(), Eigen::Vector2d{m_dx_u, m_dy_u});
 
 
-  Rectangle Rect_jm1 = Rectangle(X_0_swing_foot_initial, Eigen::Vector2d{m_dx, m_dy}, rect_offset_swing);
-  Rectangle Rect_j = Rectangle(X_0_support_foot, Eigen::Vector2d{m_dx, m_dy}, rect_offset_support);
+  Rectangle Rect_jm1 = Rectangle(X_0_swing_foot_initial, Eigen::Vector2d{m_dx + 0.06, m_dy}, rect_offset_swing + ToeOff);
+  Rectangle Rect_j = Rectangle(X_0_support_foot, Eigen::Vector2d{m_dx + 0.06, m_dy}, rect_offset_support + ToeOff);
 
   Rectangle Rect_jm1_u = Rectangle(X_0_swing_foot_initial, Eigen::Vector2d{m_dx_u, m_dy_u}, rect_offset_swing);
   Rectangle Rect_j_u = Rectangle(X_0_support_foot, Eigen::Vector2d{m_dx_u, m_dy_u}, rect_offset_support);
@@ -522,8 +563,8 @@ void ISMPC_Solver::ZMP_Constraints()
       zmp_ref_offset_swing = zmp_ref_offset_sg;
       zmp_ref_offset_sg = offset;
 
-      Rect_jm1 = Rectangle(X_0_step_jm1, Eigen::Vector2d{m_dx, m_dy},rect_offset_swing);
-      Rect_j = Rectangle(X_0_step_j, Eigen::Vector2d{m_dx, m_dy},rect_offset_support);
+      Rect_jm1 = Rectangle(X_0_step_jm1, Eigen::Vector2d{m_dx + 0.06, m_dy},rect_offset_swing + ToeOff);
+      Rect_j = Rectangle(X_0_step_j, Eigen::Vector2d{m_dx + 0.06, m_dy},rect_offset_support + ToeOff);
 
       Rect_jm1_u = Rectangle(X_0_step_jm1, Eigen::Vector2d{m_dx_u, m_dy_u}, rect_offset_swing);
       Rect_j_u = Rectangle(X_0_step_j, Eigen::Vector2d{m_dx_u, m_dy_u}, rect_offset_support);

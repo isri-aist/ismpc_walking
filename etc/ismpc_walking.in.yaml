@@ -176,8 +176,8 @@ walking_controller:
   robot:
     hrp4:
       torsoBodyName: "torso"
-      leftFootLink: "l_ankle"
-      rightFootLink: "r_ankle"
+      leftFootLink: "L_FOOT_LINK"
+      rightFootLink: "R_FOOT_LINK"
       left_hand_surface: "LeftHand"
       right_hand_surface: "RightHand"
       right_foot_surface: "RightFootCenter"

@@ -96,13 +96,19 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, c
   footcontact_dof << 0, 0, 1, 0, 0, 0;
   addContact({robot().name(), "ground", rightFootName_, "AllGround", 0.7, footcontact_dof});
   addContact({robot().name(), "ground", leftFootName_, "AllGround", 0.7, footcontact_dof});
+  // addContact({robot().name(), "ground", rightToeName_, "AllGround", 0.7, footcontact_dof});
+  // addContact({robot().name(), "ground", leftToeName_, "AllGround", 0.7, footcontact_dof});
 
   leftSwingFootTask =
       std::make_shared<mc_tasks::SurfaceTransformTask>(leftFootName_, robots(), robots().robotIndex(), 10.0, 10.);
 
   rightSwingFootTask =
       std::make_shared<mc_tasks::SurfaceTransformTask>(rightFootName_, robots(), robots().robotIndex(), 10.0, 10.);
+  leftSwingHeelTask =
+      std::make_shared<mc_tasks::SurfaceTransformTask>(leftHeelName_, robots(), robots().robotIndex(), 10.0, 10.);
 
+  rightSwingHeelTask =
+      std::make_shared<mc_tasks::SurfaceTransformTask>(rightHeelName_, robots(), robots().robotIndex(), 10.0, 10.);
   sva::ForceVecd landingAdmittance = sva::ForceVecd(Eigen::Vector3d{0.03,0.03,0} , Eigen::Vector3d{0,0,0.003});
   leftLandingTask =
   std::make_shared<mc_tasks::force::CoPTask>(leftFootName_, robots(), robots().robotIndex(), 1, controller_config_.Stab_config.contactWeight);
@@ -172,6 +178,8 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm, double dt, c
   solver().addTask(comTask);
   solver().addTask(leftSwingFootTask);
   solver().addTask(rightSwingFootTask);
+  // solver().addTask(rightSwingHeelTask);
+  // solver().addTask(leftSwingHeelTask);
   solver().addTask(MomentumTask);
   updateTasks();
   deactivate();
@@ -426,6 +434,16 @@ void Walking_controller::UpdatePlanner_input()
   mpc_state_.X_0_SupportFoot =
       sva::PTransformd(sva::RotZ(mc_rbdyn::rpyFromMat(robot().surfacePose(supportFootName).rotation()).z()),
                        robot().surfacePose(supportFootName).translation());
+  // Ajout dans l'MPC 
+  mpc_state_.X_0_SupportToe =
+      sva::PTransformd(sva::RotZ(mc_rbdyn::rpyFromMat(robot().surfacePose(supportToeName).rotation()).z()),
+                       robot().surfacePose(supportToeName).translation());
+  mpc_state_.X_0_Initial_SwingToe =
+      sva::PTransformd(sva::RotZ(mc_rbdyn::rpyFromMat(robot().surfacePose(swingToeName).rotation()).z()),
+                       robot().surfacePose(swingToeName).translation());
+  mpc_state_.SupportToePose = robot().surfacePose(supportToeName).translation();
+  mpc_state_.SupportToePose.z() = mc_rbdyn::rpyFromMat(robot().surfacePose(supportToeName).rotation()).z();
+  // ----
   mpc_state_.X_0_Initial_SwingFoot =
       sva::PTransformd(sva::RotZ(mc_rbdyn::rpyFromMat(robot().surfacePose(swingFootName).rotation()).z()),
                        robot().surfacePose(swingFootName).translation());
@@ -895,6 +913,7 @@ void Walking_controller::reset(const mc_control::ControllerResetData & reset_dat
 
   
   SwingFootTask.reset();
+  // SwingHeelTask.reset();
   SupportFootTask.reset();
   supportFootName = rightFootName_;
   swingFootName = leftFootName_;

@@ -202,6 +202,11 @@ struct MPC_state
   Eigen::Vector3d input_P_fm1;
   Eigen::Vector3d SupportFootPose;
   sva::PTransformd X_0_SupportFoot;
+  // Ajout SupportToe 
+  Eigen::Vector3d SupportToePose;
+  sva::PTransformd X_0_SupportToe;
+  sva::PTransformd X_0_Initial_SwingToe;
+  // ----
   sva::PTransformd X_0_Initial_SwingFoot;
   
   double tds = 0.25;

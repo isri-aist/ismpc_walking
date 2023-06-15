@@ -5,6 +5,8 @@ struct ControllerConfiguration
 {
   double SwingFootWeight = 5000;
   double SwingFootStiffness = 300;
+  double SwingHeelWeight = 10000;
+  double SwingHeelStiffness = 300;
 
   double Controller_timestep = 5e-3;
 
@@ -30,7 +32,7 @@ struct ControllerConfiguration
   Eigen::Vector2d Beta_range{1e10, 1e2};
   bool sliding_zmp_cstr_region = false;
   bool use_stability_task = false;
-  double FootStepHeight = 0.04;
+  double FootStepHeight = 0.06;
   double maxVelX = 0.15;
   double minVelX = -0.15;
   double delta = 5e-2; // MPC TimeStep;
@@ -41,9 +43,9 @@ struct ControllerConfiguration
   double Double_Step_Ratio = 0.25;
   double impact_threshold = 30;
 
-  double MPC_ZMP_Constraint_max_size = 0.2;
+  double MPC_ZMP_Constraint_max_size = 0.1;
   double MPC_ZMP_Constraint_min_size = 0.01;
-  Eigen::Vector2d MPC_ZMP_Constraint_size{0.1, 0.08};
+  Eigen::Vector2d MPC_ZMP_Constraint_size{0.3, 0.08};
   Eigen::Vector2d MPC_U_Constraint_size{0.2, 0.2};
   Eigen::Vector2d MPC_ZMP_cstr_square_static = {0.1,0.1};
 

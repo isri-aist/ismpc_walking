@@ -150,12 +150,12 @@ walking_controller:
   robot:
     hrp4:
       torsoBodyName: "torso"
-      leftFootLink: "l_ankle"
-      rightFootLink: "r_ankle"
+      leftFootLink: "L_FOOT_LINK"
+      rightFootLink: "R_FOOT_LINK"
       left_hand_surface: "LeftHand"
       right_hand_surface: "RightHand"
-      right_foot_surface: "RightFootCenter"
-      left_foot_surface: "LeftFootCenter"
+      right_foot_surface: "RightFoot"
+      left_foot_surface: "LeftFoot"
     hrp4cr:
       torsoBodyName: "CHEST_P_LINK"
       leftFootLink: "L_TOE_P_LINK"
@@ -285,7 +285,7 @@ stabilizer:
             stiffness: [100.,100.,100.]
             dimWeight: [1 , 1 , 1]
             weight: 5000.
-            height: 0.76
+            height: 0.81
         dcm_bias:
           dcmMeasureErrorStd: 0.001
           biasDriftPerSecondStd: 0.0001

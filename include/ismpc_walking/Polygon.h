@@ -147,6 +147,12 @@ public:
     Get_corners();
     Compute_polygone();
   }
+  SupportPolygon(const Rectangle Rect1, const Rectangle Rect2, const Rectangle Rect3, const Rectangle Rect4)
+  {
+    _Rectangles = {Rect1, Rect2, Rect3, Rect4};
+    Get_corners();
+    Compute_polygone();
+  }
   SupportPolygon(const Rectangle Rect1)
   {
     _Rectangles = {Rect1};
