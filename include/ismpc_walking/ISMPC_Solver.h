@@ -1,12 +1,12 @@
 #pragma once
 #include <mc_control/api.h>
 #include <mc_control/mc_controller.h>
-#include <pendulum_feasibility_solver/feasibility_solver.h>
 #include "ControllerConfiguration.h"
 #include "MPC_state.h"
 #include "Polygon.h"
 #include "eigen-quadprog/QuadProg.h"
 #include "eigen-quadprog/eigen_quadprog_api.h"
+#include <pendulum_feasibility_solver/feasibility_solver.h>
 #include <thread>
 
 class ISMPC_Solver
@@ -34,10 +34,7 @@ public:
    */
   void Init(double delta_controller, double delta, double Tp, double Tc, double Beta);
 
-  void init_MPC(const MPC_state & mpc_state,
-                std::string Tail,
-                int Steps_Desired,
-                int Step);
+  void init_MPC(const MPC_state & mpc_state, std::string Tail, int Steps_Desired, int Step);
 
   /**
    * Set the robot walking charateristics
@@ -158,7 +155,7 @@ public:
    */
   const Eigen::Vector3d & Puk_max() const noexcept
   {
-    return P_u_k_max; 
+    return P_u_k_max;
   }
 
   const Eigen::Matrix3d & Support_ori() const noexcept
@@ -171,9 +168,9 @@ public:
     return w_k;
   }
 
-  void Disturbance(const Eigen::Vector3d w, const double kappa = 1,const double d = 1e3) noexcept
+  void Disturbance(const Eigen::Vector3d w, const double kappa = 1, const double d = 1e3) noexcept
   {
-    w_k  = w;
+    w_k = w;
     m_kappa = kappa;
     Compute_Integration_Matrix(m_eta);
     perturbation_duration = d;
@@ -189,7 +186,7 @@ public:
    */
   const Eigen::Vector3d & Puk() const noexcept
   {
-    return P_u_k; 
+    return P_u_k;
   }
 
   const Eigen::Vector3d & Uk()
@@ -205,9 +202,9 @@ public:
   const std::vector<Eigen::Vector3d> QP_zmp()
   {
     std::vector<Eigen::Vector3d> out;
-    for (Eigen::Index i = 0 ; i < m_QP_zmp.size()/2 ; i++)
+    for(Eigen::Index i = 0; i < m_QP_zmp.size() / 2; i++)
     {
-      out.push_back(P_z_k_delayed + Eigen::Vector3d{m_QP_zmp(2*i),m_QP_zmp(2*i + 1) , 0});
+      out.push_back(P_z_k_delayed + Eigen::Vector3d{m_QP_zmp(2 * i), m_QP_zmp(2 * i + 1), 0});
     }
     return out;
   }
@@ -215,9 +212,9 @@ public:
   const std::vector<Eigen::Vector3d> QP_dcm()
   {
     std::vector<Eigen::Vector3d> out;
-    for (Eigen::Index i = 0 ; i < m_QP_dcm.size()/2 ; i++)
+    for(Eigen::Index i = 0; i < m_QP_dcm.size() / 2; i++)
     {
-      out.push_back(Eigen::Vector3d{m_QP_dcm(2*i),m_QP_dcm(2*i + 1) , CoM_height});
+      out.push_back(Eigen::Vector3d{m_QP_dcm(2 * i), m_QP_dcm(2 * i + 1), CoM_height});
     }
     return out;
   }
@@ -227,7 +224,7 @@ public:
    */
   void Puk(Eigen::Vector3d puk)
   {
-    P_u_k = puk ;
+    P_u_k = puk;
     P_u_k.z() = 0;
   }
 
@@ -261,7 +258,6 @@ public:
     return P_z_k_delayed;
   }
 
-
   double get_lambda()
   {
     return m_lambda;
@@ -272,7 +268,7 @@ public:
     return m_support_state;
   }
 
-  Eigen::Vector3d zmp_ref() 
+  Eigen::Vector3d zmp_ref()
   {
     return m_ref_zmp;
   }
@@ -289,7 +285,7 @@ public:
 
   void zmp_delay(const double t)
   {
-    m_delay = std::max(0.,std::min(m_delta,t));
+    m_delay = std::max(0., std::min(m_delta, t));
   }
 
   std::vector<Eigen::Vector3d> feasibility_region()
@@ -304,15 +300,13 @@ public:
       {
         return m_feasibility_region;
       }
-      Eigen::Vector3d p0 =  Puk_min();
-      Eigen::Vector3d p2 =  Puk_max();
-      Eigen::Vector3d p1 =
-          p0 + R_support_0 * Eigen::Vector3d{ (R_0_support * (Puk_max() - Puk_min())).x(), 0, 0};
-      Eigen::Vector3d p3 =
-          p0 + R_support_0 * Eigen::Vector3d{ 0, (R_0_support * (Puk_max() - Puk_min())).y(), 0};
+      Eigen::Vector3d p0 = Puk_min();
+      Eigen::Vector3d p2 = Puk_max();
+      Eigen::Vector3d p1 = p0 + R_support_0 * Eigen::Vector3d{(R_0_support * (Puk_max() - Puk_min())).x(), 0, 0};
+      Eigen::Vector3d p3 = p0 + R_support_0 * Eigen::Vector3d{0, (R_0_support * (Puk_max() - Puk_min())).y(), 0};
       return {p0, p1, p2, p3};
     }
-  } 
+  }
 
   const SupportPolygon & feasibility_region_switched()
   {
@@ -364,8 +358,6 @@ public:
     return All_poly;
   }
 
-
-
   bool stop()
   {
     return m_stop;
@@ -383,7 +375,7 @@ private:
    */
   void ZMP_Constraints();
 
-  void ZMP_Transition_Constraint(Eigen::MatrixXd & A_out,Eigen::VectorXd & b_out,SupportPolygon PolySS);
+  void ZMP_Transition_Constraint(Eigen::MatrixXd & A_out, Eigen::VectorXd & b_out, SupportPolygon PolySS);
 
   void Static_ZMP_Constraints();
 
@@ -399,47 +391,56 @@ private:
   void Stability_Constraints();
 
   /**
-   * @brief 
-   *  Compute the stability condition such as x_u_star = A * x + b 
-   * 
-   * @param A_out 
-   * @param b_out 
-   * @param eta 
-   * @param indx_start 
+   * @brief
+   *  Compute the stability condition such as x_u_star = A * x + b
+   *
+   * @param A_out
+   * @param b_out
+   * @param eta
+   * @param indx_start
    */
-  void Stability_Condition(Eigen::MatrixXd & A_out, Eigen::VectorXd & b_out,const double eta,const int indx_start,const Eigen::Vector2d w);
+  void Stability_Condition(Eigen::MatrixXd & A_out,
+                           Eigen::VectorXd & b_out,
+                           const double eta,
+                           const int indx_start,
+                           const Eigen::Vector2d w);
 
+  void create_cstr_matrices(Eigen::MatrixXd & A_out,
+                            Eigen::VectorXd & b_out,
+                            std::vector<SupportPolygon> & A_in,
+                            const std::vector<Eigen::VectorXd> & b_in);
 
-  void create_cstr_matrices(Eigen::MatrixXd & A_out, Eigen::VectorXd & b_out, std::vector<SupportPolygon> & A_in, const std::vector<Eigen::VectorXd> & b_in);
+  void create_cstr_matrices(Eigen::MatrixXd & A_out,
+                            Eigen::VectorXd & b_out,
+                            std::vector<Eigen::MatrixX2d> & A_in,
+                            const std::vector<Eigen::VectorXd> & b_in);
 
-  void create_cstr_matrices(Eigen::MatrixXd & A_out, Eigen::VectorXd & b_out, std::vector<Eigen::MatrixX2d> & A_in, const std::vector<Eigen::VectorXd> & b_in);
-  
   /**
    * @brief Compute the dcm after the delayed reference have been applied
-   * 
-   * @return Eigen::Vector2d 
+   *
+   * @return Eigen::Vector2d
    */
   Eigen::Vector2d compute_dcm_delay();
 
   /**
    * @brief Compute A and b such as for tj = j * m_delta ; dcm_j = A * x + b
    * where x the decision variables
-   * 
-   * @param A_out 
-   * @param b_out 
-   * @param dcm_delay 
-   * @param indx 
+   *
+   * @param A_out
+   * @param b_out
+   * @param dcm_delay
+   * @param indx
    */
   void compute_dcm(Eigen::MatrixXd & A_out, Eigen::Vector2d & b_out, const Eigen::Vector2d & dcm_delay, const int indx);
 
   /**
-   * @brief Create a dcm cost function such as 
+   * @brief Create a dcm cost function such as
    * dcm = M_dcm * x + b_dcm
-   * and generate the ref traj vector such as 
+   * and generate the ref traj vector such as
    * dcm_traj = M_traj * x + b_traj
-   *  
+   *
    * where x is the decision variables
-   * 
+   *
    * @param M_dcm Matrix to compute dcm
    * @param b_dcm Vector to compute dcm
    * @param M_traj_dcm Matrix to compute dcm ref traj
@@ -447,10 +448,14 @@ private:
    * @param M_traj_zmp Matrix to compute zmp ref traj
    * @param b_traj_zmp Vector to compute zmp ref traj
    */
-  void create_dcm_cost_function(Eigen::MatrixXd & M_dcm, Eigen::VectorXd & b_dcm, Eigen::MatrixXd & M_traj_dcm ,Eigen::VectorXd & b_traj_dcm,Eigen::MatrixXd & M_traj_zmp ,Eigen::VectorXd & b_traj_zmp);
+  void create_dcm_cost_function(Eigen::MatrixXd & M_dcm,
+                                Eigen::VectorXd & b_dcm,
+                                Eigen::MatrixXd & M_traj_dcm,
+                                Eigen::VectorXd & b_traj_dcm,
+                                Eigen::MatrixXd & M_traj_zmp,
+                                Eigen::VectorXd & b_traj_zmp);
 
-
-  Eigen::MatrixXd create_zmp_matrix(bool addDelay  );
+  Eigen::MatrixXd create_zmp_matrix(bool addDelay);
   Eigen::MatrixXd create_u_matrix();
 
   void Compute_Integration_Matrix(const double eta);
@@ -460,7 +465,11 @@ private:
    */
   void Integrate();
 
-  void Compute_Integration_Vector(const double eta,const Eigen::Vector2d & zmp0,const Eigen::Vector2d & zmpref, const double t0,const double tk);
+  void Compute_Integration_Vector(const double eta,
+                                  const Eigen::Vector2d & zmp0,
+                                  const Eigen::Vector2d & zmpref,
+                                  const double t0,
+                                  const double tk);
 
   /**
    * Generate a ZMP trajectory that is the middle point of the zmp square constraints between the preview and control
@@ -471,16 +480,15 @@ private:
   Eigen::VectorXd solveQP();
 
   Eigen::Vector3d P_z_k = Eigen::Vector3d::Zero(); // Initial ZMP position
-  Eigen::Vector3d P_z_k_delayed = Eigen::Vector3d::Zero(); //ZMP pose after input U_k during input delay
+  Eigen::Vector3d P_z_k_delayed = Eigen::Vector3d::Zero(); // ZMP pose after input U_k during input delay
   Eigen::Vector3d P_c_k = Eigen::Vector3d::Zero(); // Initial CoM Position
   Eigen::Vector3d V_c_k = Eigen::Vector3d::Zero(); // Initial CoM Velocity
   Eigen::Vector3d P_u_k = Eigen::Vector3d::Zero(); // Initial Unstable Component/DCM
-  Eigen::Vector3d U_k = Eigen::Vector3d::Zero(); //Current admittance acting on the pendulum (z_0 + u_0)
+  Eigen::Vector3d U_k = Eigen::Vector3d::Zero(); // Current admittance acting on the pendulum (z_0 + u_0)
   Eigen::Vector3d w_k = Eigen::Vector3d::Zero(); // Perturbance
   double m_kappa = 1;
-  Eigen::Vector3d Lc_k = Eigen::Vector3d::Zero(); //Initial Angular Momemtum
+  Eigen::Vector3d Lc_k = Eigen::Vector3d::Zero(); // Initial Angular Momemtum
   double perturbation_duration = 0;
-
 
   Eigen::Matrix3d R_support_0 = Eigen::Matrix3d::Identity();
   Eigen::Matrix3d R_0_support = Eigen::Matrix3d::Identity();
@@ -488,7 +496,6 @@ private:
   Eigen::VectorXd m_Ldot_c = Eigen::VectorXd::Zero(0); // Computed Centroidal AngularMomemtum dot in world frame ori
   std::vector<double> m_timestamp; // Step TimesStamp Computed at the footStep Generation
   double NextOptimalTs = 10;
-
 
   sva::PTransformd X_0_support_foot = sva::PTransformd::Identity();
   sva::PTransformd X_0_swing_foot_initial = sva::PTransformd::Identity();
@@ -524,7 +531,6 @@ private:
   bool DoubleSupport = true;
   bool m_stop = true;
 
-
   /**
    *Only during the first double support phase : If enabled, the admissible region is a sliding square,
    *otherwise it is a polygone defined by two  rectangle on both feets.
@@ -536,8 +542,8 @@ private:
   double m_mass = 40.;
   double CoM_height = 0.78;
   double g = 9.8; // Gravity acceleration
-  double m_tk = 0; //Represent the initial time in the MPC horizon
-  double m_t_global = 0; //Global time of the control scheme
+  double m_tk = 0; // Represent the initial time in the MPC horizon
+  double m_t_global = 0; // Global time of the control scheme
   double m_Tc = 2;
   double m_Tp = 5; // Control & Preview horizon time
   double m_Tds = 0.24; // Double Support Duration
@@ -554,19 +560,22 @@ private:
   double m_dx_u = 0.1;
   double m_dy_u = 0.1; // ZMP square size at one timestep
   double m_foot_max_vel = 2.;
-  Eigen::Vector2d m_ts_range{0.6,2};
-  Eigen::Vector2d m_tds_range{0.2,1.5};
-  Eigen::Vector2d m_tss_range{0.4,1.5};
+  Eigen::Vector2d m_ts_range{0.6, 2};
+  Eigen::Vector2d m_tds_range{0.2, 1.5};
+  Eigen::Vector2d m_tss_range{0.4, 1.5};
 
-  Eigen::Vector2d rect_pose_offset = Eigen::Vector2d::Zero(); // cstr zone offset in the foot frame for y axis, positive offset is an offset
-                                    // toward the other feet;
-  Eigen::Vector2d rect_pose_offset_static = Eigen::Vector2d::Zero(); // cstr zone offset in the foot frame for y axis, positive offset is an offset
-                                    // toward the other feet;
+  Eigen::Vector2d rect_pose_offset = Eigen::Vector2d::Zero(); // cstr zone offset in the foot frame for y axis, positive
+                                                              // offset is an offset toward the other feet;
+  Eigen::Vector2d rect_pose_offset_static =
+      Eigen::Vector2d::Zero(); // cstr zone offset in the foot frame for y axis, positive offset is an offset
+                               // toward the other feet;
 
-  Eigen::Vector2d zmp_ref_offset = Eigen::Vector2d::Zero();   
-  Eigen::Vector2d zmp_ref_offset_end_step = Eigen::Vector2d::Zero(); //adds to the zmp_ref_offset and applied in sg supp, x sign depends on step target 
-  Eigen::Vector2d zmp_ref_offset_start_step = Eigen::Vector2d::Zero(); //adds to the zmp_ref_offset and applied in sg supp, x sign depends on step target          
-  
+  Eigen::Vector2d zmp_ref_offset = Eigen::Vector2d::Zero();
+  Eigen::Vector2d zmp_ref_offset_end_step =
+      Eigen::Vector2d::Zero(); // adds to the zmp_ref_offset and applied in sg supp, x sign depends on step target
+  Eigen::Vector2d zmp_ref_offset_start_step =
+      Eigen::Vector2d::Zero(); // adds to the zmp_ref_offset and applied in sg supp, x sign depends on step target
+
   double zmp_cstr_next_stp_ratio = 2;
   double m_dx_f = 0.1;
   double m_dy_f = 0.1; // Step kinematic admissible Region
@@ -580,22 +589,22 @@ private:
   double m_Beta_zmp_traj_stop = 0;
   double m_Beta_Lc = 1e-2;
   double m_Beta_dcm = 1e2;
-  double m_Beta_dcm_stop =1000;
+  double m_Beta_dcm_stop = 1000;
   double m_Beta_dcm_vel = 0;
-  double m_Beta_dcm_vel_stop =1000;
+  double m_Beta_dcm_vel_stop = 1000;
   double m_lambda = 100;
-  double m_delay = 0; //delay ( < m_delta ) during which zmp is under previous input Uk
-  double m_delay_elapsed = 0; //Between 0 and m_delay represent the remaining time the delay must be applied
+  double m_delay = 0; // delay ( < m_delta ) during which zmp is under previous input Uk
+  double m_delay_elapsed = 0; // Between 0 and m_delay represent the remaining time the delay must be applied
   double m_t_delay = 0; // represent when the delay has been applied
-  double m_t_lift = 0; //time when the foot contact has been released
+  double m_t_lift = 0; // time when the foot contact has been released
 
-  double m_feet_distance = 0.2; 
+  double m_feet_distance = 0.2;
   std::string m_support_foot = "LeftFoot";
   int j_Max_C = 0; // Number of footsteps in the Control Horizon
   int j_f = 0; // Index of the actual support foot
   int j_fm1 = 0; // Index of the previous support foot
   double m_support_state = 0;
-  Eigen::Vector3d m_ref_zmp = Eigen::Vector3d::Zero(); //first ref zmp in the horizon
+  Eigen::Vector3d m_ref_zmp = Eigen::Vector3d::Zero(); // first ref zmp in the horizon
   int kfoot = 0;
 
   std::string m_Tail; // Velocity Tailing desired
@@ -617,7 +626,7 @@ private:
   Eigen::Vector2d Integration_Vec_x;
   Eigen::Vector2d Integration_Vec_y;
 
-  //Pendulum dynamic to integrate state : \dot{s} = A * s + B * U 
+  // Pendulum dynamic to integrate state : \dot{s} = A * s + B * U
   Eigen::Matrix3d m_dynamic_matrix_A;
   Eigen::MatrixXd m_dynamic_matrix_B;
 
@@ -628,7 +637,8 @@ private:
   int m_C; // Number of indexs in the Control time length Tc = m_C * m_delta
   int m_P; // Number of indexs in the Preview time length Tp = m_P * m_delta
   int m_D; // Number of Iteration on the double steps period
-  double count_Dstep; // Number bounded between 1 and m_D describing the position of the zone during the doubleStep timing
+  double
+      count_Dstep; // Number bounded between 1 and m_D describing the position of the zone during the doubleStep timing
 
   std::vector<SupportPolygon> zmp_cstr_polygons;
 
@@ -637,7 +647,7 @@ private:
 
   std::vector<Eigen::Vector3d> m_feasibility_region;
 
-  SupportPolygon m_feasibility_standing_region_swing; //standing feasibility region if support foot is switched
+  SupportPolygon m_feasibility_standing_region_swing; // standing feasibility region if support foot is switched
 
   std::vector<Eigen::Vector3d> SuppPolyCorners;
 

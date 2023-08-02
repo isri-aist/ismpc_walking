@@ -1,7 +1,7 @@
 #pragma once
+#include <SpaceVecAlg/SpaceVecAlg>
 #include <Eigen/StdVector>
 #include <eigen3/Eigen/Dense>
-#include <SpaceVecAlg/SpaceVecAlg>
 
 // clang-format off
 #include <boost/geometry.hpp>
@@ -189,9 +189,9 @@ public:
   {
     Eigen::Vector3d center = Eigen::Vector3d::Zero();
     double n = static_cast<double>(_Rectangles.size());
-    for (auto & r : _Rectangles)
+    for(auto & r : _Rectangles)
     {
-      center += (1/n) * r.get_center();
+      center += (1 / n) * r.get_center();
     }
     return center;
   }
@@ -209,7 +209,6 @@ public:
   }
 
 private:
-
   void Get_corners()
   {
     if(_Rectangles.size() > 1)
@@ -256,33 +255,33 @@ private:
       Offset(c) = (R_Vertices_0.transpose() * SupportPolygone_Edges_Center.block(c, 0, 1, 2).transpose())(0);
     }
   }
-  
+
   void cstr_to_polygone()
   {
 
     std::vector<int> vertices_indx;
-    for(Eigen::Index i = 0 ; i < SupportPolygone_Normals.rows() ; i++)
+    for(Eigen::Index i = 0; i < SupportPolygone_Normals.rows(); i++)
     {
       Eigen::Index end_indx = (i + 1) % SupportPolygone_Normals.rows();
-      Eigen::Vector2d ni = SupportPolygone_Normals.block(i,0,1,2).normalized();
-      Eigen::Vector2d nip1 = SupportPolygone_Normals.block(end_indx,0,1,2).normalized();
+      Eigen::Vector2d ni = SupportPolygone_Normals.block(i, 0, 1, 2).normalized();
+      Eigen::Vector2d nip1 = SupportPolygone_Normals.block(end_indx, 0, 1, 2).normalized();
       // mc_rtc::log::info("normal {}\n{}\nnext_normal{}\ndot prod {}",i,ni,nip1,ni.transpose() * nip1);
-      if( std::abs( ni.transpose() * nip1 - 1) > 1e-4  )
+      if(std::abs(ni.transpose() * nip1 - 1) > 1e-4)
       {
 
-        vertices_indx.push_back( static_cast<int>(i));
+        vertices_indx.push_back(static_cast<int>(i));
         // mc_rtc::log::info("selected");
       }
     }
     // mc_rtc::log::info("corner {} selected {}",SupportPolygone_Normals.rows(),normals.size());
-    for(size_t i = 0 ; i < vertices_indx.size() ; i++)
+    for(size_t i = 0; i < vertices_indx.size(); i++)
     {
       Eigen::Index start_indx = vertices_indx[i];
       Eigen::Index end_indx = vertices_indx[(i + 1) % vertices_indx.size()];
       Eigen::Matrix2d R = Eigen::Matrix2d::Zero();
-      Eigen::Vector2d o = Eigen::Vector2d::Zero(); 
-      R.block(0,0,1,2) = SupportPolygone_Normals.block(start_indx,0,1,2);
-      R.block(1,0,1,2) = SupportPolygone_Normals.block(end_indx,0,1,2);
+      Eigen::Vector2d o = Eigen::Vector2d::Zero();
+      R.block(0, 0, 1, 2) = SupportPolygone_Normals.block(start_indx, 0, 1, 2);
+      R.block(1, 0, 1, 2) = SupportPolygone_Normals.block(end_indx, 0, 1, 2);
       o.x() = Offset[start_indx];
       o.y() = Offset[end_indx];
       if(R.determinant() != 0)
@@ -290,12 +289,9 @@ private:
         Eigen::Vector2d p = R.inverse() * o;
         // mc_rtc::log::info("start {} ; end {} point {}",i,end_indx,p);
         // mc_rtc::log::info("R {}\no {}",R,o);
-  
-        SupportPolygone_Corners.push_back(Eigen::Vector3d{p.x(),p.y(),0});
+
+        SupportPolygone_Corners.push_back(Eigen::Vector3d{p.x(), p.y(), 0});
       }
-      
-      
-    
     }
   }
 
