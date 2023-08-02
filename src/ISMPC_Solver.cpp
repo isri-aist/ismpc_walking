@@ -1255,8 +1255,8 @@ void ISMPC_Solver::Compute_Stability_Range()
   }
   Eigen::VectorXd u_M = Delta.inverse() * (PzM - Pz0);
   Eigen::VectorXd u_m = Delta.inverse() * (Pzm - Pz0);
-  P_u_k_max.segment(0, 2) = A_stab * u_M + P_z_k.segment(0, 2);
-  P_u_k_min.segment(0, 2) = A_stab * u_m + P_z_k.segment(0, 2);
+  P_u_k_max.segment(0, 2) = A_stab.topLeftCorner(2, 2 * m_C) * u_M + P_z_k.segment(0, 2);
+  P_u_k_min.segment(0, 2) = A_stab.topLeftCorner(2, 2 * m_C) * u_m + P_z_k.segment(0, 2);
 }
 
 void ISMPC_Solver::Compute_Standing_Stability_Range()
