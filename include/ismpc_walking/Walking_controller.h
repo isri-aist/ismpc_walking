@@ -558,7 +558,7 @@ private:
   bool Use_w = true;
   Eigen::Vector3d w_ = Eigen::Vector3d::Zero();
   double kappa_ = 1;
-  double eta2_cstr;
+  double eta2_cstr = 0.0;
   Eigen::Vector3d Ldot_offset = Eigen::Vector3d::Zero(); // offset due to angular momentum
   Eigen::Vector3d Ldot = Eigen::Vector3d::Zero(); // current angular momentum
   std::string Tail = "Anticipative"; // Velocity tail, either "Periodic" Or "Truncated"
