@@ -1,18 +1,17 @@
 ismpc:
   u_cstr_square: [10,10]
   zmp_cstr_square: [0.2,0.12]
-  zmp_ref_offset: [0.0,0.03]
+  zmp_ref_offset: [0.0,0.01]
   offset: [0.0,0.0]
   zmp_cstr_square_static: [0.2,0.09]
   offset_static: [0.0,0]
   next_stp_cstr_ratio: 1
-  lambda: 5
-  lambda_dbl_supp: 5
-  zmp_delay: 0.024
+  lambda: 30
+  lambda_dbl_supp: 30
+  zmp_delay: 0.025
   feet_distance: 0.2
 footsteps_planner:
   feet_distance: 0.2
-  max_rotation: 0.17
 walking_controller:
   footstep_height: 0.05
   torsoBodyName: "CHEST_P_LINK"
@@ -30,22 +29,22 @@ stabilizer:
       deriv: [0., 0.]
       comdError: 0.
   admittance:
-    copFzLambda: [30, 30, 30]
-    copFzDelay: 0.025
-    df: [0.0001,0.0001,0.00015]
-    cop: [0.02, 0.02]
+    copFzLambda: [30,30,30]
+    copFzDelay: 0.0
+    df: [0.000,0.0000,0.0001]
+    cop: [0.01, 0.01]
     maxVel:
       angular: [3., 3., 3.]
       linear: [1., 1., 1.]
   tasks:
     contact:
       constrainCoP: false
-      damping: 300.
+      damping: 150.
     com:
       stiffness: [100.,100.,100.]
       dimWeight: [1 , 1 , 1]
-      weight: 5000.
-      height: 0.89
+      weight: 1000.
+      height: 0.84
   dcm_bias:
     dcmMeasureErrorStd: 0.001
     biasDriftPerSecondStd: 0.0001
@@ -75,9 +74,11 @@ stabilizer:
 stabilizer_sgsupp:
   tasks:
     com:
-      weight: 5000
+      weight: 1000
   admittance:
-    cop: [0.02, 0.02]
+    cop: [0.01, 0.01]
 stabilizer_dblsupp:
   admittance:
-    cop: [0.02, 0.02]
+    copFzLambda: [30,30,30]
+    copFzDelay: 0.0
+    df: [0.000,0.0000,0.0001]
