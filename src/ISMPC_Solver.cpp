@@ -1249,8 +1249,8 @@ void ISMPC_Solver::Compute_Stability_Range()
   // mc_rtc::log::info("ZMP boundrie size {}\nControl size {}",ZMP_max_ref_traj.size(),m_C);
   for(size_t k = 1; k < ZMP_max_ref_traj.size(); k++)
   {
-    Pzm.segment(2 * k, 2) = ZMP_min_ref_traj[k];
-    PzM.segment(2 * k, 2) = ZMP_max_ref_traj[k];
+    Pzm.segment(2 * k, 2) = ZMP_min_ref_traj[k].head(2);
+    PzM.segment(2 * k, 2) = ZMP_max_ref_traj[k].head(2);
     Pz0.segment(2 * k, 2) = P_z_k.segment(0, 2);
   }
   Eigen::VectorXd u_M = Delta.inverse() * (PzM - Pz0);
