@@ -350,15 +350,13 @@ protected:
     datastore().make_call("ismpc_walking::stop_phase", [this]() -> bool { return Stop; });
     datastore().make_call("ismpc_walking::robot_walking", [this]() -> bool { return Robot_Walking; });
     datastore().make_call("ismpc_walking::double_support", [this]() -> bool { return DoubleSupport_state; });
-    datastore().make_call("ismpc_walking::start/stop",
-                          [this]()
-                          {
-                            if(stabilizer_active_ && Stop)
-                            {
-                              compute_trajectory_once.notify_all();
-                            }
-                            Stop = !Stop;
-                          });
+    datastore().make_call("ismpc_walking::start/stop", [this]() {
+      if(stabilizer_active_ && Stop)
+      {
+        compute_trajectory_once.notify_all();
+      }
+      Stop = !Stop;
+    });
     datastore().make_call("ismpc_walking::configure",
                           [this](const ControllerConfiguration & config) { Configure(config); });
     datastore().make_call("ismpc_walking::get_config",
@@ -560,7 +558,7 @@ private:
   bool Use_w = true;
   Eigen::Vector3d w_ = Eigen::Vector3d::Zero();
   double kappa_ = 1;
-  double eta2_cstr;
+  double eta2_cstr = 0.0;
   Eigen::Vector3d Ldot_offset = Eigen::Vector3d::Zero(); // offset due to angular momentum
   Eigen::Vector3d Ldot = Eigen::Vector3d::Zero(); // current angular momentum
   std::string Tail = "Anticipative"; // Velocity tail, either "Periodic" Or "Truncated"

@@ -17,36 +17,22 @@ void Walking_controller::AddToLog()
   logger().addLogEntry("foot_wrench_SwingFoot",
                        [this]() -> const sva::ForceVecd { return SwingFootTask->frame().wrench(); });
   logger().addLogEntry("foot_vertical_force_offset", [this]() -> const double & { return vertical_force_offset_; });
-  // logger().addLogEntry("RealRobot LeftFoot Accel",
-  //                      [this]() -> const Eigen::Vector3d & { return robot().bodyAccB(LeftFootLinkName_).linear(); });
-  // logger().addLogEntry("RealRobot RightFoot Accel",
-  //                      [this]() -> const Eigen::Vector3d & { return robot().bodyAccB(RightFootLinkName_).linear(); });
-
-  logger().addLogEntry("ISMPC_measured_lambda",[this] () -> Eigen::Vector2d {return estimated_lambda();} );
-  logger().addLogEntry("ISMPC_measured_zmpvel",[this] () -> Eigen::Vector2d {return zmp_vel_.eval().segment(0,2);} );
+  logger().addLogEntry("ISMPC_measured_lambda", [this]() -> Eigen::Vector2d { return estimated_lambda(); });
+  logger().addLogEntry("ISMPC_measured_zmpvel", [this]() -> Eigen::Vector2d { return zmp_vel_.eval().segment(0, 2); });
   logger().addLogEntry("ISMPC_NextTds", [this]() -> double { return mpc_state_.get_tds(); });
   logger().addLogEntry("ISMPC_NextTs", [this]() -> double { return mpc_state_.get_Ts(0); });
   logger().addLogEntry("ISMPC_input_tds", [this]() -> double { return mpc_state_.input_tds; });
-  logger().addLogEntry("ISMPC_input_ts", [this]() -> double {
-    std::vector<double> ts(mpc_state_.input_timesteps_);
-    if(ts.size() != 0)
-    {
-      return ts[0];
-    }
-    return 0.;
-  });
-  logger().addLogEntry("ISMPC_t", [this]() -> const double & { return t; });
-  logger().addLogEntry("ISMPC_tk", [this]() -> const double & { return mpc_state_.t_k; });
-  logger().addLogEntry("ISMPC_CoMAccZ", [this]() -> const double & { return comAccZ; });
+  logger().addLogEntry("ISMPC_input_ts",
+                       [this]() { return mpc_state_.input_timesteps_.size() ? mpc_state_.input_timesteps_[0] : 0.0; });
+  logger().addLogEntry("ISMPC_t", [this]() { return t; });
+  logger().addLogEntry("ISMPC_tk", [this]() { return mpc_state_.t_k; });
+  logger().addLogEntry("ISMPC_CoMAccZ", [this]() { return comAccZ; });
   logger().addLogEntry("ISMPC_stab-error", [this]() -> const Eigen::Vector2d & { return this->mpc_state_.stab_error; });
-  logger().addLogEntry("perf_ISMPC", [this]() -> const double { return this->mpc_thread_process_time; });
+  logger().addLogEntry("perf_ISMPC", [this]() -> double { return this->mpc_thread_process_time; });
 
-  logger().addLogEntry("ISMPC_Target_Wrench", [this]() -> const sva::ForceVecd {
+  logger().addLogEntry("ISMPC_Target_Wrench", [this]() -> const sva::ForceVecd & { return target_wrench_; });
 
-    return target_wrench_;
-  });
-
-  logger().addLogEntry("ISMPC_State_CoM", [this]() -> const Eigen::Vector3d {
+  logger().addLogEntry("ISMPC_State_CoM", [this]() -> Eigen::Vector3d {
     if(MPC_thread_on)
     {
       return mpc_state_.getPck();
@@ -67,46 +53,24 @@ void Walking_controller::AddToLog()
     }
     return Eigen::Vector3d::Zero();
   });
-  logger().addLogEntry("ISMPC_State_Ld", [this]() -> const Eigen::Vector3d {
-    return Ldot;
-  });
-  logger().addLogEntry("ISMPC_Target_ZMP", [this]() -> const Eigen::Vector3d {
-    return zmpTarget;
-  });
-  logger().addLogEntry("ISMPC_Target_u", [this]() -> const Eigen::Vector3d {
-    return admittanceTarget;
-  });
-  logger().addLogEntry("ISMPC_Target_LcDot", [this]() -> const Eigen::Vector3d {
-    return LcDotTarget;
-  });
-  logger().addLogEntry("ISMPC_Target_u_delay", [this]() -> const Eigen::Vector3d {
-    return MPCSolver.Uk();
-  });
-  logger().addLogEntry("ISMPC_Target_Index", [this]() -> const double {
+  logger().addLogEntry("ISMPC_State_Ld", [this]() -> const Eigen::Vector3d { return Ldot; });
+  logger().addLogEntry("ISMPC_Target_ZMP", [this]() -> const Eigen::Vector3d { return zmpTarget; });
+  logger().addLogEntry("ISMPC_Target_u", [this]() -> const Eigen::Vector3d { return admittanceTarget; });
+  logger().addLogEntry("ISMPC_Target_LcDot", [this]() -> const Eigen::Vector3d { return LcDotTarget; });
+  logger().addLogEntry("ISMPC_Target_u_delay", [this]() -> const Eigen::Vector3d { return MPCSolver.Uk(); });
+  logger().addLogEntry("ISMPC_Target_Index", [this]() -> double {
     if(MPC_thread_on)
     {
       return mpc_state_.Index - 1;
     }
     return 0;
   });
-  logger().addLogEntry("ISMPC_alpha", [this]() -> const double {
-    return mpc_state_.alpha;
-  });
-  logger().addLogEntry("ISMPC_ref_zmp", [this]() -> const Eigen::Vector2d {
-    return mpc_state_.ref_zmp_;
-  });
-  logger().addLogEntry("ISMPC_perturbation_offset", [this]() -> const Eigen::Vector2d  {
-    return w_.segment(0,2);
-  });
-  logger().addLogEntry("ISMPC_perturbation_omega", [this]() -> const double  {
-    return sqrt(eta2_cstr);
-  });
-  logger().addLogEntry("ISMPC_perturbation_kappa", [this]() -> const double  {
-    return kappa_;
-  });
-  logger().addLogEntry("ISMPC_perturbation_Ldot/mHw2", [this]() -> const  Eigen::Vector3d & {
-    return Ldot_offset;
-  });
+  logger().addLogEntry("ISMPC_alpha", [this]() -> double { return mpc_state_.alpha; });
+  logger().addLogEntry("ISMPC_ref_zmp", [this]() -> const Eigen::Vector2d & { return mpc_state_.ref_zmp_; });
+  logger().addLogEntry("ISMPC_perturbation_offset", [this]() -> Eigen::Vector2d { return w_.segment(0, 2); });
+  logger().addLogEntry("ISMPC_perturbation_omega", [this]() -> double { return sqrt(eta2_cstr); });
+  logger().addLogEntry("ISMPC_perturbation_kappa", [this]() -> double { return kappa_; });
+  logger().addLogEntry("ISMPC_perturbation_Ldot/mHw2", [this]() -> const Eigen::Vector3d & { return Ldot_offset; });
 
   // logger().addLogEntry("ISMPC_State_ZMP_kinmes", [this]() -> const Eigen::Vector3d {
 
@@ -117,21 +81,21 @@ void Walking_controller::AddToLog()
   logger().addLogEntry("ISMPC_State_DCM", [this]() -> Eigen::Vector3d {
     if(MPC_thread_on)
     {
-      return  (mpc_state_.getPuk());
+      return (mpc_state_.getPuk());
     }
     return Eigen::Vector3d::Zero();
   });
   logger().addLogEntry("ISMPC_lambda", [this]() -> double {
     if(MPC_thread_on)
     {
-      return  MPCSolver.get_lambda();
+      return MPCSolver.get_lambda();
     }
     return 0;
   });
   logger().addLogEntry("ISMPC_zmp_delay", [this]() -> double {
     if(MPC_thread_on)
     {
-      return  MPCSolver.zmp_delay();
+      return MPCSolver.zmp_delay();
     }
     return 0;
   });

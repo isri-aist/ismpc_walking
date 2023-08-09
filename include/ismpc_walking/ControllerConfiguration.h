@@ -10,11 +10,10 @@ struct ControllerConfiguration
 
   double momentumTaskWeight = 10000;
 
-  //range is min max
-  Eigen::Vector2d ts_range{0.6,2};
-  Eigen::Vector2d tds_range{0.2,1.5};
-  Eigen::Vector2d tss_range{0.4,1.5};
-
+  // range is min max
+  Eigen::Vector2d ts_range{0.6, 2};
+  Eigen::Vector2d tds_range{0.2, 1.5};
+  Eigen::Vector2d tss_range{0.4, 1.5};
 
   Eigen::Vector2d Footsteps_Generation_Kinematics_cstr{0.3, 0.1};
 
@@ -45,22 +44,22 @@ struct ControllerConfiguration
   double foot_landing_offset = 0.;
   double Double_Step_Ratio = 0.25;
   double impact_threshold = 30;
-  double max_stability_error = 0.01; //If the stability error is beyond that value, stop will be called
+  double max_stability_error = 0.01; // If the stability error is beyond that value, stop will be called
   double max_swing_foot_velocity = 2.5;
 
   double MPC_ZMP_Constraint_max_size = 0.2;
   double MPC_ZMP_Constraint_min_size = 0.01;
   Eigen::Vector2d MPC_ZMP_Constraint_size{0.1, 0.08};
   Eigen::Vector2d MPC_U_Constraint_size{0.2, 0.2};
-  Eigen::Vector2d MPC_ZMP_cstr_square_static = {0.1,0.1};
+  Eigen::Vector2d MPC_ZMP_cstr_square_static = {0.1, 0.1};
 
   double MPC_ZMP_next_stp_cstr_ratio = 2;
   bool MPC_allow_None = true;
   Eigen::Vector2d MPC_ZMP_cstr_square_offset = Eigen::Vector2d::Zero();
   Eigen::Vector2d MPC_ZMP_static_cstr_square_offset = Eigen::Vector2d::Zero();
   Eigen::Vector2d MPC_ZMP_ref_offset_sg_supp = Eigen::Vector2d::Zero();
-  Eigen::Vector2d MPC_ZMP_ref_offset_end_step = {0.02,0};
-  Eigen::Vector2d MPC_ZMP_ref_offset_start_step = {0.02,0};
+  Eigen::Vector2d MPC_ZMP_ref_offset_end_step = {0.02, 0};
+  Eigen::Vector2d MPC_ZMP_ref_offset_start_step = {0.02, 0};
   Eigen::Vector2d MPC_Footsteps_Constraint_size{0.1, 0.1};
   Eigen::Vector2d MPC_Footsteps_kin_Constraint_size{0.1, 0.1};
 

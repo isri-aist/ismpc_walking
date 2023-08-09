@@ -75,9 +75,9 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm,
   // config_.load(config);
   // static auto constraint = mc_solver::ConstraintSetLoader::load(solver(), config("collisions")[0]);
 
-  datastore().make_call(
-      "KinematicAnchorFrame::" + robot().name(), [this](const mc_rbdyn::Robot & robot)
-      { return sva::interpolate(robot.surfacePose(leftFootName_), robot.surfacePose(rightFootName_), LeftFootRatio); });
+  datastore().make_call("KinematicAnchorFrame::" + robot().name(), [this](const mc_rbdyn::Robot & robot) {
+    return sva::interpolate(robot.surfacePose(leftFootName_), robot.surfacePose(rightFootName_), LeftFootRatio);
+  });
 
   const auto oConfig = config("ObserverPipelines")("observers");
   for(auto conf : oConfig)

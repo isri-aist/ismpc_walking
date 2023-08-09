@@ -169,7 +169,7 @@ void Walking_controller::computeExternalContact(const std::string & surfaceName,
 
 void Walking_controller::ComputeFeetPerturbances(Eigen::Vector3d & offset, double & kappa)
 {
-  const double verticalComAcc = comTask->refAccel()(6) + mc_rtc::constants::gravity.z();
+  const double verticalComAcc = comTask->refAccel()(2) + mc_rtc::constants::gravity.z();
   const double h = controller_config_.Stab_config.comHeight;
   sva::ForceVecd LcDot = rbd::computeCentroidalMomentumDot(robot().mb(), robot().mbc(), mpc_state_.Pck, mpc_state_.Vck);
   offset.setZero();

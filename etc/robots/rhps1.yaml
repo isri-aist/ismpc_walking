@@ -6,13 +6,14 @@ ismpc:
   zmp_cstr_square_static: [0.2,0.09]
   offset_static: [0.0,0]
   next_stp_cstr_ratio: 1
-  lambda: 8
-  lambda_dbl_supp: 8
+  lambda: 30
+  lambda_dbl_supp: 30
   zmp_delay: 0.025
-  feet_distance: 0.19
+  feet_distance: 0.2
 footsteps_planner:
-  feet_distance: 0.19
+  feet_distance: 0.2
 walking_controller:
+  footstep_height: 0.05
   torsoBodyName: "CHEST_P_LINK"
   leftFootLink: "L_ANKLE_P"
   rightFootLink: "R_ANKLE_P"
@@ -75,9 +76,9 @@ stabilizer_sgsupp:
     com:
       weight: 1000
   admittance:
-    cop: [0.02, 0.02]
+    cop: [0.01, 0.01]
 stabilizer_dblsupp:
   admittance:
-    copFzLambda: [10,10,10]
+    copFzLambda: [30,30,30]
     copFzDelay: 0.0
     df: [0.000,0.0000,0.0001]
