@@ -71,19 +71,6 @@ void ISMPC_Solver::configure(const ControllerConfiguration & config)
   m_foot_max_vel = config.max_swing_foot_velocity;
 
   Compute_Integration_Matrix(m_eta);
-
-  mc_rtc::log::info("[ISMPC] Configuration :");
-  mc_rtc::log::info("Beta {}", m_Beta_step);
-  mc_rtc::log::info("ZMP cstr\n{}", Eigen::Vector2d{m_dx, m_dy});
-  mc_rtc::log::info("U cstr\n{}", Eigen::Vector2d{m_dx_u, m_dy_u});
-  mc_rtc::log::info("Footsteps kin cstr\n{}", Eigen::Vector2d{m_dx_f, m_dy_f});
-  mc_rtc::log::info("Footsteps cstr\n{}", Eigen::Vector2d{m_dx_f_rect, m_dy_f_rect});
-  mc_rtc::log::info("CoM h {}", CoM_height);
-  mc_rtc::log::info("Tp {} Tc {}", m_Tp, m_Tc);
-  mc_rtc::log::info("MPC_delta {}", m_delta);
-  mc_rtc::log::info("Controller delta {}", m_delta_control);
-  mc_rtc::log::info("Use of whole polygon support {}", !Slide_ZMP_region);
-  mc_rtc::log::info("Stability Task {}", Use_Stability_Task);
 }
 
 void ISMPC_Solver::init_MPC(const MPC_state & mpc_state, std::string Tail, int Steps_Desired, int Step)
