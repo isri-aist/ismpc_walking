@@ -12,6 +12,7 @@ ismpc:
 footsteps_planner_plugin:
   feet_distance: 0.2
 walking_controller:
+  headLink: "HEAD_LINK1"
   right_foot_surface: "RightFootCenter"
   left_foot_surface: "LeftFootCenter"
   left_hand_surface: "LeftFingers"

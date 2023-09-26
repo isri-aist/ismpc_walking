@@ -20,6 +20,9 @@ ObserverPipelines:
     - type: Attitude
       required: true
       update: true
+      config:
+        KalmanFilter:
+          gyr_cov: 1e-6 # default is 1e-10
     - type: KinematicInertial
       update: true
       config:
@@ -30,6 +33,9 @@ ObserverPipelines:
       update: false
       config:
         bodySensor: FloatingBase
+
+Posture:
+  NECK_P: 0.5 
 
 constraints:
   - type: contact
@@ -58,13 +64,13 @@ ismpc:
   beta_stab: 1e5
   beta_traj : 1e1
   allow_none_tail: true
-  foosteps_kin_cstr: [0.6,0.25]
-  footsteps_cstr_square: [0.6,0.25]
+  foosteps_kin_cstr: [0.6,0.15]
+  footsteps_cstr_square: [0.6,0.15]
   ts_range: [0.7,2]
   tds_range: [0.2,1.5]
   tss_range: [0.5,1.5]
-  double_support_ratio: 0.4
-  ts: 1.3
+  double_support_ratio: 0.25
+  ts: 1.1
   sliding_zmp_cstr_region: false
   use_stability_task: false
   safety_thresholds:
@@ -76,7 +82,7 @@ footsteps_planner:
   Tp: 10
   delta: 0.1
   Ts_limit: [0.4,5]
-  kinematics_cstr: [0.6,0.08]
+  kinematics_cstr: [0.4,0.08]
   mean_speed: 0.1
   robot_height: 150
   max_rotation: 0.1

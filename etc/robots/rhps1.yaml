@@ -6,8 +6,8 @@ ismpc:
   zmp_cstr_square_static: [0.2,0.09]
   offset_static: [0.0,0]
   next_stp_cstr_ratio: 1
-  lambda: 30
-  lambda_dbl_supp: 30
+  lambda: 10
+  lambda_dbl_supp: 10
   zmp_delay: 0.025
   feet_distance: 0.2
 footsteps_planner:
@@ -21,6 +21,7 @@ walking_controller:
   right_hand_surface: "RightHandWrench"
   right_foot_surface: "RightFootCenter"
   left_foot_surface: "LeftFootCenter"
+  headLink: "HEAD_P_LINK"
 stabilizer:
   dcm_tracking:
     gains:
@@ -79,6 +80,6 @@ stabilizer_sgsupp:
     cop: [0.01, 0.01]
 stabilizer_dblsupp:
   admittance:
-    copFzLambda: [30,30,30]
+    copFzLambda: [15,15,15]
     copFzDelay: 0.0
     df: [0.000,0.0000,0.0001]
