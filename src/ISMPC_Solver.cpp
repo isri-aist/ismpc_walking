@@ -509,6 +509,11 @@ void ISMPC_Solver::Static_ZMP_Constraints()
 
     sva::PTransformd ZMP_Zone = X_0_step_stop;
 
+    //zmp location in the horizon is as such
+    //zmp_i = P_z_k_delayed + A_zmp * X (having X the decision variables)
+    //The ZMP reference trajectory in the QP is as such
+    //min | zmp_i - zmp_ref|^2 => min |M X - b|^2
+    //ZMP_ref_traj is the b part of the cost function
     ZMP_ref_traj.push_back(ZMP_Zone.translation().x() - P_z_k_delayed.x());
     ZMP_ref_traj.push_back(ZMP_Zone.translation().y() - P_z_k_delayed.y());
 
@@ -529,6 +534,10 @@ void ISMPC_Solver::Static_ZMP_Constraints()
     Eigen::MatrixX2d normals(zmp_cstr_polygons.back().normals());
     Eigen::VectorXd offsets(zmp_cstr_polygons.back().offsets());
 
+    //zmp location in the horizon is as such
+    //zmp_i = P_z_k_delayed + Delta * X (having X the decision variables)
+    //The cstr in the QP is as such
+    //N_i * zmp_i < O_i
     b_zmp_ineq.push_back(offsets - normals * P_z_k_delayed.segment(0, 2));
     b_u_ineq.push_back(u_cstr_polygons.back().offsets()
                        - u_cstr_polygons.back().normals() * P_z_k_delayed.segment(0, 2));
@@ -564,6 +573,7 @@ void ISMPC_Solver::Static_ZMP_Constraints()
   Aineq_zmp << ZMP_Cstr * Delta; // , ZMP_Cstr * DeltaNoDelay;
   bineq_zmp << b_zmp; //, b_zmp;
   A_zmp = Delta.block(0, 0, 2 * m_C, N_variable);
+
   b_zmp_traj = Eigen::Map<Eigen::VectorXd>(ZMP_ref_traj.data(), ZMP_ref_traj.size());
   M_zmp_traj = Eigen::MatrixXd::Zero(b_zmp_traj.rows(), N_variable);
   M_zmp_traj.block(0, 0, b_zmp_traj.rows(), b_zmp_traj.rows()) =
@@ -680,8 +690,11 @@ void ISMPC_Solver::ZMP_Constraints()
   ZMP_min_ref_traj.clear();
   All_poly.clear();
 
+  //Delta will convert the decision variable into the ZMP location w.r.t the footsteps location
+  //It is a square matrix as we must keep the X size the same fot the QP
   Eigen::MatrixXd Delta = Eigen::MatrixXd::Zero(N_variable, N_variable);
   Delta.block(0, 0, 2 * m_C, 2 * m_C) = create_zmp_matrix(true);
+  //Matrix similar to Delta but with a different footsteps location dependency to generate the reference zmp traj
   Eigen::MatrixXd Delta_zmp_ref = Delta;
 
   P_u_k_max = m_eta * m_delta * R_0_support * P_z_k;
@@ -761,10 +774,13 @@ void ISMPC_Solver::ZMP_Constraints()
 
     const double n = std::max(0., std::min(static_cast<double>(m_D), count_Dstep));
 
+    //alpha is a factor to place the ZMP cstr square between both feet
     const double alpha = std::min(1.0, std::max(0., n / (static_cast<double>(m_D))));
 
-    // mc_rtc::log::info("i {} jf {} alpha {},D {}, Ts {}",i,j_f,alpha,m_D,NextStepTiming);
 
+    //Depending on j_f, the zmp constraint region depends on no footsteps (current double support poylgon)
+    // One footsteps (first step and current support foot)
+    // Two footsteps
     if(j_f == 0 || !AutoFootstepPlacement)
     {
       // t_clock_0 = std::chrono::high_resolution_clock::now();
@@ -825,12 +841,21 @@ void ISMPC_Solver::ZMP_Constraints()
         ZMP_min_ref_traj.push_back(ZMP_rect.get_center() - R_support_0 * Eigen::Vector3d{m_dx / 2, m_dy / 2, 0});
       }
 
+      //zmp location in the horizon is as such
+      //zmp_i = P_z_k_delayed + A_zmp * X (having X the decision variables)
+      //The ZMP reference trajectory in the QP is as such
+      //min | zmp_i - zmp_ref|^2 => min |M X - b|^2
+      //ZMP_ref_traj is the b part of the cost function
       ZMP_ref_traj.push_back((Rect_j.get_center() + zmp_ref_offset_sg).x() - P_z_k_delayed.x());
       ZMP_ref_traj.push_back((Rect_j.get_center() + zmp_ref_offset_sg).y() - P_z_k_delayed.y());
 
       Eigen::MatrixX2d normals(zmp_cstr_polygons.back().normals());
       Eigen::VectorXd offsets(zmp_cstr_polygons.back().offsets());
 
+    //zmp location in the horizon is as such
+    //zmp_i = P_z_k_delayed + Delta * X (having X the decision variables)
+    //The cstr in the QP is as such
+    //N_i * zmp_i < O_i
       b_zmp_ineq.push_back(offsets - normals * P_z_k_delayed.segment(0, 2));
       b_u_ineq.push_back(u_cstr_polygons.back().offsets()
                          - u_cstr_polygons.back().normals() * P_z_k_delayed.segment(0, 2));
@@ -967,15 +992,15 @@ void ISMPC_Solver::ZMP_Constraints()
   {
     N_u_cstr += static_cast<int>(u_cstr_polygons[k].normals().rows());
   }
-  // mc_rtc::log::success("ZMP cstr computed, Ncstr = {}", N_zmp_cstr);
+
   Eigen::MatrixXd ZMP_Cstr = Eigen::MatrixXd::Zero(N_zmp_cstr, N_variable);
-  // std::cout << "ZMP_cstr_rows" << ZMP_Cstr.rows() << std::endl;
 
   Eigen::MatrixXd U_Cstr = Eigen::MatrixXd::Zero(N_u_cstr, N_variable);
 
   Eigen::VectorXd b_zmp = Eigen::VectorXd::Zero(ZMP_Cstr.rows());
   // Eigen::VectorXd b_u = Eigen::VectorXd::Zero(U_Cstr.rows());
 
+  //ZMP_Cstr * X <= b_zmp (X are the decision variables)
   create_cstr_matrices(ZMP_Cstr, b_zmp, zmp_cstr_polygons, b_zmp_ineq);
   // create_cstr_matrices(U_Cstr,b_u,u_cstr_polygons,b_u_ineq);
 
@@ -994,6 +1019,7 @@ void ISMPC_Solver::ZMP_Constraints()
   M_zmp_traj = Eigen::MatrixXd::Zero(b_zmp_traj.rows(), N_variable);
   M_zmp_traj.block(0, 0, b_zmp_traj.rows(), N_variable) = Delta_zmp_ref.block(0, 0, b_zmp_traj.rows(), N_variable);
   A_zmp = Delta.block(0, 0, 2 * m_C, N_variable);
+  //We remove the footsteps component part
   A_zmp.block(0, 2 * m_C, 2 * m_C, N_variable - 2 * m_C).setZero();
 
   // time_span = std::chrono::high_resolution_clock::now() - t_clock;
@@ -1227,7 +1253,7 @@ void ISMPC_Solver::Compute_Stability_Range()
   Eigen::Vector3d u_m_k;
   Eigen::Vector3d u_M_k;
 
-  Eigen::MatrixXd Delta; // Matrix to derive the ZMP position from u
+  Eigen::MatrixXd Delta; // 2*m_C square Matrix to derive the ZMP position from u
   Eigen::VectorXd PzM = Eigen::VectorXd::Zero(2 * m_C);
   Eigen::VectorXd Pzm = Eigen::VectorXd::Zero(2 * m_C);
   Eigen::VectorXd Pz0 = Eigen::VectorXd::Zero(2 * m_C);

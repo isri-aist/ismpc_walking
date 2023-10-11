@@ -55,6 +55,11 @@ public:
 
   /**
    * Compute the CoM, CoMd, ZMP trajectory for previously set Walking parameters
+   * QP is build such as the output vector contains :
+   * -The ZMP reference in x and y (world frame) ordered by timesteps then x then y
+   * -The Optimized Footstep (if computed) in x and y ordered by timesteps then x then y
+   * -The inequality constraints are set in the constraints matrix such as the first part represent the zmp position
+   * constraints and then the Footsteps position constraints
    */
   bool GetWalkingParameters(bool stop);
 
@@ -366,23 +371,30 @@ public:
 
 private:
   /**
-   * ZMP Trajectory constraints :
-   * QP is build such as the output vector contains :
-   * -The ZMP reference in x and y (world frame) ordered by timesteps then x then y
-   * -The Optimized Footstep (if computed) in x and y ordered by timesteps then x then y
-   * -The inequality constraints are set in the constraints matrix such as the first part represent the zmp position
-   * constraints and then the Footsteps position constraints
+   * Generate the ZMP Trajectory constraints for locomotion :
+   * ZMP constraints then includes the steps location decision variables
+   * 
+   * The ZMP reference pose is also generated here
    */
   void ZMP_Constraints();
 
   void ZMP_Transition_Constraint(Eigen::MatrixXd & A_out, Eigen::VectorXd & b_out, SupportPolygon PolySS);
 
+  /**
+   * @brief ZMP Constraint in standing mode
+   * The cstr is here the current support polygon on the entire horizon
+   * 
+   * The ZMP reference pose is also generated here
+   */
   void Static_ZMP_Constraints();
 
   void Compute_Stability_Range();
 
   void Compute_Standing_Stability_Range();
 
+  /**
+  * Footsteps kinematics cstr
+  */
   void FootSteps_Constraints();
 
   /**
@@ -404,12 +416,27 @@ private:
                            const double eta,
                            const int indx_start,
                            const Eigen::Vector2d w);
-
+  /**
+   * @brief Convert the created contraints to a Eigen matrix and vector usable for the QP solver
+   * 
+   * @param A_out 
+   * @param b_out 
+   * @param A_in 
+   * @param b_in 
+   */
   void create_cstr_matrices(Eigen::MatrixXd & A_out,
                             Eigen::VectorXd & b_out,
                             std::vector<SupportPolygon> & A_in,
                             const std::vector<Eigen::VectorXd> & b_in);
 
+  /**
+   * @brief Convert the created contraints to a Eigen matrix and vector usable for the QP solver
+   * 
+   * @param A_out 
+   * @param b_out 
+   * @param A_in 
+   * @param b_in 
+   */
   void create_cstr_matrices(Eigen::MatrixXd & A_out,
                             Eigen::VectorXd & b_out,
                             std::vector<Eigen::MatrixX2d> & A_in,
@@ -455,6 +482,9 @@ private:
                                 Eigen::MatrixXd & M_traj_zmp,
                                 Eigen::VectorXd & b_traj_zmp);
 
+  /**
+   * @brief Create a 2*m_C square matrix A to retrieve the zmp location from the decision variable zmp references
+   */
   Eigen::MatrixXd create_zmp_matrix(bool addDelay);
   Eigen::MatrixXd create_u_matrix();
 

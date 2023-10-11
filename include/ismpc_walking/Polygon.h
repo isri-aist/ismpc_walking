@@ -18,6 +18,10 @@ inline Eigen::Vector3d rpyFromMat(const Eigen::Matrix3d & E)
   return Eigen::Vector3d(roll, pitch, yaw);
 }
 
+/**
+ * @brief Rectangle class allows to generate easily a representation of a contact location with a defined size and orientation
+ * 
+ */
 struct Rectangle
 {
 
@@ -131,6 +135,11 @@ struct vec3d_x_comp
   }
 };
 
+/**
+ * @brief SupportPolygon class allow to convert any generated rectangles or pair of rectangles into an inequality constraint of the form
+ * N * p < O
+ * where N is a (n x 2) matrix
+ */
 struct SupportPolygon
 {
 
