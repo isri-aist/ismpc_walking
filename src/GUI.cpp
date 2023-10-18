@@ -72,7 +72,9 @@ inline void AddStabilizerConfigToGUI(mc_rtc::gui::StateBuilder & gui,
           [&c_](const Eigen::Vector2d & T) {
             c_.dcmDerivatorTimeConstant = T(0);
             c_.dcmIntegratorTimeConstant = T(1);
-          }));
+          }),
+      mc_rtc::gui::NumberInput(
+          "Torso pitch [rad]", [&c_]() { return c_.torsoPitch; }, [&c_](double pitch) { c_.torsoPitch = pitch; }));
   category.pop_back();
   category.push_back("Advanced");
   gui.addElement(
