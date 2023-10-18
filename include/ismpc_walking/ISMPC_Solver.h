@@ -373,7 +373,7 @@ private:
   /**
    * Generate the ZMP Trajectory constraints for locomotion :
    * ZMP constraints then includes the steps location decision variables
-   * 
+   *
    * The ZMP reference pose is also generated here
    */
   void ZMP_Constraints();
@@ -383,7 +383,7 @@ private:
   /**
    * @brief ZMP Constraint in standing mode
    * The cstr is here the current support polygon on the entire horizon
-   * 
+   *
    * The ZMP reference pose is also generated here
    */
   void Static_ZMP_Constraints();
@@ -393,8 +393,8 @@ private:
   void Compute_Standing_Stability_Range();
 
   /**
-  * Footsteps kinematics cstr
-  */
+   * Footsteps kinematics cstr
+   */
   void FootSteps_Constraints();
 
   /**
@@ -418,11 +418,11 @@ private:
                            const Eigen::Vector2d w);
   /**
    * @brief Convert the created contraints to a Eigen matrix and vector usable for the QP solver
-   * 
-   * @param A_out 
-   * @param b_out 
-   * @param A_in 
-   * @param b_in 
+   *
+   * @param A_out
+   * @param b_out
+   * @param A_in
+   * @param b_in
    */
   void create_cstr_matrices(Eigen::MatrixXd & A_out,
                             Eigen::VectorXd & b_out,
@@ -431,11 +431,11 @@ private:
 
   /**
    * @brief Convert the created contraints to a Eigen matrix and vector usable for the QP solver
-   * 
-   * @param A_out 
-   * @param b_out 
-   * @param A_in 
-   * @param b_in 
+   *
+   * @param A_out
+   * @param b_out
+   * @param A_in
+   * @param b_in
    */
   void create_cstr_matrices(Eigen::MatrixXd & A_out,
                             Eigen::VectorXd & b_out,
