@@ -923,6 +923,13 @@ void Walking_controller::reset(const mc_control::ControllerResetData & reset_dat
   config_stab.comWeight = 0;
   stabTask->configure(config_stab);
 
+  comTask->reset();
+  leftSwingFootTask->reset();
+  rightSwingFootTask->reset();
+  leftLandingTask->reset();
+  rightLandingTask->reset();
+  MomentumTask->reset();
+
   SwingFootTask.reset();
   SupportFootTask.reset();
   supportFootName = rightFootName_;
