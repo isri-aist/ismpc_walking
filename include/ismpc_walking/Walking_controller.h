@@ -378,6 +378,7 @@ protected:
     datastore().make_call("ismpc_walking::set_tds", [this](double t) { return tds(t); });
     datastore().make_call("ismpc_walking::get_tds", [this]() -> double { return input_tds; });
     datastore().make_call("ismpc_walking::set_n_step", [this](int n) { N_Steps_Desired_std = n; });
+    datastore().make_call("ismpc_walking::get_ref_vel", [this]() -> const Eigen::Vector3d & { return reference_velocity; });
     datastore().make_call("ismpc_walking::set_ref_vel", [this](Eigen::Vector3d vel) { reference_velocity = vel; });
     datastore().make_call("ismpc_walking::tds_by_ratio", [this](bool val) { Tds_by_ratio = val; });
     datastore().make_call("ismpc_walking::arm_swing_off", [this]() { armTask->weight(0); });
