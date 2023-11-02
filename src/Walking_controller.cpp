@@ -324,7 +324,8 @@ void Walking_controller::ComputeWalkingTrajectory()
   if(Use_w)
   {
 
-    double t_perturbation = std::max(0., 0.1);
+    const double t_perturbation = std::max(0., 0.1);
+    MPCSolver.InfiniteDisturbance(w_inf_, kappa_inf_);
     if((!DoubleSupport_state) || debugDblSupp)
     {
       MPCSolver.Disturbance(w_, kappa_, t_perturbation);
@@ -894,7 +895,10 @@ void Walking_controller::UpdateInitialVectors()
 
   if(!DebugMode)
   {
-    ComputeFeetPerturbances(w_, kappa_);
+    ComputePerturbances(w_, kappa_,w_inf_,kappa_inf_);
+    stabTask->setExternalWrenches({leftHandName_,rightHandName_},
+                                  {robot().frame(leftHandName_).forceSensor().wrench(),robot().frame(rightHandName_).forceSensor().wrench()},
+                                  {sva::MotionVecd(Eigen::Vector6d::Ones()),sva::MotionVecd(Eigen::Vector6d::Ones())});
     Ldot_offset = Eigen::Vector3d::Zero();
     // Ldot_offset = Eigen::Vector3d{-Ldot.y(),Ldot.x(),0.};
     // Ldot_offset /= (robot().mass() * controller_config_.Stab_config.comHeight * eta2_cstr);

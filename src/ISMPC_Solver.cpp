@@ -128,6 +128,7 @@ void ISMPC_Solver::init_MPC(const MPC_state & mpc_state, std::string Tail, int S
   R_support_0 = R_0_support.transpose();
 
   w_k.setZero();
+  m_kappa = 1.;
   m_eta = sqrt(mc_rtc::constants::GRAVITY / CoM_height);
   m_eta_free = m_eta;
   perturbation_duration = 0;
@@ -1198,16 +1199,16 @@ void ISMPC_Solver::Stability_Constraints()
     const double tj = static_cast<double>(j) * m_delta;
     if(tj >= perturbation_duration)
     {
-      A_stab.block(0, 2 * j, 2, 2) = Eigen::Matrix2d::Identity() * l_d_l_p_e * exp(-m_eta * tj);
+      A_stab.block(0, 2 * j, 2, 2) = Eigen::Matrix2d::Identity() * l_d_l_p_e * m_kappa_inf * exp(-m_eta * tj);
     }
     else
     {
       A_stab.block(0, 2 * j, 2, 2) =
           Eigen::Matrix2d::Identity() * exp(-m_eta * tj)
-          * (m_kappa * (1 - exp(-m_eta * (perturbation_duration - tj))) + exp(-m_eta * (perturbation_duration - tj))
+          * (m_kappa * (1 - exp(-m_eta * (perturbation_duration - tj))) + m_kappa_inf * exp(-m_eta * (perturbation_duration - tj))
              + e_d_l_p_e
                    * (m_kappa * (exp(-(m_eta + m_lambda) * (perturbation_duration - tj)) - 1)
-                      - exp(-(m_eta + m_lambda) * (perturbation_duration - tj))));
+                      - m_kappa_inf * exp(-(m_eta + m_lambda) * (perturbation_duration - tj))));
     }
 
     if(UseAngularMomentumDot)
@@ -1236,11 +1237,12 @@ void ISMPC_Solver::Stability_Constraints()
                + e_d_l_p_e * (P_z_k - U_k) * (1 - exp(-(m_eta + m_lambda) * m_delay_elapsed)))
                   .segment(0, 2);
 
-  b_stab -= exp(-m_eta * m_delay_elapsed)
-            * (P_z_k_delayed * m_kappa * (1 - exp(-m_eta * perturbation_duration))
-               + P_z_k_delayed * exp(-m_eta * perturbation_duration))
-                  .segment(0, 2);
-  b_stab -= -(w_k * (1 - exp(-m_eta * (perturbation_duration + m_delay_elapsed)))).segment(0, 2);
+  b_stab -= exp(-m_eta * m_delay_elapsed) * P_z_k_delayed.segment(0, 2) *
+              (   m_kappa * (1 - exp(-m_eta * perturbation_duration))
+                + m_kappa_inf *  exp(-m_eta * perturbation_duration)
+              );
+  b_stab -= -(  w_k * (1 - exp(-m_eta * (perturbation_duration + m_delay_elapsed))) 
+              + w_k_inf *  exp(-m_eta * (perturbation_duration + m_delay_elapsed)) ).segment(0, 2);
 }
 
 void ISMPC_Solver::Compute_Stability_Range()
@@ -1361,8 +1363,10 @@ void ISMPC_Solver::Integrate()
     {
       zmp_ref += w;
       zmp_ref /= kappa;
-      w.setZero();
-      kappa = 1;
+      zmp_ref *= m_kappa_inf;
+      zmp_ref -= w_k_inf.segment(0,2); 
+      w = w_k_inf.segment(0,2);
+      kappa = m_kappa_inf;
     }
     Lc_dot_comp << -m_Ldot_c(i + m_C), m_Ldot_c(i);
     Lc_dot_comp /= (m_mass * std::pow(eta, 2) * CoM_height);
@@ -1496,6 +1500,13 @@ bool ISMPC_Solver::GetWalkingParameters(bool stop)
   double beta_dcm = m_Beta_dcm;
   double beta_dcm_vel = m_Beta_dcm_vel;
   double beta_zmp_traj = m_Beta_zmp_traj;
+
+  if(perturbation_duration == 0)
+  {
+    m_kappa = m_kappa_inf;
+    w_k = w_k_inf;
+  }
+
   if(m_stop)
   {
     beta_dcm = m_Beta_dcm_stop;

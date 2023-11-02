@@ -336,7 +336,15 @@ protected:
 
   void add_ISMPC_Config_GUI();
 
-  void ComputeFeetPerturbances(Eigen::Vector3d & offset, double & kappa);
+  /**
+   * @brief Computes two perturbation set, one from the hands, the other from the swing foot
+   * 
+   * @param offset 
+   * @param kappa 
+   * @param offset_inf 
+   * @param kappa_inf 
+   */
+  void ComputePerturbances(Eigen::Vector3d & offset, double & kappa,Eigen::Vector3d & offset_inf, double & kappa_inf);
 
   void AddToLog();
 
@@ -559,6 +567,8 @@ private:
   bool Use_w = true;
   Eigen::Vector3d w_ = Eigen::Vector3d::Zero();
   double kappa_ = 1;
+  Eigen::Vector3d w_inf_ = Eigen::Vector3d::Zero();
+  double kappa_inf_ = 1;
   double eta2_cstr = 0.0;
   Eigen::Vector3d Ldot_offset = Eigen::Vector3d::Zero(); // offset due to angular momentum
   Eigen::Vector3d Ldot = Eigen::Vector3d::Zero(); // current angular momentum

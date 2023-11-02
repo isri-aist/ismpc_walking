@@ -252,6 +252,10 @@ void Walking_controller::addToGUI()
                         "Input Disturbance", [this]() { return w_; }, [this](const Eigen::Vector3d & in) { w_ = in; }),
                     mc_rtc::gui::NumberInput(
                         "Input Kappa", [this]() -> double { return kappa_; }, [this](double w) { kappa_ = w; }),
+                    mc_rtc::gui::ArrayInput(
+                        "Input Disturbance Infinity", [this]() { return w_inf_; }, [this](const Eigen::Vector3d & in) { w_inf_ = in; }),
+                    mc_rtc::gui::NumberInput(
+                        "Input Kappa Infinity", [this]() -> double { return kappa_inf_; }, [this](double w) { kappa_inf_ = w; }),
                     mc_rtc::gui::Checkbox(
                         "Force Contact Safety", [this]() { return force_contact_safety_; },
                         [this]() { force_contact_safety_ = !force_contact_safety_; }),

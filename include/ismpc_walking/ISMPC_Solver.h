@@ -173,12 +173,31 @@ public:
     return w_k;
   }
 
-  void Disturbance(const Eigen::Vector3d w, const double kappa = 1, const double d = 1e3) noexcept
+  /**
+   * @brief Set a disturbance over a duration
+   * 
+   * @param w 
+   * @param kappa 
+   * @param d 
+   */
+  void Disturbance(const Eigen::Vector3d & w, const double kappa = 1, const double d = 1e3) noexcept
   {
     w_k = w;
     m_kappa = kappa;
-    Compute_Integration_Matrix(m_eta);
     perturbation_duration = d;
+  }
+
+  /**
+   * @brief Set disturbance over an infinite duration
+   * If you wish to combine two perturbation this one should take into account the temporary disturbance
+   * 
+   * @param w 
+   * @param kappa 
+   */
+  void InfiniteDisturbance(const Eigen::Vector3d & w, const double kappa = 1) noexcept
+  {
+    w_k_inf = w;
+    m_kappa_inf = kappa;
   }
 
   double eta()
@@ -515,8 +534,10 @@ private:
   Eigen::Vector3d V_c_k = Eigen::Vector3d::Zero(); // Initial CoM Velocity
   Eigen::Vector3d P_u_k = Eigen::Vector3d::Zero(); // Initial Unstable Component/DCM
   Eigen::Vector3d U_k = Eigen::Vector3d::Zero(); // Current admittance acting on the pendulum (z_0 + u_0)
-  Eigen::Vector3d w_k = Eigen::Vector3d::Zero(); // Perturbance
+  Eigen::Vector3d w_k = Eigen::Vector3d::Zero(); // Perturbance over a duration
   double m_kappa = 1;
+  Eigen::Vector3d w_k_inf = Eigen::Vector3d::Zero(); // Perturbance over the infinty
+  double m_kappa_inf = 1;
   Eigen::Vector3d Lc_k = Eigen::Vector3d::Zero(); // Initial Angular Momemtum
   double perturbation_duration = 0;
 

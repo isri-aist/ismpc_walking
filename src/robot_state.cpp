@@ -167,66 +167,78 @@ void Walking_controller::computeExternalContact(const std::string & surfaceName,
   moment = surfaceWrenchW.moment();
 }
 
-void Walking_controller::ComputeFeetPerturbances(Eigen::Vector3d & offset, double & kappa)
+void Walking_controller::ComputePerturbances(Eigen::Vector3d & offset, double & kappa,Eigen::Vector3d & offset_inf, double & kappa_inf)
 {
   const double verticalComAcc = comTask->refAccel()(2) + mc_rtc::constants::gravity.z();
   const double h = controller_config_.Stab_config.comHeight;
   sva::ForceVecd LcDot = rbd::computeCentroidalMomentumDot(robot().mb(), robot().mbc(), mpc_state_.Pck, mpc_state_.Vck);
-  offset.setZero();
-  kappa = 0;
+  offset_inf.setZero();
+  kappa_inf = 0;
   Eigen::Vector3d FilteredNetForce = stabTask->measuredFilteredNetForces();
   double mass = FilteredNetForce.z() / mc_rtc::constants::GRAVITY;
   comAccZ = 0;
-  for(auto frame : {supportFootName, swingFootName, leftHandName_, rightHandName_})
-  {
-    const sva::PTransformd & X_0_f = robot().frame(frame).position();
-    comAccZ += X_0_f.inv().dualMul(robot().frame(frame).wrench()).force().z();
-  }
-  comAccZ /= mass;
-  if(std::abs(comAccZ) < 0.1 * mc_rtc::constants::GRAVITY)
-  {
-    comAccZ = mc_rtc::constants::GRAVITY;
-  }
-  comAccZ -= mc_rtc::constants::GRAVITY;
+  double k = 0;
+  Eigen::Vector3d off = Eigen::Vector3d::Zero();
+  // for(auto frame : {supportFootName, swingFootName, leftHandName_, rightHandName_})
+  // {
+  //   const sva::PTransformd & X_0_f = robot().frame(frame).position();
+  //   comAccZ += X_0_f.inv().dualMul(robot().frame(frame).wrench()).force().z();
+  // }
+  // comAccZ /= mass;
+  // filter_comAccZ.update(Eigen::Vector3d::Ones() * comAccZ);
+  // comAccZ = filter_comAccZ.eval().z();
+
+  // if(std::abs(comAccZ) < 0.1 * mc_rtc::constants::GRAVITY)
+  // {
+  //   comAccZ = mc_rtc::constants::GRAVITY;
+  // }
+  // comAccZ -= mc_rtc::constants::GRAVITY;
   const double zeta = mass * (comAccZ + mc_rtc::constants::GRAVITY);
 
-  // for(auto frame : {leftHandName_,rightHandName_} )
-  // {
-  //   const sva::PTransformd & X_0_frame = robot().frame(frame).position();
-  //   const sva::PTransformd X_0_Frame0Ori = sva::PTransformd(Eigen::Matrix3d::Identity(),X_0_frame.translation());
-  //   const sva::PTransformd X_Frame_Frame0Ori = sva::PTransformd(X_0_frame.rotation().transpose() ,
-  //   Eigen::Vector3d::Zero()) ; const sva::ForceVecd Frame_wrench_0 =
-  //   X_Frame_Frame0Ori.dualMul(robot().frame(frame).wrench());
-
-  //   const Eigen::Vector3d & Pf = X_0_frame.translation();
-
-  //   offset.x() += ( Frame_wrench_0.force().x() * (Pf.z()) - Pf.x() * Frame_wrench_0.force().z() +
-  //   Frame_wrench_0.moment().y()); offset.y() += ( Frame_wrench_0.force().y() * (Pf.z()) - Pf.y() *
-  //   Frame_wrench_0.force().z() -  Frame_wrench_0.moment().x());
-
-  //   kappa -= Frame_wrench_0.force().z();
-  // }
   if(!DoubleSupport_state)
   {
-
     const sva::PTransformd X_0_swg0Ori = sva::PTransformd(Eigen::Matrix3d::Identity(), X_0_swing.translation());
     const sva::PTransformd X_swg_swg0Ori = sva::PTransformd(X_0_swing.rotation().transpose(), Eigen::Vector3d::Zero());
     const sva::ForceVecd swing_wrench_0 = X_swg_swg0Ori.dualMul(robot().surfaceWrench(swingFootName));
 
     const Eigen::Vector3d & Pf = X_0_swing.translation();
 
-    offset.x() +=
+    off.x() +=
         (swing_wrench_0.force().x() * (Pf.z()) - Pf.x() * swing_wrench_0.force().z() + swing_wrench_0.moment().y());
-    offset.y() +=
+    off.y() +=
         (swing_wrench_0.force().y() * (Pf.z()) - Pf.y() * swing_wrench_0.force().z() - swing_wrench_0.moment().x());
 
-    kappa -= swing_wrench_0.force().z();
+    k -= swing_wrench_0.force().z();
   }
-  offset += Eigen::Vector3d{-LcDot.couple().y(), LcDot.couple().x(), 0};
+
+  offset = off;
+  kappa = k;
+
+  for(auto frame : {leftHandName_,rightHandName_} )
+  {
+    const sva::PTransformd & X_0_frame = robot().frame(frame).position();
+    const sva::PTransformd X_0_Frame0Ori = sva::PTransformd(Eigen::Matrix3d::Identity(),X_0_frame.translation());
+    const sva::PTransformd X_Frame_Frame0Ori = sva::PTransformd(X_0_frame.rotation().transpose() ,
+    Eigen::Vector3d::Zero()) ; const sva::ForceVecd Frame_wrench_0 =
+    X_Frame_Frame0Ori.dualMul(robot().frame(frame).wrench());
+
+    const Eigen::Vector3d & Pf = X_0_frame.translation();
+
+    off.x() += ( Frame_wrench_0.force().x() * (Pf.z()) - Pf.x() * Frame_wrench_0.force().z() +  Frame_wrench_0.moment().y()); 
+    off.y() += ( Frame_wrench_0.force().y() * (Pf.z()) - Pf.y() * Frame_wrench_0.force().z() -  Frame_wrench_0.moment().x());
+
+    k -= Frame_wrench_0.force().z();
+  }
+
+  // offset += Eigen::Vector3d{-LcDot.couple().y(), LcDot.couple().x(), 0};
 
   offset /= zeta;
   kappa /= zeta;
   kappa += 1;
+
+  offset_inf = off/zeta;
+  kappa_inf = k/zeta;
+  kappa_inf += 1;
 }
 
 sva::ForceVecd Walking_controller::compute_momentum_contact_point()
