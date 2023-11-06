@@ -70,6 +70,8 @@ void Walking_controller::AddToLog()
   logger().addLogEntry("ISMPC_perturbation_offset", [this]() -> Eigen::Vector2d { return w_.segment(0, 2); });
   logger().addLogEntry("ISMPC_perturbation_omega", [this]() -> double { return sqrt(eta2_cstr); });
   logger().addLogEntry("ISMPC_perturbation_kappa", [this]() -> double { return kappa_; });
+  logger().addLogEntry("ISMPC_perturbation_infinity_offset", [this]() -> Eigen::Vector2d { return w_inf_.segment(0, 2); });
+  logger().addLogEntry("ISMPC_perturbation_infinity_kappa", [this]() -> double { return kappa_inf_; });
   logger().addLogEntry("ISMPC_perturbation_Ldot/mHw2", [this]() -> const Eigen::Vector3d & { return Ldot_offset; });
 
   // logger().addLogEntry("ISMPC_State_ZMP_kinmes", [this]() -> const Eigen::Vector3d {
