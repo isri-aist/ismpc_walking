@@ -199,7 +199,7 @@ struct MPC_state
   double input_eta = 3.5;
   double input_mass = 40;
   double eta = 3.5;
-  std::vector<sva::PTransformd> input_steps_; // planner reference steps
+  std::vector<sva::PTransformd> input_ref_pose_; // planner reference steps
   std::vector<sva::PTransformd> planned_steps_;
   std::vector<double> input_timesteps_; // Input desired steps timings
   std::vector<double> planned_timesteps_; // planner reference timesteps

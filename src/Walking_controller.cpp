@@ -276,14 +276,9 @@ void Walking_controller::ComputeWalkingTrajectory()
   MPCSolver.UsePendulumSolver = UsePendulumSolver;
   MPCSolver.UseAngularMomentumDot = UseAngularMomentum;
 
-  if(mpc_thread_state.input_steps_.size() != 0)
-  {
-    N_Steps = 0;
-    N_Steps_Desired = mpc_state_.input_steps_.size();
-  }
 
   datastore().assign<std::vector<sva::MotionVecd>>("footsteps_planner::input_vel", mpc_thread_state.input_v_);
-  datastore().assign<std::vector<sva::PTransformd>>("footsteps_planner::input_steps", mpc_thread_state.input_steps_);
+  datastore().assign<std::vector<sva::PTransformd>>("footsteps_planner::input_ref_pose", mpc_thread_state.input_ref_pose_);
   datastore().assign<std::string>("footsteps_planner::support_foot_name", mpc_thread_state.input_Support_FootName);
   datastore().assign<sva::PTransformd>("footsteps_planner::support_foot_pose", mpc_thread_state.X_0_SupportFoot);
   datastore().assign<std::vector<double>>("footsteps_planner::input_time_steps", mpc_thread_state.input_timesteps_);
@@ -323,7 +318,6 @@ void Walking_controller::ComputeWalkingTrajectory()
 
   if(Use_w)
   {
-
     const double t_perturbation = std::max(0., 0.1);
     MPCSolver.InfiniteDisturbance(w_inf_, kappa_inf_);
     if((!DoubleSupport_state) || debugDblSupp)
@@ -394,6 +388,8 @@ void Walking_controller::ComputeWalkingTrajectory()
 void Walking_controller::UpdatePlanner_input()
 {
   mpc_state_.input_v_.clear();
+  mpc_state_.input_ref_pose_.clear();
+
   Eigen::Vector3d step_velocity = reference_velocity;
   double step_time = T_Steps;
   if(StepRecoveryState)
@@ -409,10 +405,17 @@ void Walking_controller::UpdatePlanner_input()
   // {
   //   step_velocity.y() = mc_filter::utils::clamp(step_velocity.y(), 0.0, 0.07);
   // }
-  for(int k = 0; k < static_cast<int>(std::round(controller_config_.Tp / controller_config_.delta)); k++)
+  if(velocityControl)
   {
-    mpc_state_.input_v_.push_back(sva::MotionVecd(Eigen::Vector3d{0, 0, step_velocity.z()},
-                                                  Eigen::Vector3d{step_velocity.x(), step_velocity.y(), 0}));
+    for(int k = 0; k < static_cast<int>(std::round(controller_config_.Tp / controller_config_.delta)); k++)
+    {
+      mpc_state_.input_v_.push_back(sva::MotionVecd(Eigen::Vector3d{0, 0, step_velocity.z()},
+                                                    Eigen::Vector3d{step_velocity.x(), step_velocity.y(), 0}));
+    }
+  }
+  else
+  {
+    mpc_state_.input_ref_pose_.push_back(target_pose_);
   }
 
   mpc_state_.input_timesteps_ = {step_time};
@@ -421,16 +424,9 @@ void Walking_controller::UpdatePlanner_input()
     mpc_state_.input_timesteps_.push_back(
         static_cast<double>((static_cast<int>(mpc_state_.input_timesteps_.size()) + 1) * step_time));
   }
-  // std::cout << "//" << std::endl;
-  // for (int k = 0 ; k < mpc_state_.input_timesteps_.size() ; k++ )
-  // {
-  //   std::cout << mpc_state_.input_timesteps_[k] << std::endl;
-  // }
-  // mpc_state_.input_v_.clear();
-  // mpc_state_.input_timesteps_.clear();
+
+
   mpc_state_.set_input_tds(input_tds);
-  mpc_state_.input_steps_.clear();
-  // mpc_state_.input_steps_.push_back(target_pose_);
   mpc_state_.input_Support_FootName = "LeftFoot";
   if(supportFootName == rightFootName_)
   {
@@ -941,7 +937,7 @@ void Walking_controller::reset(const mc_control::ControllerResetData & reset_dat
 
   mpc_state_.input_v_.clear();
   mpc_state_.input_timesteps_.clear();
-  mpc_state_.input_steps_.clear();
+  mpc_state_.input_ref_pose_.clear();
 
   SupportFootPose = robot().surfacePose(supportFootName).translation();
   SupportFootPose.z() = 0;

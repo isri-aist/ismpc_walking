@@ -272,6 +272,7 @@ void Walking_controller::addToGUI()
   );
 
   gui()->addElement({"Walking", "Footsteps Parameters"},
+                    mc_rtc::gui::Checkbox("Velocity Control Mode",[this](){return velocityControl;},[this](){velocityControl = !velocityControl; }),
                     mc_rtc::gui::ArrayInput(
                         "Reference velocity", {"x", "y", "omega"},
                         [this]() -> const Eigen::Vector3d & { return reference_velocity; },
@@ -285,10 +286,14 @@ void Walking_controller::addToGUI()
                         "Desired Steps", [this]() -> int { return N_Steps_Desired; },
                         [this](const double n) { N_Steps_Desired_std = static_cast<int>(n); }),
                     mc_rtc::gui::Label("Steps Done", [this]() -> int { return N_Steps; }),
-
                     mc_rtc::gui::Transform(
-                        "Steps desired pose", [this]() { return target_pose_; },
-                        [this](const sva::PTransformd & in) { target_pose_ = in; }),
+                        "Reference pose", [this]() { return target_pose_; },
+                        [this](const sva::PTransformd & in) { 
+                          target_pose_ = 
+                          sva::PTransformd(mc_rbdyn::rpyToMat(Eigen::Vector3d{0,0,mc_rbdyn::rpyFromMat(in.rotation()).z()} ),
+                                            in.translation());
+                                            
+                          }),
                     mc_rtc::gui::Button("Compute Trajectory", [this]() { compute_trajectory_once.notify_all(); }));
 
   gui()->addElement({"Walking", "Visualization", "Feasibility"},

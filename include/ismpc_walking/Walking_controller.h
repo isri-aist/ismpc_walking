@@ -387,7 +387,8 @@ protected:
     datastore().make_call("ismpc_walking::get_tds", [this]() -> double { return input_tds; });
     datastore().make_call("ismpc_walking::set_n_step", [this](int n) { N_Steps_Desired_std = n; });
     datastore().make_call("ismpc_walking::get_ref_vel", [this]() -> const Eigen::Vector3d & { return reference_velocity; });
-    datastore().make_call("ismpc_walking::set_ref_vel", [this](Eigen::Vector3d vel) { reference_velocity = vel; });
+    datastore().make_call("ismpc_walking::set_ref_vel", [this](Eigen::Vector3d vel) { reference_velocity = vel; velocityControl = true;});
+    datastore().make_call("ismpc_walking::set_ref_pose", [this](sva::PTransformd pose) { target_pose_ = pose; velocityControl = false;});
     datastore().make_call("ismpc_walking::tds_by_ratio", [this](bool val) { Tds_by_ratio = val; });
     datastore().make_call("ismpc_walking::arm_swing_off", [this]() { armTask->weight(0); });
     datastore().make_call("ismpc_walking::arm_swing_on", [this]() { armTask->weight(10); });
@@ -509,6 +510,7 @@ private:
   bool Tds_by_ratio = true;
   bool force_contact_safety_ = true;
   bool updateAdmittance = false;
+  bool velocityControl = true; //If false walk is done throught reference pose control
 
   double LeftFootRatio = 0.5;
   double maxRatioDelta = 0.2;
@@ -537,7 +539,7 @@ private:
   int N_Steps_Desired = -1;
   int N_Steps_Desired_std = -1;
   int N_Steps_Desired_recovery = 2;
-  sva::PTransformd target_pose_ = sva::PTransformd::Identity();
+  sva::PTransformd target_pose_ = sva::PTransformd::Identity(); //Reference pose for the footsteps plan generation
 
   double t_stop = 0;
   int count_stop = 0;
