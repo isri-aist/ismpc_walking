@@ -895,10 +895,10 @@ void Walking_controller::UpdateInitialVectors()
 
   if(!DebugMode)
   {
-    ComputePerturbances(w_, kappa_,w_inf_,kappa_inf_);
-    stabTask->setExternalWrenches({leftHandName_,rightHandName_},
-                                  {robot().frame(leftHandName_).forceSensor().wrench(),robot().frame(rightHandName_).forceSensor().wrench()},
-                                  {sva::MotionVecd(Eigen::Vector6d::Ones()),sva::MotionVecd(Eigen::Vector6d::Ones())});
+    ComputePerturbances(w_, kappa_, w_inf_, kappa_inf_);
+    stabTask->setExternalWrenches({leftHandName_, rightHandName_},
+                                  {robot().frame(leftHandName_).wrench(), robot().frame(rightHandName_).wrench()},
+                                  {sva::MotionVecd(Eigen::Vector6d::Ones()), sva::MotionVecd(Eigen::Vector6d::Ones())});
     Ldot_offset = Eigen::Vector3d::Zero();
     // Ldot_offset = Eigen::Vector3d{-Ldot.y(),Ldot.x(),0.};
     // Ldot_offset /= (robot().mass() * controller_config_.Stab_config.comHeight * eta2_cstr);
