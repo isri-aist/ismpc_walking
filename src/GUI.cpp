@@ -178,123 +178,125 @@ inline void AddStabilizerConfigToGUI(mc_rtc::gui::StateBuilder & gui,
 void Walking_controller::addToGUI()
 {
 
-  gui()->addElement({"Walking", "Main"},
+  gui()->addElement(
+      {"Walking", "Main"},
 
-                    mc_rtc::gui::Button("Start Move",
-                                        [this]() {
-                                          compute_trajectory_once.notify_all();
-                                          if(stabilizer_active_)
-                                          {
-                                            Stop = false;
-                                          }
-                                        }),
-                    mc_rtc::gui::Button("Stop", [this]() { Stop = true; }),
-                    mc_rtc::gui::Checkbox(
-                        "Active", [this]() { return active; },
-                        [this]() {
-                          if(active)
-                          {
-                            deactivate();
-                          }
-                          else
-                          {
-                            activate();
-                          }
-                        }),
-                    mc_rtc::gui::ComboInput(
-                        "Velocity Tail", {"Periodic", "Truncated", "Anticipative", "None"}, [this]() { return Tail; },
-                        [this](const std::string str) {
-                          Tail = str;
-                          compute_trajectory_once.notify_all();
-                        }),
-                    mc_rtc::gui::Label("Velocity Tail used", [this]() { return this->mpc_state_.Tail; }),
-                    mc_rtc::gui::Label("Timing", [this]() { return t; }),
-                    mc_rtc::gui::Label("Double support duration", [this]() { return this->mpc_state_.get_tds(); }),
-                    mc_rtc::gui::Label("Next Step Timing ", [this]() { return this->mpc_state_.get_Ts(0); }),
-                    mc_rtc::gui::Checkbox(
-                        "Automatic FootStep Placement", [this]() { return AutoFootstepPlacement; },
-                        [this]() { AutoFootstepPlacement = !AutoFootstepPlacement; }),
-                    mc_rtc::gui::Checkbox(
-                        "Use Angular Momentum", [this]() { return UseAngularMomentum; },
-                        [this]() { UseAngularMomentum = !UseAngularMomentum; }),
-                    mc_rtc::gui::Checkbox(
-                        "Timing/Steps optimization", [this]() { return UsePendulumSolver; },
-                        [this]() { UsePendulumSolver = !UsePendulumSolver; }),
-                    mc_rtc::gui::Checkbox(
-                        "Real Robot Data feedback", [this]() { return UseRealRobot; },
-                        [this]() {
-                          UseRealRobot = !UseRealRobot;
-                          if(UseMPCState) UseMPCState = false;
-                          compute_trajectory_once.notify_all();
-                        }),
-                    mc_rtc::gui::Checkbox(
-                        "Robot Step Recovery", [this]() { return UseStepRecovery; },
-                        [this]() { UseStepRecovery = !UseStepRecovery; }),
-                    mc_rtc::gui::NumberInput(
-                        "lambda sg support", [this]() -> double { return controller_config_.lambda_sg_supp; },
-                        [this](const double n) { controller_config_.lambda_sg_supp = n; }),
-                    mc_rtc::gui::NumberInput(
-                        "lambda dbl support", [this]() -> double { return controller_config_.lambda_dbl_supp; },
-                        [this](const double n) { controller_config_.lambda_dbl_supp = n; }),
-                    mc_rtc::gui::NumberInput(
-                        "zmp delay", [this]() -> double { return controller_config_.zmp_delay; },
-                        [this](const double n) { controller_config_.zmp_delay = n; }),
-                    mc_rtc::gui::Checkbox(
-                        "MPC state feedback", [this]() { return UseMPCState; },
-                        [this]() {
-                          UseMPCState = !UseMPCState;
-                          if(UseRealRobot) UseRealRobot = false;
-                          compute_trajectory_once.notify_all();
-                        }),
-                    mc_rtc::gui::Checkbox(
-                        "Disturbance", [this]() { return Use_w; }, [this]() { Use_w = !Use_w; }),
-                    mc_rtc::gui::ArrayInput(
-                        "Input Disturbance", [this]() { return w_; }, [this](const Eigen::Vector3d & in) { w_ = in; }),
-                    mc_rtc::gui::NumberInput(
-                        "Input Kappa", [this]() -> double { return kappa_; }, [this](double w) { kappa_ = w; }),
-                    mc_rtc::gui::ArrayInput(
-                        "Input Disturbance Infinity", [this]() { return w_inf_; }, [this](const Eigen::Vector3d & in) { w_inf_ = in; }),
-                    mc_rtc::gui::NumberInput(
-                        "Input Kappa Infinity", [this]() -> double { return kappa_inf_; }, [this](double w) { kappa_inf_ = w; }),
-                    mc_rtc::gui::Checkbox(
-                        "Force Contact Safety", [this]() { return force_contact_safety_; },
-                        [this]() { force_contact_safety_ = !force_contact_safety_; }),
-                    mc_rtc::gui::Checkbox(
-                        "Increase MPC update rate (Double Support)", [this]() { return IncreaseUpdate; },
-                        [this]() { IncreaseUpdate = !IncreaseUpdate; }),
-                    // mc_rtc::gui::Checkbox("ZMP_Corr", [this](){return ZMP_correction;}, [this](){ZMP_correction =
-                    // !ZMP_correction;}),
-                    mc_rtc::gui::Label("Stab Error (m)", [this]() { return this->mpc_state_.stab_error; }),
-                    mc_rtc::gui::Label("MPC Processing Time (ms)", [this]() { return this->mpc_thread_process_time; }),
-                    mc_rtc::gui::Label("Run Loop Processing Time (ms)", [this]() { return this->ControllerLoopTime; })
-                    // mc_rtc::gui::Label("ZMP box range x",[this](){return this->MPCSolver.ZMP_dx;}),
-                    // mc_rtc::gui::Label("ZMP box range y",[this](){return this->MPCSolver.ZMP_dy;})
+      mc_rtc::gui::Button("Start Move",
+                          [this]() {
+                            compute_trajectory_once.notify_all();
+                            if(stabilizer_active_)
+                            {
+                              Stop = false;
+                            }
+                          }),
+      mc_rtc::gui::Button("Stop", [this]() { Stop = true; }),
+      mc_rtc::gui::Checkbox(
+          "Active", [this]() { return active; },
+          [this]() {
+            if(active)
+            {
+              deactivate();
+            }
+            else
+            {
+              activate();
+            }
+          }),
+      mc_rtc::gui::ComboInput(
+          "Velocity Tail", {"Periodic", "Truncated", "Anticipative", "None"}, [this]() { return Tail; },
+          [this](const std::string str) {
+            Tail = str;
+            compute_trajectory_once.notify_all();
+          }),
+      mc_rtc::gui::Label("Velocity Tail used", [this]() { return this->mpc_state_.Tail; }),
+      mc_rtc::gui::Label("Timing", [this]() { return t; }),
+      mc_rtc::gui::Label("Double support duration", [this]() { return this->mpc_state_.get_tds(); }),
+      mc_rtc::gui::Label("Next Step Timing ", [this]() { return this->mpc_state_.get_Ts(0); }),
+      mc_rtc::gui::Checkbox(
+          "Automatic FootStep Placement", [this]() { return AutoFootstepPlacement; },
+          [this]() { AutoFootstepPlacement = !AutoFootstepPlacement; }),
+      mc_rtc::gui::Checkbox(
+          "Use Angular Momentum", [this]() { return UseAngularMomentum; },
+          [this]() { UseAngularMomentum = !UseAngularMomentum; }),
+      mc_rtc::gui::Checkbox(
+          "Timing/Steps optimization", [this]() { return UsePendulumSolver; },
+          [this]() { UsePendulumSolver = !UsePendulumSolver; }),
+      mc_rtc::gui::Checkbox(
+          "Real Robot Data feedback", [this]() { return UseRealRobot; },
+          [this]() {
+            UseRealRobot = !UseRealRobot;
+            if(UseMPCState) UseMPCState = false;
+            compute_trajectory_once.notify_all();
+          }),
+      mc_rtc::gui::Checkbox(
+          "Robot Step Recovery", [this]() { return UseStepRecovery; },
+          [this]() { UseStepRecovery = !UseStepRecovery; }),
+      mc_rtc::gui::NumberInput(
+          "lambda sg support", [this]() -> double { return controller_config_.lambda_sg_supp; },
+          [this](const double n) { controller_config_.lambda_sg_supp = n; }),
+      mc_rtc::gui::NumberInput(
+          "lambda dbl support", [this]() -> double { return controller_config_.lambda_dbl_supp; },
+          [this](const double n) { controller_config_.lambda_dbl_supp = n; }),
+      mc_rtc::gui::NumberInput(
+          "zmp delay", [this]() -> double { return controller_config_.zmp_delay; },
+          [this](const double n) { controller_config_.zmp_delay = n; }),
+      mc_rtc::gui::Checkbox(
+          "MPC state feedback", [this]() { return UseMPCState; },
+          [this]() {
+            UseMPCState = !UseMPCState;
+            if(UseRealRobot) UseRealRobot = false;
+            compute_trajectory_once.notify_all();
+          }),
+      mc_rtc::gui::Checkbox(
+          "Disturbance", [this]() { return Use_w; }, [this]() { Use_w = !Use_w; }),
+      mc_rtc::gui::ArrayInput(
+          "Input Disturbance", [this]() { return w_; }, [this](const Eigen::Vector3d & in) { w_ = in; }),
+      mc_rtc::gui::NumberInput(
+          "Input Kappa", [this]() -> double { return kappa_; }, [this](double w) { kappa_ = w; }),
+      mc_rtc::gui::ArrayInput(
+          "Input Disturbance Infinity", [this]() { return w_inf_; },
+          [this](const Eigen::Vector3d & in) { w_inf_ = in; }),
+      mc_rtc::gui::NumberInput(
+          "Input Kappa Infinity", [this]() -> double { return kappa_inf_; }, [this](double w) { kappa_inf_ = w; }),
+      mc_rtc::gui::Checkbox(
+          "Force Contact Safety", [this]() { return force_contact_safety_; },
+          [this]() { force_contact_safety_ = !force_contact_safety_; }),
+      mc_rtc::gui::Checkbox(
+          "Increase MPC update rate (Double Support)", [this]() { return IncreaseUpdate; },
+          [this]() { IncreaseUpdate = !IncreaseUpdate; }),
+      // mc_rtc::gui::Checkbox("ZMP_Corr", [this](){return ZMP_correction;}, [this](){ZMP_correction =
+      // !ZMP_correction;}),
+      mc_rtc::gui::Label("Stab Error (m)", [this]() { return this->mpc_state_.stab_error; }),
+      mc_rtc::gui::Label("MPC Processing Time (ms)", [this]() { return this->mpc_thread_process_time; }),
+      mc_rtc::gui::Label("Run Loop Processing Time (ms)", [this]() { return this->ControllerLoopTime; })
+      // mc_rtc::gui::Label("ZMP box range x",[this](){return this->MPCSolver.ZMP_dx;}),
+      // mc_rtc::gui::Label("ZMP box range y",[this](){return this->MPCSolver.ZMP_dy;})
   );
 
-  gui()->addElement({"Walking", "Footsteps Parameters"},
-                    mc_rtc::gui::Checkbox("Velocity Control Mode",[this](){return velocityControl;},[this](){velocityControl = !velocityControl; }),
-                    mc_rtc::gui::ArrayInput(
-                        "Reference velocity", {"x", "y", "omega"},
-                        [this]() -> const Eigen::Vector3d & { return reference_velocity; },
-                        [this](const Eigen::Vector3d & vel) { reference_velocity = vel; }),
-                    mc_rtc::gui::NumberInput(
-                        "Ts", [this]() -> double { return ts(); }, [this](const double t) { T_Steps = t; }),
-                    mc_rtc::gui::NumberInput(
-                        "Tds/Ts", [this]() -> double { return controller_config_.Double_Step_Ratio; },
-                        [this](const double t) { controller_config_.Double_Step_Ratio = t; }),
-                    mc_rtc::gui::NumberInput(
-                        "Desired Steps", [this]() -> int { return N_Steps_Desired; },
-                        [this](const double n) { N_Steps_Desired_std = static_cast<int>(n); }),
-                    mc_rtc::gui::Label("Steps Done", [this]() -> int { return N_Steps; }),
-                    mc_rtc::gui::Transform(
-                        "Reference pose", [this]() { return target_pose_; },
-                        [this](const sva::PTransformd & in) { 
-                          target_pose_ = 
-                          sva::PTransformd(mc_rbdyn::rpyToMat(Eigen::Vector3d{0,0,mc_rbdyn::rpyFromMat(in.rotation()).z()} ),
-                                            in.translation());
-                                            
-                          }),
-                    mc_rtc::gui::Button("Compute Trajectory", [this]() { compute_trajectory_once.notify_all(); }));
+  gui()->addElement(
+      {"Walking", "Footsteps Parameters"},
+      mc_rtc::gui::Checkbox(
+          "Velocity Control Mode", [this]() { return velocityControl; },
+          [this]() { velocityControl = !velocityControl; }),
+      mc_rtc::gui::ArrayInput(
+          "Reference velocity", {"x", "y", "omega"}, [this]() -> const Eigen::Vector3d & { return reference_velocity; },
+          [this](const Eigen::Vector3d & vel) { reference_velocity = vel; }),
+      mc_rtc::gui::NumberInput(
+          "Ts", [this]() -> double { return ts(); }, [this](const double t) { T_Steps = t; }),
+      mc_rtc::gui::NumberInput(
+          "Tds/Ts", [this]() -> double { return controller_config_.Double_Step_Ratio; },
+          [this](const double t) { controller_config_.Double_Step_Ratio = t; }),
+      mc_rtc::gui::NumberInput(
+          "Desired Steps", [this]() -> int { return N_Steps_Desired; },
+          [this](const double n) { N_Steps_Desired_std = static_cast<int>(n); }),
+      mc_rtc::gui::Label("Steps Done", [this]() -> int { return N_Steps; }),
+      mc_rtc::gui::Transform(
+          "Reference pose", [this]() { return target_pose_; },
+          [this](const sva::PTransformd & in) {
+            target_pose_ = sva::PTransformd(
+                mc_rbdyn::rpyToMat(Eigen::Vector3d{0, 0, mc_rbdyn::rpyFromMat(in.rotation()).z()}), in.translation());
+          }),
+      mc_rtc::gui::Button("Compute Trajectory", [this]() { compute_trajectory_once.notify_all(); }));
 
   gui()->addElement({"Walking", "Visualization", "Feasibility"},
                     mc_rtc::gui::Polygon("Feasibility Region", mc_rtc::gui::Color(1., 0., 1.),
@@ -600,7 +602,12 @@ void Walking_controller::add_ISMPC_Config_GUI()
                                                     controller_config_.MPC_ZMP_ref_offset_start_step.y()};
                                           }),
               mc_rtc::gui::FormNumberInput("feet distance", false,
-                                           [this]() { return controller_config_.feet_ditance_; })));
+                                           [this]() { return controller_config_.feet_ditance_; }),
+              mc_rtc::gui::FormNumberInput("External disturbance cutoff period", false,
+                                           [this]() { return controller_config_.external_disturbance_cutoff_period_; }),
+              mc_rtc::gui::FormCheckbox("Include high frequency hand disturbance", false, [this]() {
+                return controller_config_.with_external_disturbance_highpass_filter_;
+              })));
 }
 
 void Walking_controller::add_FootSteps_GUI()

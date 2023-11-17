@@ -15,7 +15,8 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm,
                                        const mc_rtc::Configuration & config,
                                        mc_control::ControllerParameters params)
 : mc_control::fsm::Controller(rm, dt, config, params), filter_left_hand_wrench_(0.005, 0),
-  filter_right_hand_wrench_(0.005, 0), filter_gamma_(0.005, 0), zmp_vel_(0.005, 0.05, {0., 0., 0.})
+  filter_right_hand_wrench_(0.005, 0), filter_gamma_(0.005, 0), zmp_vel_(0.005, 0.05, {0., 0., 0.}),
+  leftHandDisturbanceFilter_(dt, 0), rightHandDisturbanceFilter_(dt, 0)
 {
 
   mc_rbdyn::lipm_stabilizer::StabilizerConfiguration Stabiconfig(robot().module().defaultLIPMStabilizerConfiguration());
@@ -276,9 +277,9 @@ void Walking_controller::ComputeWalkingTrajectory()
   MPCSolver.UsePendulumSolver = UsePendulumSolver;
   MPCSolver.UseAngularMomentumDot = UseAngularMomentum;
 
-
   datastore().assign<std::vector<sva::MotionVecd>>("footsteps_planner::input_vel", mpc_thread_state.input_v_);
-  datastore().assign<std::vector<sva::PTransformd>>("footsteps_planner::input_ref_pose", mpc_thread_state.input_ref_pose_);
+  datastore().assign<std::vector<sva::PTransformd>>("footsteps_planner::input_ref_pose",
+                                                    mpc_thread_state.input_ref_pose_);
   datastore().assign<std::string>("footsteps_planner::support_foot_name", mpc_thread_state.input_Support_FootName);
   datastore().assign<sva::PTransformd>("footsteps_planner::support_foot_pose", mpc_thread_state.X_0_SupportFoot);
   datastore().assign<std::vector<double>>("footsteps_planner::input_time_steps", mpc_thread_state.input_timesteps_);
@@ -424,7 +425,6 @@ void Walking_controller::UpdatePlanner_input()
     mpc_state_.input_timesteps_.push_back(
         static_cast<double>((static_cast<int>(mpc_state_.input_timesteps_.size()) + 1) * step_time));
   }
-
 
   mpc_state_.set_input_tds(input_tds);
   mpc_state_.input_Support_FootName = "LeftFoot";

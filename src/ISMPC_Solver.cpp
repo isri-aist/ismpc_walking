@@ -1205,7 +1205,8 @@ void ISMPC_Solver::Stability_Constraints()
     {
       A_stab.block(0, 2 * j, 2, 2) =
           Eigen::Matrix2d::Identity() * exp(-m_eta * tj)
-          * (m_kappa * (1 - exp(-m_eta * (perturbation_duration - tj))) + m_kappa_inf * exp(-m_eta * (perturbation_duration - tj))
+          * (m_kappa * (1 - exp(-m_eta * (perturbation_duration - tj)))
+             + m_kappa_inf * exp(-m_eta * (perturbation_duration - tj))
              + e_d_l_p_e
                    * (m_kappa * (exp(-(m_eta + m_lambda) * (perturbation_duration - tj)) - 1)
                       - m_kappa_inf * exp(-(m_eta + m_lambda) * (perturbation_duration - tj))));
@@ -1237,12 +1238,11 @@ void ISMPC_Solver::Stability_Constraints()
                + e_d_l_p_e * (P_z_k - U_k) * (1 - exp(-(m_eta + m_lambda) * m_delay_elapsed)))
                   .segment(0, 2);
 
-  b_stab -= exp(-m_eta * m_delay_elapsed) * P_z_k_delayed.segment(0, 2) *
-              (   m_kappa * (1 - exp(-m_eta * perturbation_duration))
-                + m_kappa_inf *  exp(-m_eta * perturbation_duration)
-              );
-  b_stab -= -(  w_k * (1 - exp(-m_eta * (perturbation_duration + m_delay_elapsed))) 
-              + w_k_inf *  exp(-m_eta * (perturbation_duration + m_delay_elapsed)) ).segment(0, 2);
+  b_stab -= exp(-m_eta * m_delay_elapsed) * P_z_k_delayed.segment(0, 2)
+            * (m_kappa * (1 - exp(-m_eta * perturbation_duration)) + m_kappa_inf * exp(-m_eta * perturbation_duration));
+  b_stab -= -(w_k * (1 - exp(-m_eta * (perturbation_duration + m_delay_elapsed)))
+              + w_k_inf * exp(-m_eta * (perturbation_duration + m_delay_elapsed)))
+                 .segment(0, 2);
 }
 
 void ISMPC_Solver::Compute_Stability_Range()
@@ -1364,8 +1364,8 @@ void ISMPC_Solver::Integrate()
       zmp_ref += w;
       zmp_ref /= kappa;
       zmp_ref *= m_kappa_inf;
-      zmp_ref -= w_k_inf.segment(0,2); 
-      w = w_k_inf.segment(0,2);
+      zmp_ref -= w_k_inf.segment(0, 2);
+      w = w_k_inf.segment(0, 2);
       kappa = m_kappa_inf;
     }
     Lc_dot_comp << -m_Ldot_c(i + m_C), m_Ldot_c(i);

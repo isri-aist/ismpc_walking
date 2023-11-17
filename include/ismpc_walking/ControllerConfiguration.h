@@ -79,4 +79,8 @@ struct ControllerConfiguration
   double Ts_ = 0.6;
   double Ls_ = 0.15;
   double alpha = 0.4; // Average Step duration/lentgh/speed (To process the timestamp)
+                      //
+  // Low-pass filter frequency for external disturbance
+  bool with_external_disturbance_highpass_filter_ = true;
+  double external_disturbance_cutoff_period_ = 1.0;
 };

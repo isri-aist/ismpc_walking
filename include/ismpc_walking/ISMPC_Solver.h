@@ -175,10 +175,10 @@ public:
 
   /**
    * @brief Set a disturbance over a duration
-   * 
-   * @param w 
-   * @param kappa 
-   * @param d 
+   *
+   * @param w
+   * @param kappa
+   * @param d
    */
   void Disturbance(const Eigen::Vector3d & w, const double kappa = 1, const double d = 1e3) noexcept
   {
@@ -190,9 +190,9 @@ public:
   /**
    * @brief Set disturbance over an infinite duration
    * If you wish to combine two perturbation this one should take into account the temporary disturbance
-   * 
-   * @param w 
-   * @param kappa 
+   *
+   * @param w
+   * @param kappa
    */
   void InfiniteDisturbance(const Eigen::Vector3d & w, const double kappa = 1) noexcept
   {

@@ -115,6 +115,9 @@ public:
     }
     controller_config_.zmp_delay = config("ismpc")("zmp_delay");
     controller_config_.feet_ditance_ = config("ismpc")("feet_distance");
+    config("ismpc")("with_external_disturbance_highpass_filter",
+                    controller_config_.with_external_disturbance_highpass_filter_);
+    config("ismpc")("external_disturbance_cutoff_frequency", controller_config_.external_disturbance_cutoff_period_);
 
     if(config("walking_controller").has("foot_landing_offset"))
     {
@@ -174,6 +177,8 @@ public:
     controller_config_.feet_ditance_ = config("feet distance");
     controller_config_.MPC_ZMP_ref_offset_end_step = config("zmp ref end step");
     controller_config_.MPC_ZMP_ref_offset_start_step = config("zmp ref start step");
+    controller_config_.external_disturbance_cutoff_period_ = config("External disturbance cutoff period");
+    controller_config_.with_external_disturbance_highpass_filter_ = config("Include high frequency hand disturbance");
     Configure(controller_config_);
   }
 
@@ -190,6 +195,8 @@ public:
     controller_config_.MPC_ZMP_Constraint_size.y() = std::min(
         controller_config_.MPC_ZMP_Constraint_max_size,
         std::max(controller_config_.MPC_ZMP_Constraint_min_size, controller_config_.MPC_ZMP_Constraint_size.y()));
+    leftHandDisturbanceFilter_.cutoffPeriod(controller_config_.external_disturbance_cutoff_period_);
+    rightHandDisturbanceFilter_.cutoffPeriod(controller_config_.external_disturbance_cutoff_period_);
     MPCSolver.configure(controller_config_);
   }
 
@@ -338,13 +345,13 @@ protected:
 
   /**
    * @brief Computes two perturbation set, one from the hands, the other from the swing foot
-   * 
-   * @param offset 
-   * @param kappa 
-   * @param offset_inf 
-   * @param kappa_inf 
+   *
+   * @param offset
+   * @param kappa
+   * @param offset_inf
+   * @param kappa_inf
    */
-  void ComputePerturbances(Eigen::Vector3d & offset, double & kappa,Eigen::Vector3d & offset_inf, double & kappa_inf);
+  void ComputePerturbances(Eigen::Vector3d & offset, double & kappa, Eigen::Vector3d & offset_inf, double & kappa_inf);
 
   void AddToLog();
 
@@ -386,9 +393,16 @@ protected:
     datastore().make_call("ismpc_walking::set_tds", [this](double t) { return tds(t); });
     datastore().make_call("ismpc_walking::get_tds", [this]() -> double { return input_tds; });
     datastore().make_call("ismpc_walking::set_n_step", [this](int n) { N_Steps_Desired_std = n; });
-    datastore().make_call("ismpc_walking::get_ref_vel", [this]() -> const Eigen::Vector3d & { return reference_velocity; });
-    datastore().make_call("ismpc_walking::set_ref_vel", [this](Eigen::Vector3d vel) { reference_velocity = vel; velocityControl = true;});
-    datastore().make_call("ismpc_walking::set_ref_pose", [this](sva::PTransformd pose) { target_pose_ = pose; velocityControl = false;});
+    datastore().make_call("ismpc_walking::get_ref_vel",
+                          [this]() -> const Eigen::Vector3d & { return reference_velocity; });
+    datastore().make_call("ismpc_walking::set_ref_vel", [this](Eigen::Vector3d vel) {
+      reference_velocity = vel;
+      velocityControl = true;
+    });
+    datastore().make_call("ismpc_walking::set_ref_pose", [this](sva::PTransformd pose) {
+      target_pose_ = pose;
+      velocityControl = false;
+    });
     datastore().make_call("ismpc_walking::tds_by_ratio", [this](bool val) { Tds_by_ratio = val; });
     datastore().make_call("ismpc_walking::arm_swing_off", [this]() { armTask->weight(0); });
     datastore().make_call("ismpc_walking::arm_swing_on", [this]() { armTask->weight(10); });
@@ -475,6 +489,9 @@ private:
   std::string rightHandName_ = "";
   std::string leftHandName_ = "";
 
+  mc_filter::LowPass<sva::ForceVecd> leftHandDisturbanceFilter_;
+  mc_filter::LowPass<sva::ForceVecd> rightHandDisturbanceFilter_;
+
   std::vector<mc_rbdyn::Plane> planes_;
 
   Eigen::VectorXd Traj_ant;
@@ -510,7 +527,7 @@ private:
   bool Tds_by_ratio = true;
   bool force_contact_safety_ = true;
   bool updateAdmittance = false;
-  bool velocityControl = true; //If false walk is done throught reference pose control
+  bool velocityControl = true; // If false walk is done throught reference pose control
 
   double LeftFootRatio = 0.5;
   double maxRatioDelta = 0.2;
@@ -539,7 +556,7 @@ private:
   int N_Steps_Desired = -1;
   int N_Steps_Desired_std = -1;
   int N_Steps_Desired_recovery = 2;
-  sva::PTransformd target_pose_ = sva::PTransformd::Identity(); //Reference pose for the footsteps plan generation
+  sva::PTransformd target_pose_ = sva::PTransformd::Identity(); // Reference pose for the footsteps plan generation
 
   double t_stop = 0;
   int count_stop = 0;
