@@ -198,22 +198,23 @@ void Walking_controller::ComputePerturbances(Eigen::Vector3d & offset,
 
     const Eigen::Vector3d & Pf = X_0_frame.translation();
 
-    if(controller_config_.with_external_disturbance_highpass_filter_)
-    {
-      sva::ForceVecd handDisturbanceHighFreq = Frame_wrench_0 - handDisturbanceLowFreq;
-      off_finite.x() += (handDisturbanceHighFreq.force().x() * (Pf.z()) - Pf.x() * handDisturbanceHighFreq.force().z()
-                         + handDisturbanceHighFreq.moment().y());
-      off_finite.y() += (handDisturbanceHighFreq.force().y() * (Pf.z()) - Pf.y() * handDisturbanceHighFreq.force().z()
-                         - handDisturbanceHighFreq.moment().x());
-
-      k_finite -= handDisturbanceHighFreq.force().z();
-    }
     off_inf.x() += (handDisturbanceLowFreq.force().x() * (Pf.z()) - Pf.x() * handDisturbanceLowFreq.force().z()
                     + handDisturbanceLowFreq.moment().y());
     off_inf.y() += (handDisturbanceLowFreq.force().y() * (Pf.z()) - Pf.y() * handDisturbanceLowFreq.force().z()
                     - handDisturbanceLowFreq.moment().x());
-
     k_inf -= handDisturbanceLowFreq.force().z();
+
+    if(controller_config_.with_external_disturbance_highpass_filter_)
+    {
+      sva::ForceVecd handDisturbanceHighFreq = Frame_wrench_0 - handDisturbanceLowFreq;
+      off_finite.x() =  off_inf.x() + (handDisturbanceHighFreq.force().x() * (Pf.z()) - Pf.x() * handDisturbanceHighFreq.force().z()
+                         + handDisturbanceHighFreq.moment().y());
+      off_finite.y() += off_inf.y() + (handDisturbanceHighFreq.force().y() * (Pf.z()) - Pf.y() * handDisturbanceHighFreq.force().z()
+                         - handDisturbanceHighFreq.moment().x());
+
+      k_finite = k_inf - handDisturbanceHighFreq.force().z();
+    }
+
   };
   update_disturbance(leftHandName_, leftHandDisturbanceFilter_);
   update_disturbance(rightHandName_, rightHandDisturbanceFilter_);
