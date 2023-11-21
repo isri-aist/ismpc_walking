@@ -234,8 +234,8 @@ void Walking_controller::ComputePerturbances(Eigen::Vector3d & offset,
     k_finite -= swing_wrench_0.force().z();
   }
 
-  offset = off_finite / zeta;
-  kappa = 1 + k_finite / zeta;
+  offset = (off_finite + off_inf) / zeta;
+  kappa = 1 + (k_finite + k_inf) / zeta;
 
   offset_inf = off_inf / zeta;
   kappa_inf = 1 + k_inf / zeta;
