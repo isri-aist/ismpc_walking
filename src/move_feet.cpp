@@ -112,16 +112,9 @@ bool Walking_controller::MoveFeet(double t)
     if(controller_config_.FootStepHeight - X_0_FootTask_Target.translation().z() < 0.005)
     {
       double vertical_offset_measure = SwingFootTask->frame().wrench().force().z();
-      if(vertical_force_measure_cnt_ == 0)
-      {
-        vertical_force_offset_ = vertical_offset_measure;
-      }
-      else
-      {
-        vertical_force_offset_ =
-            (vertical_force_offset_ * static_cast<double>(vertical_force_measure_cnt_) + vertical_offset_measure)
-            / (static_cast<double>(vertical_force_measure_cnt_) + 1);
-      }
+      vertical_force_offset_ =
+          (vertical_force_offset_ * static_cast<double>(vertical_force_measure_cnt_) + vertical_offset_measure)
+          / (static_cast<double>(vertical_force_measure_cnt_) + 1);
       vertical_force_measure_cnt_++;
     }
 
@@ -233,9 +226,11 @@ bool Walking_controller::MoveFeet(double t)
 
     if(vertical_force_measure_cnt_ > 0)
     {
-      auto & sensor = robot().frame(swingFootName).forceSensor();
+      mc_rbdyn::ForceSensor & sensor = robot().sensor<mc_rbdyn::ForceSensor>(robot().frame(supportFootName).forceSensor().name());
+      auto calib = sensor.calib();
       // FIXME Maybe X_frame_sensor * Eigen::Vector3d(0, 0, offset)
-      auto & calib = const_cast<mc_rbdyn::detail::ForceSensorCalibData &>(sensor.calib()).offset.force().z() += vertical_force_offset_;
+      calib.offset.force().z() += vertical_force_offset_;
+      sensor.loadCalibrator(calib);
     }
 
     vertical_force_offset_ = 0;
