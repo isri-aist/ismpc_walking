@@ -1,5 +1,30 @@
 #include "../include/ismpc_walking/Walking_controller.h"
 
+#ifdef __linux__
+
+#  include <sched.h>
+
+void reset_affinity()
+{
+  cpu_set_t cpu_set;
+  CPU_ZERO(&cpu_set);
+  for(unsigned int i = 0; i < std::thread::hardware_concurrency(); ++i)
+  {
+    CPU_SET(i, &cpu_set);
+  }
+  int result = sched_setaffinity(0, sizeof(cpu_set_t), &cpu_set);
+  if(result != 0)
+  {
+    perror("sched_setaffinity");
+  }
+}
+
+#else
+
+void reset_affinity() {}
+
+#endif
+
 Walking_controller::~Walking_controller()
 {
   MPC_thread_on = false;
@@ -76,9 +101,9 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm,
   // config_.load(config);
   // static auto constraint = mc_solver::ConstraintSetLoader::load(solver(), config("collisions")[0]);
 
-  datastore().make_call("KinematicAnchorFrame::" + robot().name(), [this](const mc_rbdyn::Robot & robot) {
-    return sva::interpolate(robot.surfacePose(leftFootName_), robot.surfacePose(rightFootName_), LeftFootRatio);
-  });
+  datastore().make_call(
+      "KinematicAnchorFrame::" + robot().name(), [this](const mc_rbdyn::Robot & robot)
+      { return sva::interpolate(robot.surfacePose(leftFootName_), robot.surfacePose(rightFootName_), LeftFootRatio); });
 
   const auto oConfig = config("ObserverPipelines")("observers");
   for(auto conf : oConfig)
@@ -249,6 +274,7 @@ bool Walking_controller::wait_for_mpc_thread()
 
 void Walking_controller::WalkingTrajectoryLoop()
 {
+  reset_affinity();
   do
   {
     WalkingTrajectory_Computing = true;
