@@ -125,7 +125,7 @@ bool Walking_controller::MoveFeet(double t)
         (realRobot().surfacePose(swingFootName).translation() - realRobot().surfacePose(supportFootName).translation())
             .z();
 
-    bool TouchDown = (SwingFootTask->frame().forceSensor().force().z() - vertical_force_offset_
+    bool TouchDown = (SwingFootTask->frame().wrench().force().z() - vertical_force_offset_
                       > controller_config_.impact_threshold);
     // TouchDown = false;
 
