@@ -1412,7 +1412,7 @@ bool ISMPC_Solver::GetWalkingParameters(bool stop)
 
       m_feas_res = m_feasibilitySolver.solve(m_tk, m_t_lift, DoubleSupport, P_u_k.segment(0, 2), P_z_k.segment(0, 2),
                                              m_support_foot, X_0_support_foot, X_0_swing_foot_initial, m_input_Tds,
-                                             input_steps_, m_timestamp);
+                                             input_steps_, m_timestamp,w_k_inf.segment(0,2),m_kappa_inf);
     }
 
     std::vector<double> optimalTs = m_feasibilitySolver.get_optimal_steps_timings();
