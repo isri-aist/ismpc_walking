@@ -6,7 +6,7 @@ bool Walking_controller::MoveFeet(double t)
   PrevStepTiming = 0;
   double NextTimeStep(0);
 
-  NextTimeStep = mpc_state_.get_Ts(kfoot);
+  NextTimeStep = mpc_state_.get_Ts(static_cast<size_t>(kfoot));
 
   // if(kfoot != 0)
   // {
@@ -111,11 +111,11 @@ bool Walking_controller::MoveFeet(double t)
   {
     if(controller_config_.FootStepHeight - X_0_FootTask_Target.translation().z() < 0.005)
     {
-      vertical_force_measure_.push_back((float)SwingFootTask->frame().forceSensor().force().z());
-      const int size = vertical_force_measure_.size();
-      Eigen::VectorXd force_measure =
-          Eigen::Map<Eigen::VectorXd>(vertical_force_measure_.data(), vertical_force_measure_.size());
-      vertical_force_offset_ = force_measure.mean();
+      double vertical_offset_measure = SwingFootTask->frame().wrench().force().z();
+      vertical_force_offset_ =
+          (vertical_force_offset_ * static_cast<double>(vertical_force_measure_cnt_) + vertical_offset_measure)
+          / (static_cast<double>(vertical_force_measure_cnt_) + 1);
+      vertical_force_measure_cnt_++;
     }
 
     double Step_Time = t - t_lift;
@@ -125,7 +125,7 @@ bool Walking_controller::MoveFeet(double t)
         (realRobot().surfacePose(swingFootName).translation() - realRobot().surfacePose(supportFootName).translation())
             .z();
 
-    bool TouchDown = (SwingFootTask->frame().forceSensor().force().z() - vertical_force_offset_
+    bool TouchDown = (SwingFootTask->frame().wrench().force().z() - vertical_force_offset_
                       > controller_config_.impact_threshold);
     // TouchDown = false;
 
@@ -224,7 +224,17 @@ bool Walking_controller::MoveFeet(double t)
 
     X_0_SwingFootInitial = robot().surfacePose(swingFootName);
 
-    vertical_force_measure_.clear();
+    if(vertical_force_measure_cnt_ > 0)
+    {
+      mc_rbdyn::ForceSensor & sensor = robot().sensor<mc_rbdyn::ForceSensor>(robot().frame(supportFootName).forceSensor().name());
+      auto calib = sensor.calib();
+      // FIXME Maybe X_frame_sensor * Eigen::Vector3d(0, 0, offset)
+      calib.offset.force().z() += vertical_force_offset_;
+      sensor.loadCalibrator(calib);
+    }
+
+    vertical_force_offset_ = 0;
+    vertical_force_measure_cnt_ = 0;
 
     // stabTask->setExternalWrenches({},{},{});
     filter_gamma_.reset(Eigen::Vector3d::Zero());
