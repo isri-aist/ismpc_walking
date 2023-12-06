@@ -315,7 +315,7 @@ void Walking_controller::ComputeWalkingTrajectory()
   datastore().assign<std::string>("footsteps_planner::support_foot_name", mpc_thread_state.input_Support_FootName);
   datastore().assign<sva::PTransformd>("footsteps_planner::support_foot_pose", mpc_thread_state.X_0_SupportFoot);
   datastore().assign<std::vector<double>>("footsteps_planner::input_time_steps", mpc_thread_state.input_timesteps_);
-  datastore().call("footstep_planner::compute_plan");
+  datastore().call("footsteps_planner::compute_plan");
 
   mpc_thread_state.planned_steps_ = datastore().get<std::vector<sva::PTransformd>>("footsteps_planner::output_steps");
   // for (int k = 0 ; k < planned_steps_.size() ; k++)
