@@ -54,6 +54,7 @@ void Walking_controller::AddToLog()
     return Eigen::Vector3d::Zero();
   });
   logger().addLogEntry("ISMPC_State_Ld", [this]() -> const Eigen::Vector3d { return Ldot; });
+  logger().addLogEntry("ISMPC_State_Lc", [this]() -> const Eigen::Vector3d { return mpc_state_.Lck; });
   logger().addLogEntry("ISMPC_Target_ZMP", [this]() -> const Eigen::Vector3d { return zmpTarget; });
   logger().addLogEntry("ISMPC_Target_u", [this]() -> const Eigen::Vector3d { return admittanceTarget; });
   logger().addLogEntry("ISMPC_Target_LcDot", [this]() -> const Eigen::Vector3d { return LcDotTarget; });
