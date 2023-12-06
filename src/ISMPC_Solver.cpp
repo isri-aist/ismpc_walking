@@ -1501,7 +1501,7 @@ bool ISMPC_Solver::GetWalkingParameters(bool stop)
   }
   std::chrono::duration<double, std::milli> time_span = std::chrono::high_resolution_clock::now() - t_clock;
 
-  // mc_rtc::log::info("countD {}, m_D {} ,t_k : {}; Tc : {} ; Ts {} ; Tds {} ; j_f_max : {}",count_Dstep,m_D,m_tk,
+  // mc_rtc::log::info("countD {}, m_D {} ,t_k : {}",count_Dstep,m_D,m_tk);
   // m_Tc,m_timestamp[0],m_Tds,j_Max_C);
   // mc_rtc::log::info("m_C {}",m_C); t_clock = std::chrono::high_resolution_clock::now();
   double beta_dcm = m_Beta_dcm;
@@ -1584,9 +1584,13 @@ bool ISMPC_Solver::GetWalkingParameters(bool stop)
 
   // Eigen::MatrixXd M_steps = Eigen::MatrixXd::Zero(2*j_Max_C, N_variable);
   // M_steps.block(0, 2 * m_C, 2 * j_Max_C, 2 * j_Max_C) = Eigen::MatrixXd::Identity(2 * j_Max_C, 2 * j_Max_C);
-  Eigen::MatrixXd M_steps = Eigen::MatrixXd::Zero(2, N_variable);
-  M_steps.block(0, 2 * m_C, 2 * j_Max_C, 2) = Eigen::MatrixXd::Identity(2, 2 * j_Max_C);
   // Eigen::VectorXd b_steps = Eigen::VectorXd::Zero(2*j_Max_C);
+
+  Eigen::MatrixXd M_steps = Eigen::MatrixXd::Zero(2, N_variable);
+  if(j_Max_C != 0)
+  {
+    M_steps.block(0, 2 * m_C, 2 , 2) = Eigen::MatrixXd::Identity(2, 2);
+  }
   Eigen::VectorXd b_steps = Eigen::VectorXd::Zero(2);
 
   Eigen::MatrixXd M_stepsDelta = Eigen::MatrixXd::Zero(0, N_variable);
