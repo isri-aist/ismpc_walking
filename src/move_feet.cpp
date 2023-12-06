@@ -68,12 +68,6 @@ bool Walking_controller::MoveFeet(double t)
 
       removeContact({robot().name(), "ground", swingFootName, "AllGround", 0.7, footcontact_dof});
 
-      Eigen::Vector3d ext_wrench_gain_v = config()("stabilizer")("external_wrench")("ext_wrench_gain");
-      sva::MotionVecd ext_wrench_gain{ext_wrench_gain_v, ext_wrench_gain_v};
-      // if(Use_w)
-      // {
-      //   stabTask->setExternalWrenches({swingFootName}, {sva::ForceVecd::Zero()}, {ext_wrench_gain});
-      // }
 
       t_lift = t;
 

@@ -446,6 +446,7 @@ protected:
     }
   }
 
+
   bool wait_for_mpc_thread();
 
   std::shared_ptr<mc_tasks::lipm_stabilizer::StabilizerTask> stabTask;

@@ -31,7 +31,7 @@ public:
 
   std::vector<Eigen::Vector3d> TrajGUI();
 
-  void setZOffset(double z)
+  void setZOffset(const double z)
   {
     z_offset = z;
   }

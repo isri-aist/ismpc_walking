@@ -154,7 +154,7 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm,
 
   MomentumTask = std::make_shared<mc_tasks::MomentumTask>(robots(), robot().robotIndex(), 10, 10);
   Eigen::Vector6d MomentumTask_dof;
-  MomentumTask_dof << 1, 1, 0, 0, 0, 0;
+  MomentumTask_dof << 1, 1, 1, 0, 0, 0;
   MomentumTask->dimWeight(MomentumTask_dof);
 
   comTask = std::make_shared<mc_tasks::CoMTask>(robots(), robot().robotIndex(), 10, 200);
@@ -423,6 +423,7 @@ void Walking_controller::UpdatePlanner_input()
 
   Eigen::Vector3d step_velocity = reference_velocity;
   double step_time = T_Steps;
+
   if(StepRecoveryState)
   {
     step_velocity.setZero();
@@ -736,17 +737,8 @@ void Walking_controller::MoveCoM()
   // mc_rtc::log::info("//Index : {}, z_y {}",mpc_state_.Index,zmpTarget.y());
 
   Eigen::Vector3d Ac_com = std::pow(mpc_state_.eta, 2) * (Pcom - zmpTarget);
-  Ac_com = std::pow(mpc_state_.eta, 2) * (Pcom - mpc_state_.Get_ZMP_planarTarget(mpc_state_.Index + n));
-
   Ac_com.z() = 0;
   admittanceTarget = mpc_state_.delayed_zmp_ + mpc_state_.get_u(0);
-  // for (int k = 0 ; k <= mpc_state_.Index/n ; k++)
-  // {
-  //   // mc_rtc::log::info("index {} , k {}",mpc_state_.Index,k);
-  //   admittanceTarget += mpc_state_.get_u(k);
-  // }
-  // mc_rtc::log::info("//");
-
   admittanceTarget.z() = 0;
 
   if(DoubleSupport_state && updateAdmittance && mpc_state_.get_tds() - t_k > 0
@@ -845,9 +837,6 @@ void Walking_controller::UpdateInitialVectors()
   Eigen::Vector3d FilteredNetForce = stabTask->measuredFilteredNetForces();
   mpc_state_.input_mass = FilteredNetForce.z() / mc_rtc::constants::GRAVITY;
 
-  // mpc_state_.Pzk = Eigen::Vector3d{0,0,1}.cross( robot().com().cross(robot().mass()*mc_rtc::constants::gravity) ) /
-  //                       ( (robot().mass()*(mc_rtc::constants::gravity - robot().comAcceleration())).transpose() *
-  //                       Eigen::Vector3d{0,0,1} );
 
   if(DebugMode)
   {
@@ -868,13 +857,11 @@ void Walking_controller::UpdateInitialVectors()
     mpc_state_.Vck = mpc_state_.Get_CoMVel_planarTarget(mpc_state_.Index);
     mpc_state_.Pzk = mpc_state_.Get_ZMP_planarTarget(mpc_state_.Index);
     mpc_state_.Pu = mpc_state_.Pck + mpc_state_.Vck / mpc_state_.eta;
-    // std::cout << "using MPC" << std::endl;
   }
   else
   {
     mpc_state_.Pck = robot().com();
     mpc_state_.Vck = robot().comVelocity();
-    // mpc_state_.Pzk = mpc_state_.Get_ZMP_planarTarget(indx);
     mpc_state_.Pu = mpc_state_.Pck + mpc_state_.Vck / mpc_state_.eta;
   }
   if(UseRealRobot)
@@ -895,8 +882,6 @@ void Walking_controller::UpdateInitialVectors()
     robot().zmp(mpc_state_.Pzk, measuredNetWrench_, zmpFrame);
     zmp_vel = (mpc_state_.Pzk - zmp_vel) / controller_timestep;
     zmp_vel_.append(zmp_vel);
-
-    // mpc_state_.ComBias
 
     mpc_state_.Vck = realRobot().comVelocity();
     mpc_state_.ComBias.segment(0, 2) = stabTask->biasDCM();
@@ -919,16 +904,12 @@ void Walking_controller::UpdateInitialVectors()
     mpc_state_.Pzk = mpc_state_.Get_ZMP_planarTarget(mpc_state_.Index);
   }
 
-  if(!DebugMode)
+  if(!DebugMode && UseRealRobot)
   {
-    ComputePerturbances(w_, kappa_, w_inf_, kappa_inf_);
-    stabTask->setExternalWrenches({leftHandName_, rightHandName_},
-                                  {robot().frame(leftHandName_).wrench(), robot().frame(rightHandName_).wrench()},
-                                  {sva::MotionVecd(Eigen::Vector6d::Ones()), sva::MotionVecd(Eigen::Vector6d::Ones())});
-    Ldot_offset = Eigen::Vector3d::Zero();
-    // Ldot_offset = Eigen::Vector3d{-Ldot.y(),Ldot.x(),0.};
-    // Ldot_offset /= (robot().mass() * controller_config_.Stab_config.comHeight * eta2_cstr);
-    w_ += Ldot_offset;
+    ComputePerturbances(w_, kappa_,w_inf_,kappa_inf_);
+    stabTask->setExternalWrenches({leftHandName_,rightHandName_},
+                                  {robot().frame(leftHandName_).forceSensor().wrench(),robot().frame(rightHandName_).forceSensor().wrench()},
+                                  {sva::MotionVecd(Eigen::Vector6d::Ones()),sva::MotionVecd(Eigen::Vector6d::Ones())});
   }
 
   // eta2_cstr = (mc_rtc::constants::GRAVITY/controller_config_.Stab_config.comHeight);
