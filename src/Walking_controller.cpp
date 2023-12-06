@@ -760,23 +760,17 @@ void Walking_controller::MoveCoM()
     updateAdmittance = false;
   }
 
-  Eigen::Vector3d Ac_wrench = std::pow(mpc_state_.eta, 2) * (mpc_state_.Get_CoM_planarTarget(0) - admittanceTarget);
+  Eigen::Vector3d Ac_wrench = std::pow(mpc_state_.eta, 2) * ( Pcom - admittanceTarget);
   Ac_wrench.z() = 0;
 
   target_force_ = robot().mass() * (Ac_wrench + mc_rtc::constants::gravity);
-  target_wrench_ = sva::ForceVecd{mpc_state_.Get_CoM_planarTarget(0).cross(target_force_), target_force_};
-
-  if(DoubleSupport_state)
-  {
-    Ac_wrench = Ac_com;
-  }
-
-  // mc_rtc::log::info("zmp diff {}", admittanceTarget -  mc_rbdyn::zmp(target_wrench_, sva::PTransformd::Identity()) );
+  target_wrench_ = sva::ForceVecd{mpc_state_.getPck().cross(target_force_), target_force_};
 
   Ac_wrench.z() = 0;
-  dcmTarget = Pcom + Vc / mpc_state_.eta;
 
   stabTask->target(Pcom, Vc, Ac_wrench, zmpTarget);
+  // stabTask->target(Pcom, Vc, Ac_wrench, admittanceTarget);
+  // stabTask->target(Pcom, Vc, Ac_com, zmpTarget);
   if(!active || DebugMode)
   {
     Pcom.segment(0, 2) = sva::interpolate(robot().surfacePose(leftFootName_), robot().surfacePose(rightFootName_), 0.5)
@@ -803,16 +797,13 @@ void Walking_controller::MoveCoM()
   if(UseAngularMomentum)
   {
     solver().addTask(MomentumTask);
-    MomentumTask->stiffness(1);
-    MomentumTask->damping(0);
+    Eigen::Vector6d MomentumTask_Stiff;
+    MomentumTask_Stiff << 0, 0, 5, 0, 0, 0;
+    MomentumTask->stiffness(MomentumTask_Stiff);
+
     MomentumTask->weight(controller_config_.momentumTaskWeight);
     MomentumTask->refAccel(sva::MotionVecd(LcDotTarget, Eigen::Vector3d::Zero()).vector());
 
-    // else
-    // {
-    //   MomentumTask->stiffness(10);
-    //   MomentumTask->refAccel(Eigen::Vector6d::Zero());
-    // }
   }
   else
   {
