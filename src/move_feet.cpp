@@ -45,10 +45,15 @@ bool Walking_controller::MoveFeet(double t)
 
       mc_rtc::log::success("lifting " + swingFootName);
       solver().addTask(SwingFootTask);
-      Eigen::Vector3d supp_pose;
+      Eigen::Vector3d supp_pose= realRobot().surfacePose(supportFootName).translation();
+      Eigen::Vector3d swing_pose = realRobot().surfacePose(swingFootName).translation();
+
       double supp_yaw;
-      supp_pose = realRobot().surfacePose(supportFootName).translation();
-      supp_pose.z() = 0.0;
+      if(std::abs((supp_pose - swing_pose).z()) < 0.01)
+      {
+        supp_pose.z() = 0;
+      }
+      // supp_pose.z() = 0.0;
       supp_yaw = mc_rbdyn::rpyFromMat(robot().surfacePose(supportFootName).rotation()).z();
       if(supportFootName == leftFootName_)
       {
@@ -82,10 +87,10 @@ bool Walking_controller::MoveFeet(double t)
     }
   }
 
-  double offset = 0;
-  double SingleSupportDuration = (NextTimeStep - t_lift) + offset;
-  double height_off = X_0_support.translation().z();
-  SwingFootTrajectory.setZOffset(controller_config_.foot_landing_offset);
+  const double offset = 0;
+  const double SingleSupportDuration = (NextTimeStep - t_lift) + offset;
+  const double height_off = X_0_support.translation().z();
+  SwingFootTrajectory.setZOffset(controller_config_.foot_landing_offset + height_off);
 
   SwingFootTrajectory.getSwingFootTrajectory(X_0_SwingFootTarget, X_0_SwingFootInitial, t,
                                              controller_config_.FootStepHeight, SingleSupportDuration, t_lift,
@@ -136,14 +141,22 @@ bool Walking_controller::MoveFeet(double t)
       t_contact = t;
       solver().removeTask(SwingFootTask);
 
-      landingTask->targetPose(landingTask->surfacePose());
-      landingTask->targetCoP(Eigen::Vector2d::Zero());
-      landingTask->targetForce(Eigen::Vector3d{0, 0, 5});
       solver().addTask(landingTask);
+      landingTask->targetPose(landingTask->surfacePose());
+      landingTask->admittance(sva::ForceVecd(Eigen::Vector3d{0.03, 0.03, 0}, Eigen::Vector3d{0, 0, 0.01}));
+      landingTask->targetCoP(Eigen::Vector2d::Zero());
+      landingTask->targetForce(Eigen::Vector3d{0, 0, 50});
 
       Swing_Foot_Contact = true;
       mc_rtc::log::info("height : {} ", swing_foot_height);
       mc_rtc::log::info("touchdown : {} ", TouchDown);
+      landing_time = 0;
+      if(!TouchDown)
+      {
+        mc_rtc::log::warning("[Walking Controller] Contact without forces measured, stoping");
+        landing_time = controller_config_.landing_time;
+        // Stop = true;
+      }
       // mc_rtc::log::info("Locking " + swingFootName + "at t : " + std::to_string(t));
       mc_rtc::log::info("T_contact - T_steps : {}", t - NextTimeStep);
 
@@ -170,18 +183,19 @@ bool Walking_controller::MoveFeet(double t)
       // }
     }
 
-    if(Swing_Foot_Contact && !DoubleSupport_state && (t - t_contact >= 0. || Step_Time >= SingleSupportDuration))
+    if(Swing_Foot_Contact && !DoubleSupport_state && ( t - t_contact >= landing_time || robot().frame(swingFootName).wrench().force().z() > 100 ) )
     {
       solver().removeTask(landingTask);
+      mc_rtc::log::info("Landing over {}, Touchdown 2 {}",t - t_contact, robot().frame(swingFootName).wrench().force().z() > 100);
       Eigen::Vector3d supp_pose;
       double supp_yaw;
       supp_pose = realRobot().surfacePose(supportFootName).translation();
-      supp_pose.z() = 0.0;
+      // supp_pose.z() = 0.0;
       supp_yaw = mc_rbdyn::rpyFromMat(robot().surfacePose(supportFootName).rotation()).z();
       Eigen::Vector3d swing_pose;
       double swing_yaw;
       swing_pose = realRobot().surfacePose(swingFootName).translation();
-      swing_pose.z() = 0.0;
+      // swing_pose.z() = 0.0;
       swing_yaw = mc_rbdyn::rpyFromMat(robot().surfacePose(swingFootName).rotation()).z();
       if(supportFootName == leftFootName_)
       {

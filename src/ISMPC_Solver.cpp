@@ -1455,6 +1455,13 @@ bool ISMPC_Solver::GetWalkingParameters(bool stop)
     m_feas_res = false;
     m_Tds = m_input_Tds;
   }
+
+  if (m_tk - m_timestamp[0] > 0)
+  {
+    mc_rtc::log::warning("[ISMPC] t_k is over the first step, increasing step duration");
+    m_timestamp[0] = m_tk + 2 * m_delta;
+  }
+
   NextOptimalTs = m_timestamp[0];
   QPsuccess = false;
   InStabilityRange = false;

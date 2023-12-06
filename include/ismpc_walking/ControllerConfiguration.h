@@ -47,6 +47,8 @@ struct ControllerConfiguration
   double max_stability_error = 0.01; // If the stability error is beyond that value, stop will be called
   double max_swing_foot_velocity = 2.5;
 
+  double landing_time = 0.2;
+
   double MPC_ZMP_Constraint_max_size = 0.2;
   double MPC_ZMP_Constraint_min_size = 0.01;
   Eigen::Vector2d MPC_ZMP_Constraint_size{0.1, 0.08};

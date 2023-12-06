@@ -70,6 +70,8 @@ stabilizer:
     derivator_time_constant: 1.0
     ## gain (not loaded automatically) ##
     ext_wrench_gain: [1, 1, 1]
+  vdc:
+    stiffness: 10
 stabilizer_sgsupp:
   admittance:
     cop: [0.015, 0.015]

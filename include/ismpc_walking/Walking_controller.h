@@ -558,6 +558,8 @@ private:
   int N_Steps_Desired_recovery = 2;
   sva::PTransformd target_pose_ = sva::PTransformd::Identity(); // Reference pose for the footsteps plan generation
 
+  double landing_time = 0; //time landing task is active
+
   double t_stop = 0;
   int count_stop = 0;
   // Measured by averaging the force sensor during the swing phase

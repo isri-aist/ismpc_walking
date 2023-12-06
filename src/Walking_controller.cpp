@@ -132,16 +132,20 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm,
   rightSwingFootTask =
       std::make_shared<mc_tasks::SurfaceTransformTask>(rightFootName_, robots(), robots().robotIndex(), 10.0, 10.);
 
-  sva::ForceVecd landingAdmittance = sva::ForceVecd(Eigen::Vector3d{0.03, 0.03, 0}, Eigen::Vector3d{0, 0, 0.003});
+  sva::ForceVecd landingAdmittance = sva::ForceVecd(Eigen::Vector3d{0.03, 0.03, 0}, Eigen::Vector3d{0, 0, 0.03});
   leftLandingTask = std::make_shared<mc_tasks::force::CoPTask>(leftFootName_, robots(), robots().robotIndex(), 1,
                                                                controller_config_.Stab_config.contactWeight);
   leftLandingTask->name("landingTask_left");
+  leftLandingTask->maxLinearVel(Eigen::Vector3d::Ones() * 10);
+  leftLandingTask->maxAngularVel(Eigen::Vector3d::Ones() * 10);
   leftLandingTask->admittance(landingAdmittance);
   leftLandingTask->damping(controller_config_.Stab_config.contactDamping);
 
   rightLandingTask = std::make_shared<mc_tasks::force::CoPTask>(rightFootName_, robots(), robots().robotIndex(), 1,
                                                                 controller_config_.Stab_config.contactWeight);
   rightLandingTask->name("landingTask_right");
+  rightLandingTask->maxLinearVel(Eigen::Vector3d::Ones() * 10);
+  rightLandingTask->maxAngularVel(Eigen::Vector3d::Ones() * 10);
   rightLandingTask->admittance(landingAdmittance);
   rightLandingTask->damping(controller_config_.Stab_config.contactDamping);
 
@@ -720,7 +724,7 @@ void Walking_controller::MoveCoM()
   }
 
   Eigen::Vector3d Pcom(mpc_state_.Get_CoM_planarTarget(mpc_state_.Index));
-  Pcom.z() = controller_config_.Stab_config.comHeight + 0 * X_0_support.translation().z();
+  Pcom.z() = controller_config_.Stab_config.comHeight + 1 * X_0_support.translation().z();
   Eigen::Vector3d Vc(mpc_state_.Get_CoMVel_planarTarget(mpc_state_.Index));
   Vc.z() = 0;
   zmpTarget = mpc_state_.Get_ZMP_planarTarget(mpc_state_.Index);
