@@ -1443,6 +1443,7 @@ bool ISMPC_Solver::GetWalkingParameters(bool stop)
       }
       // input_steps_ = optimalPf;
       m_feasibility_region = m_feasibilitySolver.get_feasibility_region();
+
     }
     else
     {

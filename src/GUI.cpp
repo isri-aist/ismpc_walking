@@ -183,10 +183,10 @@ void Walking_controller::addToGUI()
 
       mc_rtc::gui::Button("Start Move",
                           [this]() {
-                            compute_trajectory_once.notify_all();
                             if(stabilizer_active_)
                             {
                               Stop = false;
+                              compute_trajectory_once.notify_all();
                             }
                           }),
       mc_rtc::gui::Button("Stop", [this]() { Stop = true; }),

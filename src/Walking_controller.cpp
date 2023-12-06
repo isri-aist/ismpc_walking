@@ -296,7 +296,9 @@ void Walking_controller::ComputeWalkingTrajectory()
   {
     std::lock_guard<std::mutex> lk_copy_state(mutex_mpc_);
     UpdateInitialVectors();
+    UpdatePlanner_input();
     mpc_thread_state = mpc_state_;
+    mpc_thread_state.stop = !Robot_Walking;
   }
   if(NewConfigState)
   {
@@ -471,6 +473,7 @@ void Walking_controller::UpdatePlanner_input()
                        robot().surfacePose(swingFootName).translation());
 
   mpc_state_.X_0_SwingFoot = X_0_swing;
+  Robot_Walking = !(Stop && DoubleSupport_state);
   mpc_state_.stop = !Robot_Walking;
   if(DebugMode)
   {
@@ -613,16 +616,14 @@ bool Walking_controller::run()
 
   if(!(Stop && DoubleSupport_state))
   {
-
-    if(t - t_k + controller_timestep >= controller_config_.delta || (DoubleSupport_state && IncreaseUpdate))
+    Robot_Walking = true;
+    if(t - t_k > controller_config_.delta || (DoubleSupport_state && IncreaseUpdate))
     {
-      t_k += t - t_k;
+      t_k += (DoubleSupport_state && IncreaseUpdate) ? controller_timestep : controller_config_.delta;
       compute_trajectory_once.notify_all();
     }
 
     MoveFeet(t);
-
-    Robot_Walking = true;
   }
   else
   {
