@@ -18,8 +18,11 @@ ISMPC_Solver::ISMPC_Solver(double delta_controller, double delta, double Tp, dou
   QPsuccess = false;
 
   Compute_Integration_Matrix(m_eta);
-
+  m_kappa = 1;
   w_k.setZero();
+  m_kappa_inf = 1;
+  w_k_inf.setZero();
+  perturbation_duration = 0;
 }
 
 void ISMPC_Solver::configure(const ControllerConfiguration & config)
@@ -127,8 +130,11 @@ void ISMPC_Solver::init_MPC(const MPC_state & mpc_state, std::string Tail, int S
   R_0_support = X_0_support_foot.rotation();
   R_support_0 = R_0_support.transpose();
 
+  m_kappa = 1;
   w_k.setZero();
-  m_kappa = 1.;
+  m_kappa_inf = 1;
+  w_k_inf.setZero();
+  perturbation_duration = 0;
   m_eta = sqrt(mc_rtc::constants::GRAVITY / CoM_height);
   m_eta_free = m_eta;
   perturbation_duration = 0;
