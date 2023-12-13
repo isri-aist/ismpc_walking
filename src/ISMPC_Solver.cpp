@@ -173,8 +173,8 @@ void ISMPC_Solver::compute_dcm(Eigen::MatrixXd & A_out,
   }
   const int p = static_cast<int>(tp / m_delta);
   b_out = dcm_delay;
-  b_out -= P_z_k_delayed.segment(0, 2) * (m_kappa * (1 - exp(-m_eta * tp)) + exp(-m_eta * tp) - exp(-m_eta * tj));
-  b_out += w_k.segment(0, 2) * (1 - exp(-m_eta * tp));
+  b_out -= P_z_k_delayed.segment(0, 2) * (m_kappa * (1 - exp(-m_eta * tp)) + (exp(-m_eta * tp) - exp(-m_eta * tj)) * m_kappa_inf );
+  b_out += w_k.segment(0, 2) * (1 - exp(-m_eta * tp)) + w_k_inf.segment(0,2) * exp(-m_eta * tp);
   b_out *= exp(m_eta * tj);
 
   for(int i = 0; i < indx; i++)
@@ -184,13 +184,13 @@ void ISMPC_Solver::compute_dcm(Eigen::MatrixXd & A_out,
     {
       A_out.block(0, 2 * i, 2, 2) -= Eigen::Matrix2d::Identity() * exp(-m_eta * ti) * m_kappa
                                      * (1 - exp(-m_eta * (tp - ti)) - e_d_lpe * (1 - exp(-lpe * (tp - ti))));
-      A_out.block(0, 2 * i, 2, 2) -= Eigen::Matrix2d::Identity() * exp(-m_eta * ti)
+      A_out.block(0, 2 * i, 2, 2) -= Eigen::Matrix2d::Identity() * exp(-m_eta * ti) * m_kappa_inf
                                      * (exp(-m_eta * (tp - ti)) - exp(-m_eta * (tj - ti))
                                         - e_d_lpe * (exp(-lpe * (tp - ti)) - exp(-lpe * (tj - ti))));
     }
     else
     {
-      A_out.block(0, 2 * i, 2, 2) -= Eigen::Matrix2d::Identity() * exp(-m_eta * ti)
+      A_out.block(0, 2 * i, 2, 2) -= Eigen::Matrix2d::Identity() * exp(-m_eta * ti) * m_kappa_inf
                                      * (1 - exp(-m_eta * (tj - ti)) - e_d_lpe * (1 - exp(-lpe * (tj - ti))));
     }
 
