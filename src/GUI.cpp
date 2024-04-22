@@ -258,9 +258,12 @@ void Walking_controller::addToGUI()
           [this](const Eigen::Vector3d & in) { w_inf_ = in; }),
       mc_rtc::gui::NumberInput(
           "Input Kappa Infinity", [this]() -> double { return kappa_inf_; }, [this](double w) { kappa_inf_ = w; }),
+      // mc_rtc::gui::Checkbox(
+      //     "Force Contact Safety", [this]() { return force_contact_safety_; },
+      //     [this]() { force_contact_safety_ = !force_contact_safety_; }),
       mc_rtc::gui::Checkbox(
-          "Force Contact Safety", [this]() { return force_contact_safety_; },
-          [this]() { force_contact_safety_ = !force_contact_safety_; }),
+          "Ticker Mode", [this]() { return tickerMode; },
+          [this]() { tickerMode = !tickerMode; }),
       mc_rtc::gui::Checkbox(
           "Increase MPC update rate (Double Support)", [this]() { return IncreaseUpdate; },
           [this]() { IncreaseUpdate = !IncreaseUpdate; }),
@@ -344,9 +347,9 @@ void Walking_controller::addToGUI()
       //     "ZMPMeasured", mc_rtc::gui::LineConfig(mc_rtc::gui::Color(0.5, 1., 0.), 0.01,
       //     mc_rtc::gui::LineStyle::Solid), [this]() { return stabTask->measuredZMP(); }),
       // mc_rtc::gui::Trajectory(
-      //     "Pzk", mc_rtc::gui::LineConfig(mc_rtc::gui::Color(0., 1., 0.), 0.01, mc_rtc::gui::LineStyle::Solid),
+      //     "p_z_k", mc_rtc::gui::LineConfig(mc_rtc::gui::Color(0., 1., 0.), 0.01, mc_rtc::gui::LineStyle::Solid),
       //     [this]() {
-      //       return mpc_state_.Pzk;
+      //       return mpc_state_.p_z_k;
       //       ;
       //     }),
 
@@ -395,7 +398,7 @@ void Walking_controller::addToGUI()
 
             for(auto & p : traj)
             {
-              output.push_back(Eigen::Vector3d{p.x(), p.y(), mpc_state_.Pck.z()});
+              output.push_back(Eigen::Vector3d{p.x(), p.y(), mpc_state_.p_c_k.z()});
             }
             return output;
           }),
@@ -406,7 +409,7 @@ void Walking_controller::addToGUI()
                                 for(size_t k = 0; k < mpc_state_.X_MPC.size(); k++)
                                 {
                                   Output.push_back(mpc_state_.Get_CoM_planarTarget(k)
-                                                   + Eigen::Vector3d{0, 0, controller_config_.Stab_config.comHeight});
+                                                   + Eigen::Vector3d{0, 0, controller_config_.stab_config.comHeight});
                                 }
                                 return Output;
                               }),
@@ -418,7 +421,7 @@ void Walking_controller::addToGUI()
                                 {
                                   Output.push_back(mpc_state_.Get_CoM_planarTarget(k)
                                                    + mpc_state_.Get_CoMVel_planarTarget(k) / mpc_state_.eta
-                                                   + Eigen::Vector3d{0, 0, controller_config_.Stab_config.comHeight});
+                                                   + Eigen::Vector3d{0, 0, controller_config_.stab_config.comHeight});
                                 }
                                 return Output;
                               }),
@@ -513,11 +516,11 @@ void Walking_controller::addToGUI()
   gui()->addElement(
       {"Walking", "Debug"},
       mc_rtc::gui::Checkbox(
-          "Active", [this]() -> bool { return DebugMode; },
+          "Active", [this]() -> bool { return debugMode; },
           [this]() {
             if(!robot_walking())
             {
-              DebugMode = !DebugMode;
+              debugMode = !debugMode;
               deactivate();
             }
           }),

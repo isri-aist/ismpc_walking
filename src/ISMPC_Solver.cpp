@@ -58,10 +58,10 @@ void ISMPC_Solver::configure(const ControllerConfiguration & config)
   m_Tc = config.Tc;
   m_Tp = config.Tp;
   m_delta = config.delta;
-  m_delta_control = config.Controller_timestep;
+  m_delta_control = config.controller_timestep;
   m_C = (int)std::round((m_Tc) / m_delta);
   m_P = (int)std::round((m_Tp) / m_delta);
-  CoM_height = config.Stab_config.comHeight;
+  CoM_height = config.stab_config.comHeight;
   m_eta = sqrt(mc_rtc::constants::GRAVITY / CoM_height);
   m_eta_free = m_eta;
   Use_Stability_Task = config.use_stability_task;
@@ -78,9 +78,9 @@ void ISMPC_Solver::configure(const ControllerConfiguration & config)
 
 void ISMPC_Solver::init_MPC(const MPC_state & mpc_state, std::string Tail, int Steps_Desired, int Step)
 {
-  P_c_k = mpc_state.Pck;
-  V_c_k = mpc_state.Vck;
-  P_z_k = mpc_state.Pzk;
+  P_c_k = mpc_state.p_c_k;
+  V_c_k = mpc_state.v_c_k;
+  P_z_k = mpc_state.p_z_k;
   Lc_k = mpc_state.Lck;
   m_mass = mpc_state.input_mass;
 
@@ -1408,11 +1408,11 @@ bool ISMPC_Solver::GetWalkingParameters(bool stop)
   if(UsePendulumSolver)
   {
     m_feas_res = true;
-    if((NextOptimalTs - m_tk) > 0.3)
+    if((NextOptimalTs - m_tk) > 0.1)
     {
       double Ts = m_timestamp[0];
       m_feasibilitySolver.configure(m_eta, m_delta_control, m_tds_range, m_tss_range, m_ts_range,
-                                    Eigen::Vector2d{m_dx_f, 2 * m_dy_f}, Eigen::Vector2d{m_dx * 0.7, m_dy},
+                                    Eigen::Vector2d{m_dx_f, 2 * m_dy_f}, Eigen::Vector2d{m_dx , m_dy},
                                     m_feet_distance, 8);
       std::vector<sva::PTransformd> & stepsRef = corr_steps_.size() != 0 ? corr_steps_ : input_steps_;
 

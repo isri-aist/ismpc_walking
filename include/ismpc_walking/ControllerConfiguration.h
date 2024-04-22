@@ -6,7 +6,7 @@ struct ControllerConfiguration
   double SwingFootWeight = 5000;
   double SwingFootStiffness = 300;
 
-  double Controller_timestep = 5e-3;
+  double controller_timestep = 5e-3;
 
   double momentumTaskWeight = 10000;
 
@@ -34,7 +34,7 @@ struct ControllerConfiguration
   Eigen::Vector2d Beta_range{1e10, 1e2};
   bool sliding_zmp_cstr_region = false;
   bool use_stability_task = false;
-  double FootStepHeight = 0.04;
+  double footStepHeight = 0.04;
   double maxVelX = 0.15;
   double minVelX = -0.15;
   double delta = 5e-2; // MPC TimeStep;
@@ -73,10 +73,10 @@ struct ControllerConfiguration
   double gamma_filter_cutoff;
   double safety_roll_error_ = 0.1;
 
-  mc_rbdyn::lipm_stabilizer::StabilizerConfiguration Stab_config;
-  mc_rbdyn::lipm_stabilizer::StabilizerConfiguration Stab_config_standing;
-  mc_rbdyn::lipm_stabilizer::StabilizerConfiguration Stab_config_sg_supp;
-  mc_rbdyn::lipm_stabilizer::StabilizerConfiguration Stab_config_dbl_supp;
+  mc_rbdyn::lipm_stabilizer::StabilizerConfiguration stab_config;
+  mc_rbdyn::lipm_stabilizer::StabilizerConfiguration stab_config_standing;
+  mc_rbdyn::lipm_stabilizer::StabilizerConfiguration stab_config_sg_supp;
+  mc_rbdyn::lipm_stabilizer::StabilizerConfiguration stab_config_dbl_supp;
 
   double Ts_ = 0.6;
   double Ls_ = 0.15;

@@ -9,6 +9,7 @@
 #include <pendulum_feasibility_solver/feasibility_solver.h>
 #include <thread>
 
+
 class ISMPC_Solver
 {
 public:
@@ -38,15 +39,15 @@ public:
 
   /**
    * Set the robot walking charateristics
-   * @tparam Pck , Vck , Pzk : Initial CoM , CoMd and ZMP position
+   * @tparam p_c_k , v_c_k , p_z_k : Initial CoM , CoMd and ZMP position
    * @tparam Pfm1 : Previous swing foot or actual support foot position
    * @tparam timesstp , timesindx : Steps timing and their indexes in the horizon
    * @tparam Tail , choice of the velocity tail (Truncated, Periodic, Anticipative or None)
    * @tparam Steps_Desired, steps choosen to be performed, the number of steps done must be updated manually with Steps
    */
-  void SetWalkingParameters(const Eigen::Vector3d & Pck,
-                            const Eigen::Vector3d & Vck,
-                            const Eigen::Vector3d & Pzk,
+  void SetWalkingParameters(const Eigen::Vector3d & p_c_k,
+                            const Eigen::Vector3d & v_c_k,
+                            const Eigen::Vector3d & p_z_k,
                             const Eigen::Vector3d & Pfm1,
                             const std::vector<double> & timesstp,
                             std::string Tail,

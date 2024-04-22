@@ -112,6 +112,7 @@ private:
 
   double duration = 0;
   double duration_Z = 0;
+  double duration_Z_coef = 0.5;
   double prev_dur = 0;
 
   double zi = 0;

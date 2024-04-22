@@ -173,8 +173,8 @@ void Walking_controller::ComputePerturbances(Eigen::Vector3d & offset,
                                              double & kappa_inf)
 {
   const double verticalComAcc = comTask->refAccel()(2) + mc_rtc::constants::gravity.z();
-  const double h = controller_config_.Stab_config.comHeight;
-  sva::ForceVecd LcDot = rbd::computeCentroidalMomentumDot(robot().mb(), robot().mbc(), mpc_state_.Pck, mpc_state_.Vck);
+  const double h = controller_config_.stab_config.comHeight;
+  sva::ForceVecd LcDot = rbd::computeCentroidalMomentumDot(robot().mb(), robot().mbc(), mpc_state_.p_c_k, mpc_state_.v_c_k);
   offset_inf.setZero();
   kappa_inf = 0;
   Eigen::Vector3d FilteredNetForce = stabTask->measuredFilteredNetForces();
@@ -218,11 +218,15 @@ void Walking_controller::ComputePerturbances(Eigen::Vector3d & offset,
   update_disturbance(leftHandName_, leftHandDisturbanceFilter_);
   update_disturbance(rightHandName_, rightHandDisturbanceFilter_);
 
-  if(!DoubleSupport_state)
+  if(!doubleSupport_state)
   {
     const sva::PTransformd X_0_swg0Ori = sva::PTransformd(Eigen::Matrix3d::Identity(), X_0_swing.translation());
     const sva::PTransformd X_swg_swg0Ori = sva::PTransformd(X_0_swing.rotation().transpose(), Eigen::Vector3d::Zero());
-    const sva::ForceVecd swing_wrench_0 = X_swg_swg0Ori.dualMul(robot().surfaceWrench(swingFootName));
+    sva::ForceVecd swing_wrench_0 = X_swg_swg0Ori.dualMul(robot().surfaceWrench(swingFootName));
+    // if(swing_foot_contact)
+    // {
+    //   swing_wrench_0 = X_swg_swg0Ori.dualMul(sva::ForceVecd(Eigen::Vector3d::Zero(),Eigen::Vector3d{0,0,500}));
+    // }
 
     const Eigen::Vector3d & Pf = X_0_swing.translation();
 

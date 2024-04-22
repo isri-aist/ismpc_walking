@@ -9,8 +9,6 @@
 #include <mc_rbdyn/rpy_utils.h>
 #include <mc_rtc/clock.h>
 #include <mc_rtc/logging.h>
-#include <mc_solver/ConstraintSetLoader.h>
-#include <mc_tasks/AddRemoveContactTask.h>
 #include <mc_tasks/CoPTask.h>
 #include <mc_tasks/MomentumTask.h>
 #include <mc_tasks/SurfaceTransformTask.h>
@@ -114,6 +112,7 @@ public:
       controller_config_.MPC_ZMP_ref_offset_end_step = config("ismpc")("zmp_ref_end_step");
     }
     controller_config_.zmp_delay = config("ismpc")("zmp_delay");
+    controller_config_.zmp_delay -= std::fmod(controller_config_.zmp_delay, controller_config_.controller_timestep);
     controller_config_.feet_ditance_ = config("ismpc")("feet_distance");
     config("ismpc")("with_external_disturbance_highpass_filter",
                     controller_config_.with_external_disturbance_highpass_filter_);
@@ -139,7 +138,7 @@ public:
     controller_config_.safety_roll_error_ = config("walking_controller")("safety_foot_roll_error");
     controller_config_.wrench_filter_cutoff = config("walking_controller")("wrench_filter_cutoff_T");
     controller_config_.gamma_filter_cutoff = config("walking_controller")("gamma_filter_cutoff_T");
-    controller_config_.FootStepHeight = config("walking_controller")("footstep_height");
+    controller_config_.footStepHeight = config("walking_controller")("footstep_height");
 
     controller_config_.SwingFootStiffness = config("tasks")("swingfoot_stiffness");
     controller_config_.SwingFootWeight = config("tasks")("swingfoot_weight");
@@ -185,7 +184,7 @@ public:
   void Configure(const ControllerConfiguration & config)
   {
     controller_config_ = config;
-    controller_config_.Stab_config_sg_supp.copFzLambda = controller_config_.lambda_sg_supp * Eigen::Vector3d::Ones();
+    controller_config_.stab_config_sg_supp.copFzLambda = controller_config_.lambda_sg_supp * Eigen::Vector3d::Ones();
 
     controller_config_.Beta_step = std::min(controller_config_.Beta_range(1),
                                             std::max(controller_config_.Beta_range(0), controller_config_.Beta_step));
@@ -202,7 +201,7 @@ public:
 
   bool double_support_state() noexcept
   {
-    return DoubleSupport_state;
+    return doubleSupport_state;
   }
   bool stop_phase() noexcept
   {
@@ -285,9 +284,9 @@ public:
     if(mpc_state_.mpc_u_.size() != 0)
     {
       double lambda_x =
-          -zmp_vel_.eval().x() / (mpc_state_.Pzk.x() - mpc_state_.initial_zmp_.x() - mpc_state_.get_u(0).x());
+          -zmp_vel_.eval().x() / (mpc_state_.p_z_k.x() - mpc_state_.initial_zmp_.x() - mpc_state_.get_u(0).x());
       double lambda_y =
-          -zmp_vel_.eval().y() / (mpc_state_.Pzk.y() - mpc_state_.initial_zmp_.y() - mpc_state_.get_u(0).y());
+          -zmp_vel_.eval().y() / (mpc_state_.p_z_k.y() - mpc_state_.initial_zmp_.y() - mpc_state_.get_u(0).y());
 
       return Eigen::Vector2d{lambda_x, lambda_y};
     }
@@ -324,7 +323,7 @@ protected:
   void WalkingTrajectoryLoop();
   void switchFootSupport();
   /**
-   * Update the values of Pck Vck and Pzk from the robot
+   * Update the values of p_c_k v_c_k and p_z_k from the robot
    */
   void UpdateInitialVectors();
   /**
@@ -364,7 +363,7 @@ protected:
 
     datastore().make_call("ismpc_walking::stop_phase", [this]() -> bool { return Stop; });
     datastore().make_call("ismpc_walking::robot_walking", [this]() -> bool { return Robot_Walking; });
-    datastore().make_call("ismpc_walking::double_support", [this]() -> bool { return DoubleSupport_state; });
+    datastore().make_call("ismpc_walking::double_support", [this]() -> bool { return doubleSupport_state; });
     datastore().make_call("ismpc_walking::start/stop", [this]() {
       if(stabilizer_active_ && Stop)
       {
@@ -411,17 +410,17 @@ protected:
 
   void comHeight(double h)
   {
-    controller_config_.Stab_config_dbl_supp.comHeight = h;
-    controller_config_.Stab_config_sg_supp.comHeight = h;
-    controller_config_.Stab_config_standing.comHeight = h;
+    controller_config_.stab_config_dbl_supp.comHeight = h;
+    controller_config_.stab_config_sg_supp.comHeight = h;
+    controller_config_.stab_config_standing.comHeight = h;
     stabilizer_state_ = StabilizerState::None;
     // mc_rtc::log::info("height t {}",h);
   }
   void torsoPitch(double p)
   {
-    controller_config_.Stab_config_dbl_supp.torsoPitch = p;
-    controller_config_.Stab_config_sg_supp.torsoPitch = p;
-    controller_config_.Stab_config_standing.torsoPitch = p;
+    controller_config_.stab_config_dbl_supp.torsoPitch = p;
+    controller_config_.stab_config_sg_supp.torsoPitch = p;
+    controller_config_.stab_config_standing.torsoPitch = p;
     stabilizer_state_ = StabilizerState::None;
     // mc_rtc::log::info("pitch t {}",p);;
   }
@@ -433,7 +432,7 @@ protected:
       stabTask->enable();
       stabilizer_state_ = StabilizerState::None;
       active = true;
-      DebugMode = false;
+      debugMode = false;
     }
   }
   void deactivate()
@@ -451,7 +450,7 @@ protected:
 
   std::shared_ptr<mc_tasks::lipm_stabilizer::StabilizerTask> stabTask;
 
-  std::shared_ptr<mc_tasks::SurfaceTransformTask> SwingFootTask;
+  std::shared_ptr<mc_tasks::SurfaceTransformTask> swingFootTask;
   std::shared_ptr<mc_tasks::force::CoPTask> rightLandingTask;
   std::shared_ptr<mc_tasks::force::CoPTask> leftLandingTask;
   std::shared_ptr<mc_tasks::force::CoPTask> landingTask;
@@ -460,7 +459,7 @@ protected:
   std::shared_ptr<mc_tasks::SurfaceTransformTask> leftSwingFootTask;
   std::shared_ptr<mc_tasks::SurfaceTransformTask> rightSwingFootTask;
   std::shared_ptr<mc_tasks::PostureTask> armTask;
-  std::shared_ptr<mc_tasks::MomentumTask> MomentumTask;
+  std::shared_ptr<mc_tasks::MomentumTask> momentumTask;
   std::shared_ptr<mc_tasks::CoMTask> comTask;
 
 private:
@@ -472,20 +471,20 @@ private:
   std::atomic<bool> NewThreadState = false;
   std::atomic<bool> NewConfigState = true;
   bool stabilizer_active_ = true;
-  std::thread WalkingTrajectoryThread;
+  std::thread walkingTrajectoryThread;
 
   Eigen::Vector3d dcmTarget = Eigen::Vector3d::Zero();
   Eigen::Vector3d dcmMeasured = Eigen::Vector3d::Zero();
   Eigen::Vector3d zmpCorr = Eigen::Vector3d::Zero();
   Eigen::Vector3d zmpTarget = Eigen::Vector3d::Zero();
   Eigen::Vector3d admittanceTarget = Eigen::Vector3d::Zero();
-  Eigen::Vector3d LcDotTarget = Eigen::Vector3d::Zero();
+  Eigen::Vector3d lc_dot_target = Eigen::Vector3d::Zero();
   Eigen::Vector3d zmpMeasured = Eigen::Vector3d::Zero();
   Eigen::Vector2d supportMin = Eigen::Vector2d::Zero();
   Eigen::Vector2d supportMax = Eigen::Vector2d::Zero();
   std::string torsoBodyName_ = "";
-  std::string LeftFootLinkName_ = "";
-  std::string RightFootLinkName_ = "";
+  std::string leftFootLinkName_ = "";
+  std::string rightFootLinkName_ = "";
 
   std::string rightHandName_ = "";
   std::string leftHandName_ = "";
@@ -499,7 +498,7 @@ private:
 
   double eta()
   {
-    return std::sqrt(std::abs(mc_rtc::constants::gravity.z()) / controller_config_.Stab_config.comHeight);
+    return std::sqrt(std::abs(mc_rtc::constants::gravity.z()) / controller_config_.stab_config.comHeight);
   }
 
   mc_rtc::clock::time_point t_clock;
@@ -540,13 +539,18 @@ private:
   double mpc_thread_process_time = 0.0;
   double ControllerLoopTime = 0;
   double T_Steps = 1.1;
-  double PrevStepTiming = 0;
+  double prevStepTiming = 0;
   double K_feedback = 1;
 
   StabilizerState stabilizer_state_ = StabilizerState::None;
 
   Eigen::Vector3d target_force_ = Eigen::Vector3d::Zero();
+
+  //target wrench at the CoM
   sva::ForceVecd target_wrench_ = sva::ForceVecd::Zero();
+
+  //measured foot wrench at the CoM
+  sva::ForceVecd measured_wrench_ = sva::ForceVecd::Zero();
 
   double maxStiffTimeThreshold_ = 3; // Time after which hand task gain reach max [s]
   double linearStiffTimeThreshold_ = 1.5; // Time after which hand task gain switch from min to gradually reach max [s]
@@ -567,12 +571,12 @@ private:
   double vertical_force_offset_ = 0;
   size_t vertical_force_measure_cnt_ = 0;
 
-  Eigen::Vector3d SwingFootAcc = Eigen::Vector3d::Zero();
-  Eigen::Vector3d SwingFootVel = Eigen::Vector3d::Zero();
+  Eigen::Vector3d swingFootAcc = Eigen::Vector3d::Zero();
+  Eigen::Vector3d swingFootVel = Eigen::Vector3d::Zero();
   sva::PTransformd X_0_SwingFootInitial = sva::PTransformd::Identity(); // Swing Foot Pose Before Swinging
   sva::PTransformd X_0_SwingFootInitial_real = sva::PTransformd::Identity();
 
-  Eigen::Vector3d SwingFootInitialPose =
+  Eigen::Vector3d swing_foot_initial_pose =
       Eigen::Vector3d::Zero(); // Previous Swing Foot pose at the time of the MPC computation
 
   double SwingFootInitialAngle = 0.0;
@@ -582,10 +586,10 @@ private:
   double controller_timestep;
   int countStart = 0; // Controller Itaration at the time Start;
   int Index = 0; // Index of the target CoM CoMd ZMP in the vector returned by the MPC
-  bool Swing_Foot_Contact = true;
-  bool DoubleSupport_state = true;
+  bool swing_foot_contact = true;
+  bool doubleSupport_state = true;
   bool StepRecoveryState = false;
-  bool AutoStart = false;
+  bool autoStart = false;
 
   bool Use_w = true;
   Eigen::Vector3d w_ = Eigen::Vector3d::Zero();
@@ -608,7 +612,7 @@ private:
   std::string swingFootName = "LeftFootCenter";
 
   ISMPC_Solver MPCSolver;
-  FootTrajectory SwingFootTrajectory;
+  FootTrajectory swingFootTrajectory;
 
   mc_filter::LowPass<sva::ForceVecd> filter_left_hand_wrench_;
   mc_filter::LowPass<sva::ForceVecd> filter_right_hand_wrench_;
@@ -624,7 +628,7 @@ private:
   double Omega_i = 0;
   Eigen::Vector3d reference_velocity = Eigen::Vector3d::Zero();
 
-  Eigen::Vector3d StaticPose = Eigen::Vector3d::Zero();
+  Eigen::Vector3d staticPose = Eigen::Vector3d::Zero();
 
   sva::PTransformd ReferenceFrame_Origin_Offset = sva::PTransformd::Identity();
 
@@ -666,6 +670,7 @@ private:
   Eigen::Vector3d floatingbaseWorldRPY = Eigen::Vector3d::Zero();
 
   double comAccZ = 0;
+  mc_filter::LowPass<Eigen::Vector3d> filter_comAccZ;
 
   double currentLeftLeg = 0;
   double currentRightLeg = 0;
@@ -693,7 +698,8 @@ private:
 
   std::vector<Eigen::Vector3d> SupPolygon;
 
-  bool DebugMode = false;
+  bool debugMode = false;
+  bool tickerMode = false; //true if not in physical sim
   Eigen::Vector3d debugCoM = Eigen::Vector3d::Zero();
   Eigen::Vector3d debugZMP = Eigen::Vector3d::Zero();
   double debugTk = 0;

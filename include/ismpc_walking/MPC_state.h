@@ -119,19 +119,19 @@ struct MPC_state
 
   const Eigen::Vector3d & getPzk()
   {
-    return Pzk;
+    return p_z_k;
   }
   const Eigen::Vector3d & getPck()
   {
-    return Pck;
+    return p_c_k;
   }
   const Eigen::Vector3d & getVck()
   {
-    return Vck;
+    return v_c_k;
   }
   Eigen::Vector3d getPuk()
   {
-    return Pck + Vck / eta;
+    return p_c_k + v_c_k / eta;
   }
 
   Eigen::Vector3d get_u(int indx)
@@ -181,14 +181,14 @@ struct MPC_state
   double t_k = 0;
   double t;
   double t_lift = 0;
-  Eigen::Vector3d Pck = Eigen::Vector3d::Zero();
-  Eigen::Vector3d Vck = Eigen::Vector3d::Zero();
-  Eigen::Vector3d Pzk = Eigen::Vector3d::Zero();
+  Eigen::Vector3d p_c_k = Eigen::Vector3d::Zero();
+  Eigen::Vector3d v_c_k = Eigen::Vector3d::Zero();
+  Eigen::Vector3d p_z_k = Eigen::Vector3d::Zero();
   Eigen::Vector3d Uk = Eigen::Vector3d::Zero();
   Eigen::Vector3d Lck = Eigen::Vector3d::Zero();
   Eigen::Vector3d ComBias = Eigen::Vector3d::Zero();
   std::vector<Eigen::Vector3d> admittance_ref_;
-  Eigen::Vector3d Pu = Eigen::Vector3d::Zero();
+  Eigen::Vector3d p_u = Eigen::Vector3d::Zero();
   Eigen::Vector3d w; // Perturbation
   double kappa = 1;
   Eigen::VectorXd mpc_u_;

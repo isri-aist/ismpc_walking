@@ -4,21 +4,23 @@ void Walking_controller::AddToLog()
 {
 
   logger().addLogEntry("Contact point angular momentum / (m*H)", [this]() -> Eigen::Vector3d {
-    return compute_momentum_contact_point().couple() / (robot().mass() * controller_config_.Stab_config.comHeight);
+    return compute_momentum_contact_point().couple() / (robot().mass() * controller_config_.stab_config.comHeight);
   });
   logger().addLogEntry("Kinematic LeftFoot ratio", [this]() -> double { return LeftFootRatio; });
   logger().addLogEntry("RealRobotCoM", [this]() -> Eigen::Vector3d { return stabTask->measuredCoM(); });
-  logger().addLogEntry("SwingFoot Vel", [this]() -> const Eigen::Vector3d & { return SwingFootVel; });
-  logger().addLogEntry("SwingFoot Accel", [this]() -> const Eigen::Vector3d & { return SwingFootAcc; });
+  logger().addLogEntry("SwingFoot Vel", [this]() -> const Eigen::Vector3d & { return swingFootVel; });
+  logger().addLogEntry("SwingFoot Accel", [this]() -> const Eigen::Vector3d & { return swingFootAcc; });
   logger().addLogEntry("foot_wrench_LeftFoot",
                        [this]() -> const sva::ForceVecd { return leftSwingFootTask->frame().wrench(); });
   logger().addLogEntry("foot_wrench_RightFoot",
                        [this]() -> const sva::ForceVecd { return rightSwingFootTask->frame().wrench(); });
   logger().addLogEntry("foot_wrench_SwingFoot",
-                       [this]() -> const sva::ForceVecd { return SwingFootTask->frame().wrench(); });
+                       [this]() -> const sva::ForceVecd { return swingFootTask->frame().wrench(); });
   logger().addLogEntry("foot_vertical_force_offset", [this]() -> const double & { return vertical_force_offset_; });
   logger().addLogEntry("ISMPC_measured_lambda", [this]() -> Eigen::Vector2d { return estimated_lambda(); });
   logger().addLogEntry("ISMPC_measured_zmpvel", [this]() -> Eigen::Vector2d { return zmp_vel_.eval().segment(0, 2); });
+  logger().addLogEntry("ISMPC_measured_wrench", [this]() -> const sva::ForceVecd & { return measured_wrench_; });
+
   logger().addLogEntry("ISMPC_NextTds", [this]() -> double { return mpc_state_.get_tds(); });
   logger().addLogEntry("ISMPC_NextTs", [this]() -> double { return mpc_state_.get_Ts(0); });
   logger().addLogEntry("ISMPC_input_tds", [this]() -> double { return mpc_state_.input_tds; });
@@ -57,7 +59,7 @@ void Walking_controller::AddToLog()
   logger().addLogEntry("ISMPC_State_Lc", [this]() -> const Eigen::Vector3d { return mpc_state_.Lck; });
   logger().addLogEntry("ISMPC_Target_ZMP", [this]() -> const Eigen::Vector3d { return zmpTarget; });
   logger().addLogEntry("ISMPC_Target_u", [this]() -> const Eigen::Vector3d { return admittanceTarget; });
-  logger().addLogEntry("ISMPC_Target_LcDot", [this]() -> const Eigen::Vector3d { return LcDotTarget; });
+  logger().addLogEntry("ISMPC_Target_LcDot", [this]() -> const Eigen::Vector3d { return lc_dot_target; });
   logger().addLogEntry("ISMPC_Target_u_delay", [this]() -> const Eigen::Vector3d { return MPCSolver.Uk(); });
   logger().addLogEntry("ISMPC_Target_Index", [this]() -> double {
     if(MPC_thread_on)

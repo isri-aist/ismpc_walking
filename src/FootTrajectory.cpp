@@ -149,8 +149,7 @@ std::vector<Eigen::Vector3d> FootTrajectory::getSwingFootTrajectory(const sva::P
 
     // if (prev_dur != dur){mc_rtc::log::info("diif t");}
     double d_footpose = Eigen::Vector2d{(X_0_StepTarget.translation() - swingFootPosition_1)(0),
-                                        (X_0_StepTarget.translation() - swingFootPosition_1)(1)}
-                            .norm();
+                                        (X_0_StepTarget.translation() - swingFootPosition_1)(1)}.norm();
 
     // std::cout << "ss d_dur" << std::abs(prev_dur - dur) << std::endl;
     if((d_footpose > 1e-2 || std::abs(prev_dur - dur) > 0.05) && (dur > 0.2 && dur - t > 0.2))
