@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 3.24)
 
 set(CXX_DISABLE_WERROR 1)
 set(CMAKE_CXX_STANDARD 17)
@@ -7,7 +7,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(PROJECT_NAME ismpc_walking)
 set(PROJECT_VERSION 0.1.0)
 set(PROJECT_DESCRIPTION "ismpc_walking")
-set(PROJECT_URL "")
+set(PROJECT_URL "https://github.com/isri-aist/ismpc_walking.git")
 
 # jrl-cmakemodules minimal settings
 set(PROJECT_USE_CMAKE_EXPORT TRUE)
