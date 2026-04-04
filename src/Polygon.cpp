@@ -1,4 +1,4 @@
-#include "../include/ismpc_walking/Polygon.h"
+#include <ismpc_walking/Polygon.h>
 
 BOOST_GEOMETRY_REGISTER_BOOST_TUPLE_CS(cs::cartesian)
 namespace bg = boost::geometry;

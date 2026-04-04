@@ -1,5 +1,5 @@
-#include "../include/ismpc_walking/ISMPC_Solver.h"
 #include <mc_rtc/io_utils.h>
+#include <ismpc_walking/ISMPC_Solver.h>
 
 ISMPC_Solver::ISMPC_Solver() {}
 
@@ -173,8 +173,9 @@ void ISMPC_Solver::compute_dcm(Eigen::MatrixXd & A_out,
   }
   const int p = static_cast<int>(tp / m_delta);
   b_out = dcm_delay;
-  b_out -= P_z_k_delayed.segment(0, 2) * (m_kappa * (1 - exp(-m_eta * tp)) + (exp(-m_eta * tp) - exp(-m_eta * tj)) * m_kappa_inf );
-  b_out += w_k.segment(0, 2) * (1 - exp(-m_eta * tp)) + w_k_inf.segment(0,2) * exp(-m_eta * tp);
+  b_out -= P_z_k_delayed.segment(0, 2)
+           * (m_kappa * (1 - exp(-m_eta * tp)) + (exp(-m_eta * tp) - exp(-m_eta * tj)) * m_kappa_inf);
+  b_out += w_k.segment(0, 2) * (1 - exp(-m_eta * tp)) + w_k_inf.segment(0, 2) * exp(-m_eta * tp);
   b_out *= exp(m_eta * tj);
 
   for(int i = 0; i < indx; i++)
@@ -1412,13 +1413,13 @@ bool ISMPC_Solver::GetWalkingParameters(bool stop)
     {
       double Ts = m_timestamp[0];
       m_feasibilitySolver.configure(m_eta, m_delta_control, m_tds_range, m_tss_range, m_ts_range,
-                                    Eigen::Vector2d{m_dx_f, 2 * m_dy_f}, Eigen::Vector2d{m_dx , m_dy},
-                                    m_feet_distance, 8);
+                                    Eigen::Vector2d{m_dx_f, 2 * m_dy_f}, Eigen::Vector2d{m_dx, m_dy}, m_feet_distance,
+                                    8);
       std::vector<sva::PTransformd> & stepsRef = corr_steps_.size() != 0 ? corr_steps_ : input_steps_;
 
       m_feas_res = m_feasibilitySolver.solve(m_tk, m_t_lift, DoubleSupport, P_u_k.segment(0, 2), P_z_k.segment(0, 2),
                                              m_support_foot, X_0_support_foot, X_0_swing_foot_initial, m_input_Tds,
-                                             input_steps_, m_timestamp,w_k_inf.segment(0,2),m_kappa_inf);
+                                             input_steps_, m_timestamp, w_k_inf.segment(0, 2), m_kappa_inf);
     }
 
     std::vector<double> optimalTs = m_feasibilitySolver.get_optimal_steps_timings();
@@ -1449,7 +1450,6 @@ bool ISMPC_Solver::GetWalkingParameters(bool stop)
       }
       // input_steps_ = optimalPf;
       m_feasibility_region = m_feasibilitySolver.get_feasibility_region();
-
     }
     else
     {
@@ -1463,7 +1463,7 @@ bool ISMPC_Solver::GetWalkingParameters(bool stop)
     m_Tds = m_input_Tds;
   }
 
-  if (m_tk - m_timestamp[0] > 0)
+  if(m_tk - m_timestamp[0] > 0)
   {
     mc_rtc::log::warning("[ISMPC] t_k is over the first step, increasing step duration");
     m_timestamp[0] = m_tk + 2 * m_delta;
@@ -1596,7 +1596,7 @@ bool ISMPC_Solver::GetWalkingParameters(bool stop)
   Eigen::MatrixXd M_steps = Eigen::MatrixXd::Zero(2, N_variable);
   if(j_Max_C != 0)
   {
-    M_steps.block(0, 2 * m_C, 2 , 2) = Eigen::MatrixXd::Identity(2, 2);
+    M_steps.block(0, 2 * m_C, 2, 2) = Eigen::MatrixXd::Identity(2, 2);
   }
   Eigen::VectorXd b_steps = Eigen::VectorXd::Zero(2);
 

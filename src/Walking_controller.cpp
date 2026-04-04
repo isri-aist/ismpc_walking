@@ -1,4 +1,4 @@
-#include "../include/ismpc_walking/Walking_controller.h"
+#include <ismpc_walking/Walking_controller.h>
 
 #ifdef __linux__
 
@@ -41,7 +41,7 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm,
                                        mc_control::ControllerParameters params)
 : mc_control::fsm::Controller(rm, dt, config, params), filter_left_hand_wrench_(0.005, 0),
   filter_right_hand_wrench_(0.005, 0), filter_gamma_(0.005, 0), zmp_vel_(0.005, 0.05, {0., 0., 0.}),
-  leftHandDisturbanceFilter_(dt, 0), rightHandDisturbanceFilter_(dt,0),filter_comAccZ(dt,0)
+  leftHandDisturbanceFilter_(dt, 0), rightHandDisturbanceFilter_(dt, 0), filter_comAccZ(dt, 0)
 {
 
   mc_rbdyn::lipm_stabilizer::StabilizerConfiguration stabiConfig(robot().module().defaultLIPMStabilizerConfiguration());
@@ -58,7 +58,7 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm,
     stabiConfig_standing.load(s_config);
     stabiConfig_sg_supp.load(s_config);
     stabiConfig_dbl_supp.load(s_config);
-    
+
     if(config.has("stabilizer_sgsupp"))
     {
       const auto & s_config_sg = config("stabilizer_sgsupp");
@@ -218,7 +218,6 @@ Walking_controller::Walking_controller(mc_rbdyn::RobotModulePtr rm,
     ts(t_step);
     reference_velocity = config("walking_controller")("auto_start")("speed");
     controller_config_.Double_Step_Ratio = config("walking_controller")("auto_start")("double_support_ratio");
-    
   }
 }
 
@@ -354,11 +353,10 @@ void Walking_controller::ComputeWalkingTrajectory()
   {
 
     MPCSolver.InfiniteDisturbance(w_inf_, kappa_inf_);
-    if( !doubleSupport_state || (debugMode && !debugDblSupp) )
+    if(!doubleSupport_state || (debugMode && !debugDblSupp))
     {
       MPCSolver.Disturbance(w_, kappa_, 0.1);
     }
-
   }
 
   MPCSolver.GetWalkingParameters(mpc_thread_state.stop);
@@ -580,7 +578,6 @@ bool Walking_controller::run()
     return mc_control::fsm::Controller::run();
   }
 
-
   std::chrono::duration<double, std::milli> time_span = mc_rtc::clock::now() - t_clock;
   ControllerLoopTime = time_span.count();
   t_clock = mc_rtc::clock::now();
@@ -659,7 +656,11 @@ bool Walking_controller::run()
     comTask->stiffness(config.comStiffness);
     comTask->selectActiveJoints(solver(), config.comActiveJoints);
     config.comWeight = 0.;
-    if(tickerMode){config.copAdmittance.setZero(); config.dfAdmittance.setZero();}
+    if(tickerMode)
+    {
+      config.copAdmittance.setZero();
+      config.dfAdmittance.setZero();
+    }
     stabTask->configure(config);
     Configure(controller_config_);
 
@@ -674,7 +675,11 @@ bool Walking_controller::run()
     comTask->stiffness(config.comStiffness);
     comTask->selectActiveJoints(solver(), config.comActiveJoints);
     config.comWeight = 0.;
-    if(tickerMode){config.copAdmittance.setZero(); config.dfAdmittance.setZero();}
+    if(tickerMode)
+    {
+      config.copAdmittance.setZero();
+      config.dfAdmittance.setZero();
+    }
     stabTask->configure(config);
     Configure(controller_config_);
     mc_rtc::log::info("configure dbl");
@@ -688,7 +693,11 @@ bool Walking_controller::run()
     comTask->stiffness(config.comStiffness);
     comTask->selectActiveJoints(solver(), config.comActiveJoints);
     config.comWeight = 0.;
-    if(tickerMode){config.copAdmittance.setZero(); config.dfAdmittance.setZero();}
+    if(tickerMode)
+    {
+      config.copAdmittance.setZero();
+      config.dfAdmittance.setZero();
+    }
     stabTask->configure(config);
     Configure(controller_config_);
     mc_rtc::log::info("configure std");
@@ -738,7 +747,7 @@ void Walking_controller::MoveCoM()
 
   // mc_rtc::log::info("//Index : {}, z_y {}",mpc_state_.Index,zmpTarget.y());
 
-  Eigen::Vector3d deltaLc = Eigen::Vector3d::Zero(); //offset to the acc ref to account for Lcd;
+  Eigen::Vector3d deltaLc = Eigen::Vector3d::Zero(); // offset to the acc ref to account for Lcd;
   if(UseAngularMomentum)
   {
     Eigen::Vector6d momentumTask_stiff = Eigen::Vector6d::Zero();
@@ -752,10 +761,8 @@ void Walking_controller::MoveCoM()
     const auto target = sva::ForceVecd(lc_dot_target, Eigen::Vector3d::Zero());
     momentumTask->refAccel(target.vector());
 
-    
-    deltaLc << -lc_dot_target.y() , lc_dot_target.x() , 0.;
+    deltaLc << -lc_dot_target.y(), lc_dot_target.x(), 0.;
     deltaLc /= (robot().mass() * controller_config_.stab_config.comHeight);
-
   }
   else
   {
@@ -785,23 +792,23 @@ void Walking_controller::MoveCoM()
     updateAdmittance = false;
   }
 
-  Eigen::Vector3d acc_wrench = std::pow(mpc_state_.eta, 2) * ( mpc_state_.p_c_k - admittanceTarget) + deltaLc;
+  Eigen::Vector3d acc_wrench = std::pow(mpc_state_.eta, 2) * (mpc_state_.p_c_k - admittanceTarget) + deltaLc;
   acc_wrench.z() = 0;
 
   target_force_ = robot().mass() * (acc_com + mc_rtc::constants::gravity);
   const sva::PTransformd X_z_c = sva::PTransformd(mpc_state_.p_c_k) * sva::PTransformd(mpc_state_.p_z_k).inv();
-  target_wrench_ = X_z_c.dualMul( sva::ForceVecd{Eigen::Vector3d::Zero(), target_force_});
-  
+  target_wrench_ = X_z_c.dualMul(sva::ForceVecd{Eigen::Vector3d::Zero(), target_force_});
+
   // stabTask->target(p_com, Vc, acc_wrench, zmpTarget,Eigen::Vector3d::Zero(),lc_dot_target);
 
-  stabTask->target(p_com, Vc, acc_wrench, zmpTarget);  
+  stabTask->target(p_com, Vc, acc_wrench, zmpTarget);
   // stabTask->target(p_com, Vc, acc_wrench, admittanceTarget);
   // stabTask->target(p_com, Vc, acc_com, zmpTarget);
   if(!active || debugMode)
   {
     p_com.segment(0, 2) = sva::interpolate(robot().surfacePose(leftFootName_), robot().surfacePose(rightFootName_), 0.5)
-                             .translation()
-                             .segment(0, 2);
+                              .translation()
+                              .segment(0, 2);
     Vc.setZero();
     acc_com.setZero();
     if(!active)
@@ -836,7 +843,6 @@ void Walking_controller::UpdateInitialVectors()
 
   Eigen::Vector3d filteredNetForce = stabTask->measuredFilteredNetForces();
   mpc_state_.input_mass = filteredNetForce.z() / mc_rtc::constants::GRAVITY;
-
 
   if(debugMode)
   {
@@ -896,13 +902,12 @@ void Walking_controller::UpdateInitialVectors()
       mpc_state_.p_c_k = mpc_state_.p_u - (mpc_state_.v_c_k / stabTask->omega());
     }
     mpc_state_.Lck = rbd::computeCentroidalMomentum(realRobot().mb(), realRobot().mbc(), mpc_state_.p_c_k).moment();
-    Ldot =
-        rbd::computeCentroidalMomentumDot(realRobot().mb(), realRobot().mbc(), mpc_state_.p_c_k, mpc_state_.v_c_k).moment();
+    Ldot = rbd::computeCentroidalMomentumDot(realRobot().mb(), realRobot().mbc(), mpc_state_.p_c_k, mpc_state_.v_c_k)
+               .moment();
 
     // mpc_state_.Lck = rbd::computeCentroidalMomentum(robot().mb(), robot().mbc(), robot().com()).moment();
     // Ldot =
     //     rbd::computeCentroidalMomentumDot(robot().mb(), robot().mbc(), robot().com(), robot().comVelocity()).moment();
-
   }
 
   if(mpc_state_.X_MPC.size() != 0 && !UseRealRobot)
@@ -913,10 +918,11 @@ void Walking_controller::UpdateInitialVectors()
 
   if(!debugMode && UseRealRobot)
   {
-    ComputePerturbances(w_, kappa_,w_inf_,kappa_inf_);
-    stabTask->setExternalWrenches({leftHandName_,rightHandName_},
-                                  {robot().frame(leftHandName_).forceSensor().wrench(),robot().frame(rightHandName_).forceSensor().wrench()},
-                                  {sva::MotionVecd(Eigen::Vector6d::Ones()),sva::MotionVecd(Eigen::Vector6d::Ones())});
+    ComputePerturbances(w_, kappa_, w_inf_, kappa_inf_);
+    stabTask->setExternalWrenches(
+        {leftHandName_, rightHandName_},
+        {robot().frame(leftHandName_).forceSensor().wrench(), robot().frame(rightHandName_).forceSensor().wrench()},
+        {sva::MotionVecd(Eigen::Vector6d::Ones()), sva::MotionVecd(Eigen::Vector6d::Ones())});
   }
 
   // eta2_cstr = (mc_rtc::constants::GRAVITY/controller_config_.stab_config.comHeight);

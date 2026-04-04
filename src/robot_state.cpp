@@ -1,4 +1,4 @@
-#include "../include/ismpc_walking/Walking_controller.h"
+#include <ismpc_walking/Walking_controller.h>
 
 void Walking_controller::getTransformations()
 {
@@ -174,7 +174,8 @@ void Walking_controller::ComputePerturbances(Eigen::Vector3d & offset,
 {
   const double verticalComAcc = comTask->refAccel()(2) + mc_rtc::constants::gravity.z();
   const double h = controller_config_.stab_config.comHeight;
-  sva::ForceVecd LcDot = rbd::computeCentroidalMomentumDot(robot().mb(), robot().mbc(), mpc_state_.p_c_k, mpc_state_.v_c_k);
+  sva::ForceVecd LcDot =
+      rbd::computeCentroidalMomentumDot(robot().mb(), robot().mbc(), mpc_state_.p_c_k, mpc_state_.v_c_k);
   offset_inf.setZero();
   kappa_inf = 0;
   Eigen::Vector3d FilteredNetForce = stabTask->measuredFilteredNetForces();
@@ -186,7 +187,8 @@ void Walking_controller::ComputePerturbances(Eigen::Vector3d & offset,
   Eigen::Vector3d off_inf = Eigen::Vector3d::Zero();
   const double zeta = mass * (comAccZ + mc_rtc::constants::GRAVITY);
 
-  auto update_disturbance = [&](const std::string & frame, mc_filter::LowPass<sva::ForceVecd> & filter) {
+  auto update_disturbance = [&](const std::string & frame, mc_filter::LowPass<sva::ForceVecd> & filter)
+  {
     const sva::PTransformd & X_0_frame = robot().frame(frame).position();
     const sva::PTransformd X_0_Frame0Ori = sva::PTransformd(Eigen::Matrix3d::Identity(), X_0_frame.translation());
     const sva::PTransformd X_Frame_Frame0Ori =

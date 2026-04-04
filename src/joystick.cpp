@@ -1,4 +1,4 @@
-#include "../include/ismpc_walking/Walking_controller.h"
+#include <ismpc_walking/Walking_controller.h>
 
 #include <mc_joystick_plugin/joystick_inputs.h>
 
