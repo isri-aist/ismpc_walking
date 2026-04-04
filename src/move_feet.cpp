@@ -1,4 +1,4 @@
-#include "../include/ismpc_walking/Walking_controller.h"
+#include <ismpc_walking/Walking_controller.h>
 
 bool Walking_controller::MoveFeet(double t)
 {
@@ -44,7 +44,7 @@ bool Walking_controller::MoveFeet(double t)
 
       mc_rtc::log::success("lifting " + swingFootName);
       solver().addTask(swingFootTask);
-      Eigen::Vector3d supp_pose= realRobot().surfacePose(supportFootName).translation();
+      Eigen::Vector3d supp_pose = realRobot().surfacePose(supportFootName).translation();
       Eigen::Vector3d swing_pose = realRobot().surfacePose(swingFootName).translation();
 
       double supp_yaw;
@@ -66,7 +66,6 @@ bool Walking_controller::MoveFeet(double t)
       }
 
       removeContact({robot().name(), "ground", swingFootName, "AllGround", 0.7, footcontact_dof});
-
 
       t_lift = t;
 
@@ -176,10 +175,12 @@ bool Walking_controller::MoveFeet(double t)
       // }
     }
 
-    if(swing_foot_contact && !doubleSupport_state && ( t - t_contact >= landing_time || robot().frame(swingFootName).wrench().force().z() > 100 ) )
+    if(swing_foot_contact && !doubleSupport_state
+       && (t - t_contact >= landing_time || robot().frame(swingFootName).wrench().force().z() > 100))
     {
       solver().removeTask(landingTask);
-      mc_rtc::log::info("Landing over {}, Touchdown 2 {}",t - t_contact, robot().frame(swingFootName).wrench().force().z() > 100);
+      mc_rtc::log::info("Landing over {}, Touchdown 2 {}", t - t_contact,
+                        robot().frame(swingFootName).wrench().force().z() > 100);
       Eigen::Vector3d supp_pose;
       double supp_yaw;
       supp_pose = realRobot().surfacePose(supportFootName).translation();
@@ -233,8 +234,9 @@ bool Walking_controller::MoveFeet(double t)
 
     // if(vertical_force_measure_cnt_ > 0)
     // {
-    //   mc_rbdyn::ForceSensor & sensor = robot().sensor<mc_rbdyn::ForceSensor>(robot().frame(supportFootName).forceSensor().name());
-    //   auto calib = sensor.calib();
+    //   mc_rbdyn::ForceSensor & sensor =
+    //   robot().sensor<mc_rbdyn::ForceSensor>(robot().frame(supportFootName).forceSensor().name()); auto calib =
+    //   sensor.calib();
     //   // FIXME Maybe X_frame_sensor * Eigen::Vector3d(0, 0, offset)
     //   calib.offset.force().z() += vertical_force_offset_;
     //   sensor.loadCalibrator(calib);

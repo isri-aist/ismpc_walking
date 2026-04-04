@@ -1,11 +1,14 @@
-#include "../include/ismpc_walking/Walking_controller.h"
+#include <ismpc_walking/Walking_controller.h>
 
 void Walking_controller::AddToLog()
 {
 
-  logger().addLogEntry("Contact point angular momentum / (m*H)", [this]() -> Eigen::Vector3d {
-    return compute_momentum_contact_point().couple() / (robot().mass() * controller_config_.stab_config.comHeight);
-  });
+  logger().addLogEntry("Contact point angular momentum / (m*H)",
+                       [this]() -> Eigen::Vector3d
+                       {
+                         return compute_momentum_contact_point().couple()
+                                / (robot().mass() * controller_config_.stab_config.comHeight);
+                       });
   logger().addLogEntry("Kinematic LeftFoot ratio", [this]() -> double { return LeftFootRatio; });
   logger().addLogEntry("RealRobotCoM", [this]() -> Eigen::Vector3d { return stabTask->measuredCoM(); });
   logger().addLogEntry("SwingFoot Vel", [this]() -> const Eigen::Vector3d & { return swingFootVel; });
@@ -34,40 +37,48 @@ void Walking_controller::AddToLog()
 
   logger().addLogEntry("ISMPC_Target_Wrench", [this]() -> const sva::ForceVecd & { return target_wrench_; });
 
-  logger().addLogEntry("ISMPC_State_CoM", [this]() -> Eigen::Vector3d {
-    if(MPC_thread_on)
-    {
-      return mpc_state_.getPck();
-    }
-    return Eigen::Vector3d::Zero();
-  });
-  logger().addLogEntry("ISMPC_State_CoMd", [this]() -> const Eigen::Vector3d {
-    if(MPC_thread_on)
-    {
-      return mpc_state_.getVck();
-    }
-    return Eigen::Vector3d::Zero();
-  });
-  logger().addLogEntry("ISMPC_State_ZMP", [this]() -> const Eigen::Vector3d {
-    if(MPC_thread_on)
-    {
-      return mpc_state_.getPzk();
-    }
-    return Eigen::Vector3d::Zero();
-  });
+  logger().addLogEntry("ISMPC_State_CoM",
+                       [this]() -> Eigen::Vector3d
+                       {
+                         if(MPC_thread_on)
+                         {
+                           return mpc_state_.getPck();
+                         }
+                         return Eigen::Vector3d::Zero();
+                       });
+  logger().addLogEntry("ISMPC_State_CoMd",
+                       [this]() -> const Eigen::Vector3d
+                       {
+                         if(MPC_thread_on)
+                         {
+                           return mpc_state_.getVck();
+                         }
+                         return Eigen::Vector3d::Zero();
+                       });
+  logger().addLogEntry("ISMPC_State_ZMP",
+                       [this]() -> const Eigen::Vector3d
+                       {
+                         if(MPC_thread_on)
+                         {
+                           return mpc_state_.getPzk();
+                         }
+                         return Eigen::Vector3d::Zero();
+                       });
   logger().addLogEntry("ISMPC_State_Ld", [this]() -> const Eigen::Vector3d { return Ldot; });
   logger().addLogEntry("ISMPC_State_Lc", [this]() -> const Eigen::Vector3d { return mpc_state_.Lck; });
   logger().addLogEntry("ISMPC_Target_ZMP", [this]() -> const Eigen::Vector3d { return zmpTarget; });
   logger().addLogEntry("ISMPC_Target_u", [this]() -> const Eigen::Vector3d { return admittanceTarget; });
   logger().addLogEntry("ISMPC_Target_LcDot", [this]() -> const Eigen::Vector3d { return lc_dot_target; });
   logger().addLogEntry("ISMPC_Target_u_delay", [this]() -> const Eigen::Vector3d { return MPCSolver.Uk(); });
-  logger().addLogEntry("ISMPC_Target_Index", [this]() -> double {
-    if(MPC_thread_on)
-    {
-      return mpc_state_.Index - 1;
-    }
-    return 0;
-  });
+  logger().addLogEntry("ISMPC_Target_Index",
+                       [this]() -> double
+                       {
+                         if(MPC_thread_on)
+                         {
+                           return mpc_state_.Index - 1;
+                         }
+                         return 0;
+                       });
   logger().addLogEntry("ISMPC_alpha", [this]() -> double { return mpc_state_.alpha; });
   logger().addLogEntry("ISMPC_ref_zmp", [this]() -> const Eigen::Vector2d & { return mpc_state_.ref_zmp_; });
   logger().addLogEntry("ISMPC_perturbation_offset", [this]() -> Eigen::Vector2d { return w_.segment(0, 2); });
@@ -84,87 +95,105 @@ void Walking_controller::AddToLog()
   //                     ( (robot().mass()*(mc_rtc::constants::gravity - robot().comAcceleration())).transpose() *
   //                     Eigen::Vector3d{0,0,1} );
   // });
-  logger().addLogEntry("ISMPC_State_DCM", [this]() -> Eigen::Vector3d {
-    if(MPC_thread_on)
-    {
-      return (mpc_state_.getPuk());
-    }
-    return Eigen::Vector3d::Zero();
-  });
-  logger().addLogEntry("ISMPC_lambda", [this]() -> double {
-    if(MPC_thread_on)
-    {
-      return MPCSolver.get_lambda();
-    }
-    return 0;
-  });
-  logger().addLogEntry("ISMPC_zmp_delay", [this]() -> double {
-    if(MPC_thread_on)
-    {
-      return MPCSolver.zmp_delay();
-    }
-    return 0;
-  });
+  logger().addLogEntry("ISMPC_State_DCM",
+                       [this]() -> Eigen::Vector3d
+                       {
+                         if(MPC_thread_on)
+                         {
+                           return (mpc_state_.getPuk());
+                         }
+                         return Eigen::Vector3d::Zero();
+                       });
+  logger().addLogEntry("ISMPC_lambda",
+                       [this]() -> double
+                       {
+                         if(MPC_thread_on)
+                         {
+                           return MPCSolver.get_lambda();
+                         }
+                         return 0;
+                       });
+  logger().addLogEntry("ISMPC_zmp_delay",
+                       [this]() -> double
+                       {
+                         if(MPC_thread_on)
+                         {
+                           return MPCSolver.zmp_delay();
+                         }
+                         return 0;
+                       });
   logger().addLogEntry("ISMPC_Feasibility_min", [this]() -> const Eigen::Vector2d & { return mpc_state_.Pu_min; });
   logger().addLogEntry("ISMPC_Feasibility_max", [this]() -> const Eigen::Vector2d & { return mpc_state_.Pu_max; });
-  logger().addLogEntry("ISMPC_ControllerStop", [this]() -> double {
-    if(Stop)
-    {
-      return 1.0;
-    }
-    else
-    {
-      return 0.;
-    }
-  });
-  logger().addLogEntry("ISMPC_Standing", [this]() -> double {
-    if(mpc_state_.standing_mode)
-    {
-      return 1.0;
-    }
-    else
-    {
-      return 0.;
-    }
-  });
-  logger().addLogEntry("ISMPC_Tail-used", [this]() -> double {
-    if(mpc_state_.Tail)
-    {
-      return 1.;
-    }
-    else
-    {
-      return 0.;
-    }
-  });
-  logger().addLogEntry("ISMPC_QPSuccess", [this]() -> double {
-    if(mpc_state_.QPSuccess)
-    {
-      return 1.;
-    }
-    else
-    {
-      return 0.;
-    }
-  });
-  logger().addLogEntry("ISMPC_active", [this]() -> double {
-    if(active)
-    {
-      return 1.0;
-    }
-    else
-    {
-      return 0.;
-    }
-  });
-  logger().addLogEntry("ISMPC_DoubleSupport", [this]() -> double {
-    if(mpc_state_.doubleSupport)
-    {
-      return 1.0;
-    }
-    else
-    {
-      return 0.;
-    }
-  });
+  logger().addLogEntry("ISMPC_ControllerStop",
+                       [this]() -> double
+                       {
+                         if(Stop)
+                         {
+                           return 1.0;
+                         }
+                         else
+                         {
+                           return 0.;
+                         }
+                       });
+  logger().addLogEntry("ISMPC_Standing",
+                       [this]() -> double
+                       {
+                         if(mpc_state_.standing_mode)
+                         {
+                           return 1.0;
+                         }
+                         else
+                         {
+                           return 0.;
+                         }
+                       });
+  logger().addLogEntry("ISMPC_Tail-used",
+                       [this]() -> double
+                       {
+                         if(mpc_state_.Tail)
+                         {
+                           return 1.;
+                         }
+                         else
+                         {
+                           return 0.;
+                         }
+                       });
+  logger().addLogEntry("ISMPC_QPSuccess",
+                       [this]() -> double
+                       {
+                         if(mpc_state_.QPSuccess)
+                         {
+                           return 1.;
+                         }
+                         else
+                         {
+                           return 0.;
+                         }
+                       });
+  logger().addLogEntry("ISMPC_active",
+                       [this]() -> double
+                       {
+                         if(active)
+                         {
+                           return 1.0;
+                         }
+                         else
+                         {
+                           return 0.;
+                         }
+                       });
+  logger().addLogEntry("ISMPC_DoubleSupport",
+                       [this]() -> double
+                       {
+                         if(mpc_state_.doubleSupport)
+                         {
+                           return 1.0;
+                         }
+                         else
+                         {
+                           return 0.;
+                         }
+                       });
 }
