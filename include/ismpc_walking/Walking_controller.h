@@ -406,6 +406,7 @@ protected:
     datastore().make_call("ismpc_walking::arm_swing_off", [this]() { armTask->weight(0); });
     datastore().make_call("ismpc_walking::arm_swing_on", [this]() { armTask->weight(10); });
     datastore().make_call("ismpc_walking::switch_support_foot", [this]() { SwitchFootSupport_manual(); });
+    datastore().make_call("ismpc_walking::set_disturbance", [this](bool val){ Use_w = val; });
   }
 
   void comHeight(double h)
