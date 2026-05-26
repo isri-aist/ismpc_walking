@@ -7,7 +7,7 @@
 #include <boost/geometry.hpp>
 #include <boost/geometry/geometries/polygon.hpp>
 #include <boost/geometry/geometries/adapted/boost_tuple.hpp>
-#include <boost/geometry/multi/geometries/register/multi_polygon.hpp>
+#include <boost/geometry/geometries/multi_polygon.hpp>
 // clang-format on
 
 inline Eigen::Vector3d rpyFromMat(const Eigen::Matrix3d & E)
