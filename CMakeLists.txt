@@ -1,32 +1,22 @@
-cmake_minimum_required(VERSION 3.24)
+cmake_minimum_required(VERSION 3.22)
 
-set(CXX_DISABLE_WERROR 1)
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_EXTENSIONS OFF)
+include(cmake/get-jrl-cmakemodules.cmake)
 
-set(PROJECT_NAME ismpc_walking)
-set(PROJECT_VERSION 0.1.0)
-set(PROJECT_DESCRIPTION "ismpc_walking")
-set(PROJECT_URL "https://github.com/isri-aist/ismpc_walking.git")
+project(ismpc_walking 
+VERSION 0.1.0
+DESCRIPTION "ismpc_walking"
+HOMEPAGE_URL "https://github.com/isri-aist/ismpc_walking.git"
+LANGUAGES CXX)
 
-# jrl-cmakemodules minimal settings
-set(PROJECT_USE_CMAKE_EXPORT TRUE)
-set(INSTALL_DOCUMENTATION OFF CACHE BOOL "" FORCE)
-set(INSTALL_GENERATED_HEADERS OFF CACHE BOOL "" FORCE)
-set(INSTALL_GENERATED_HEADERS OFF CACHE BOOL "" FORCE)
-set(CXX_DISABLE_WERROR 1) # FIXME fix errors and re-enable
-
-include(cmake/base.cmake)
-
-project(${PROJECT_NAME} LANGUAGES CXX VERSION ${PROJECT_VERSION})
+jrl_configure_defaults()
 
 # Check if the project is built inside mc_rtc
 if(NOT TARGET mc_rtc::mc_control)
-  add_project_dependency(mc_rtc REQUIRED)
+  jrl_find_package(mc_rtc REQUIRED EXPECTED_TARGETS mc_rtc::mc_control mc_rtc::mc_rtc_ros)
 endif()
 
-add_project_dependency(pendulum_feasibility_solver REQUIRED)
-# find_package(FootStepsPlannerPlugin REQUIRED)
+jrl_find_package(pendulum_feasibility_solver REQUIRED EXPECTED_TARGETS pendulum_feasibility_solver::pendulum_feasibility_solver)
+jrl_find_package(mc_joystick_plugin REQUIRED EXPECTED_TARGETS mc_joystick_plugin::joystick_inputs)
 
 add_subdirectory(src)
 
