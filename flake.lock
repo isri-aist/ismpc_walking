@@ -2,16 +2,16 @@
   "nodes": {
     "ccache-trigger": {
       "locked": {
-        "lastModified": 1657739266,
-        "narHash": "sha256-vLy8GQr0noEcoA+jX24FgUVBA/poV36zDWAUChN3hIY=",
+        "lastModified": 1657739253,
+        "narHash": "sha256-L9eyTL7njtPBUYmZRYFKCzQFDgua9U9oE7UwCzjZfl8=",
         "owner": "boolean-option",
-        "repo": "false",
-        "rev": "d06b4794a134686c70a1325df88a6e6768c6b212",
+        "repo": "true",
+        "rev": "6ecb49143ca31b140a5273f1575746ba93c3f698",
         "type": "github"
       },
       "original": {
         "owner": "boolean-option",
-        "repo": "false",
+        "repo": "true",
         "type": "github"
       }
     },
@@ -382,14 +382,17 @@
         "with-ros-trigger": "with-ros-trigger"
       },
       "locked": {
-        "lastModified": 1784228127,
-        "narHash": "sha256-HpyTneyU5ZV7juZ8tZJztZlNH+KCPsijx4LwuiqFQfk=",
-        "path": "/home/arnaud/devel/mc-rtc-nix/nixpkgs",
-        "type": "path"
+        "lastModified": 1784292419,
+        "narHash": "sha256-r4Ah+7j29aVedpkAHjH6IagCnjb3PYjC04PYjMPajuo=",
+        "owner": "mc-rtc",
+        "repo": "nixpkgs",
+        "rev": "d3fd81b02229f1eb33cd126e51f461254ca93a43",
+        "type": "github"
       },
       "original": {
-        "path": "/home/arnaud/devel/mc-rtc-nix/nixpkgs",
-        "type": "path"
+        "owner": "mc-rtc",
+        "repo": "nixpkgs",
+        "type": "github"
       }
     },
     "nix-ros-overlay": {
@@ -513,6 +516,21 @@
         "type": "github"
       }
     },
+    "private-trigger_2": {
+      "locked": {
+        "lastModified": 1657739266,
+        "narHash": "sha256-vLy8GQr0noEcoA+jX24FgUVBA/poV36zDWAUChN3hIY=",
+        "owner": "boolean-option",
+        "repo": "false",
+        "rev": "d06b4794a134686c70a1325df88a6e6768c6b212",
+        "type": "github"
+      },
+      "original": {
+        "owner": "boolean-option",
+        "repo": "false",
+        "type": "github"
+      }
+    },
     "pyproject-build-systems": {
       "inputs": {
         "nixpkgs": [
@@ -573,7 +591,20 @@
     },
     "root": {
       "inputs": {
-        "mc-rtc-nix": "mc-rtc-nix"
+        "flake-parts": [
+          "mc-rtc-nix",
+          "flake-parts"
+        ],
+        "gepetto": [
+          "mc-rtc-nix",
+          "gepetto"
+        ],
+        "mc-rtc-nix": "mc-rtc-nix",
+        "private-trigger": "private-trigger_2",
+        "systems": [
+          "mc-rtc-nix",
+          "systems"
+        ]
       }
     },
     "rosdistro": {
