@@ -12,21 +12,46 @@ on:
       - main
 jobs:
   nix:
-    runs-on: "${{ matrix.os }}-latest"
+    runs-on: "${{ matrix.os }}"
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu]
+        # 1. Define the core multiplication axes at the top level
+        os: [ubuntu-24.04, macos-latest]
+        ccache: [true, false]
     steps:
-      - uses: actions/checkout@v7
+      - &configure-variants 
+        name: "Determine Variant Arguments"
+        id: flags
+        run: |
+          ARGS=""
+          # Handle ccache trigger
+          if [ "${{ matrix.ccache }}" = "true" ]; then
+            ARGS="$ARGS --override-input ccache-trigger github:boolean-option/true"
+          else
+            ARGS="$ARGS --override-input ccache-trigger github:boolean-option/false"
+          fi
+          # Trim leading space and export
+          echo "args=$(echo "$ARGS" | xargs)" >> "$GITHUB_OUTPUT"
+      - &setup-ccache
+        if: ${{ matrix.ccache == true }}
+        name: Setup ccache environment
+        run: |
+          sudo mkdir -m0770 -p '/var/cache/ccache'
+          sudo chown --reference=/nix/store '/var/cache/ccache'
+          mkdir -p ~/.config/nix
+          echo 'extra-sandbox-paths = /var/cache/ccache' | sudo tee -a /etc/nix/nix.conf
+          sudo systemctl restart nix-daemon.service
+          sudo ls -ld /var/cache/ccache
+      - uses: actions/checkout@v6
       - uses: cachix/install-nix-action@v31
       - uses: cachix/cachix-action@v17
         with:
           name: mc-rtc-nix
           authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
           extraPullNames: "ros,gepetto"
-      - run: nix flake check -L --override-input ccache-trigger github:boolean-option/false
-      - run: nix build -L --override-input ccache-trigger github:boolean-option/false
+      - run: nix flake check -L ${{ steps.flags.outputs.args }}
+      - run: nix build -L ${{ steps.flags.outputs.args }}
   check:
     if: always()
     name: check-macos-linux-nix
