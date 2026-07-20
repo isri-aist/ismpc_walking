@@ -15,6 +15,21 @@
         "type": "github"
       }
     },
+    "ccache-trigger_2": {
+      "locked": {
+        "lastModified": 1657739253,
+        "narHash": "sha256-L9eyTL7njtPBUYmZRYFKCzQFDgua9U9oE7UwCzjZfl8=",
+        "owner": "boolean-option",
+        "repo": "true",
+        "rev": "6ecb49143ca31b140a5273f1575746ba93c3f698",
+        "type": "github"
+      },
+      "original": {
+        "owner": "boolean-option",
+        "repo": "true",
+        "type": "github"
+      }
+    },
     "flake-compat": {
       "flake": false,
       "locked": {
@@ -194,11 +209,11 @@
         "uv2nix": "uv2nix"
       },
       "locked": {
-        "lastModified": 1782566589,
-        "narHash": "sha256-vXVLP31bnnk8KUBUV88Ms2R6P06wdQPZzsXgR6iZ5FI=",
+        "lastModified": 1783519093,
+        "narHash": "sha256-ah05yiNKtTipRI1rseMOfqXCTaqEX5TM+o9lz3IQd+M=",
         "owner": "gepetto",
         "repo": "gazebros2nix",
-        "rev": "6e51068e9e9fec8e960f68911127ad64b417bf6b",
+        "rev": "662fcd41e6bab21ef6cce4e9e3d0a4e6221961dc",
         "type": "github"
       },
       "original": {
@@ -251,11 +266,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1783001154,
-        "narHash": "sha256-kPrfWL8YePlBRv0Sz2J4Uwn6C/HlhM3WZG96Y6TEqeU=",
+        "lastModified": 1784295348,
+        "narHash": "sha256-hZYhxeG510Ui/RSviEM7KyON8RiQoHFD7SY3y4+1zKA=",
         "owner": "gepetto",
         "repo": "nix",
-        "rev": "7a2bf9834c160a05872d0f77eeadc9362cb6f014",
+        "rev": "166caeac8f09def7818c47bbfcc08777c2c3fbc4",
         "type": "github"
       },
       "original": {
@@ -353,7 +368,7 @@
     },
     "mc-rtc-nix": {
       "inputs": {
-        "ccache-trigger": "ccache-trigger",
+        "ccache-trigger": "ccache-trigger_2",
         "flake-parts": [
           "mc-rtc-nix",
           "gepetto",
@@ -382,11 +397,11 @@
         "with-ros-trigger": "with-ros-trigger"
       },
       "locked": {
-        "lastModified": 1784292419,
-        "narHash": "sha256-r4Ah+7j29aVedpkAHjH6IagCnjb3PYjC04PYjMPajuo=",
+        "lastModified": 1784568873,
+        "narHash": "sha256-vVhG0xK6NF2Wi0JVWH3aGPjZHpEjfdVo5WpPNlRnHwg=",
         "owner": "mc-rtc",
         "repo": "nixpkgs",
-        "rev": "d3fd81b02229f1eb33cd126e51f461254ca93a43",
+        "rev": "bcb3eda5a23e25b175d95399cfd7f937add0f7fa",
         "type": "github"
       },
       "original": {
@@ -576,11 +591,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1782089418,
-        "narHash": "sha256-LRD1SuQWr49fGq3A+8GLXfsLE2xqIpQA440YDZwms3M=",
+        "lastModified": 1782905613,
+        "narHash": "sha256-SvXJcAemihifkTn4BGvyE5K1FJX9bl4U8DQ5pqKvD0s=",
         "owner": "pyproject-nix",
         "repo": "pyproject.nix",
-        "rev": "43f0b40edd0a74c63f66b7b48d969ae6b740d611",
+        "rev": "7af23cfe91064865ecf2e835da28b45b3c6f49fd",
         "type": "github"
       },
       "original": {
@@ -591,6 +606,7 @@
     },
     "root": {
       "inputs": {
+        "ccache-trigger": "ccache-trigger",
         "flake-parts": [
           "mc-rtc-nix",
           "flake-parts"
@@ -750,11 +766,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1781810314,
-        "narHash": "sha256-PQfvfKWaBvCysdHFUO5GewwvwIqI/WL6OcrJhDSUdbc=",
+        "lastModified": 1783511944,
+        "narHash": "sha256-Z/Ss9rWw9QYcRK+Qqkmty7PB1pIik5XGbrtit+ad2qs=",
         "owner": "pyproject-nix",
         "repo": "uv2nix",
-        "rev": "14aa44100859a44144878fe079f8089d3fa4dc4e",
+        "rev": "83995ef5e4ece3c9c704aa645bbff439e15a0ac3",
         "type": "github"
       },
       "original": {
