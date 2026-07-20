@@ -11,66 +11,15 @@
 
   outputs =
     inputs:
-    inputs.flake-parts.lib.mkFlake { inherit inputs; } (
+    inputs.mc-rtc-nix.lib.mkMcRtcController inputs "ismpc-walking-controller" (
       { lib, ... }:
-      let
-        with-private = inputs.private-trigger.value;
-      in
       {
-        systems = [ "x86_64-linux" ];
-        imports = [
-          inputs.mc-rtc-nix.flakeModule
-          {
-            mc-rtc-nix.overlays.private = with-private;
-            mc-rtc-superbuild =
-              { pkgs, ... }:
-              {
-                enable = true;
-                configurations =
-                  let
-                    ismpc = pkgs.ismpc-walking-controller;
-                  in
-                  {
-                    ismpc-minimal = {
-                      extends = [ "minimal" ];
-                      enabled = "ismpc_walking";
-                      runtime = {
-                        apps = [
-                          pkgs.mc-rtc-magnum
-                        ];
-                      };
-                      devel = {
-                        controllers = [ ismpc ];
-                        # XXX: should be ismpc.mc-rtc.observers
-                        observers = [ pkgs.mc-state-observation ];
-                        plugins = ismpc.mc-rtc.plugins;
-                      };
-                    };
-                    ismpc-full = {
-                      extends = [
-                        "ismpc-minimal"
-                      ];
-                      runtime = {
-                        apps = [
-                          pkgs.mc-mujoco-full
-                        ];
-                        robots = lib.optionals with-private [
-                          pkgs.mc-hrp4
-                          pkgs.mc-hrp5-p
-                        ];
-                      };
-                    };
-                  };
-              };
-
-            flakoboros = {
-              overrideAttrs.ismpc-walking-controller = {
-                src = lib.cleanSource ./.;
-              };
-            };
-          }
-        ];
-
+        mc-rtc-nix.overlays.private = inputs.private-trigger.value;
+        flakoboros = {
+          overrideAttrs.ismpc-walking-controller = {
+            src = lib.cleanSource ./.;
+          };
+        };
       }
     );
 }
