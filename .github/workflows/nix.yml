@@ -17,9 +17,18 @@ jobs:
       fail-fast: false
       matrix:
         # 1. Define the core multiplication axes at the top level
-        os: [ubuntu-24.04, macos-latest]
+        os: [ubuntu-24.04]
+        # Disable macos for now, fails when building with ros
+        # os: [ubuntu-24.04, macos-latest]
         ccache: [true, false]
     steps:
+      - uses: actions/checkout@v6
+      - uses: cachix/install-nix-action@v31
+      - uses: cachix/cachix-action@v17
+        with:
+          name: mc-rtc-nix
+          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+          extraPullNames: "ros,gepetto"
       - &configure-variants 
         name: "Determine Variant Arguments"
         id: flags
@@ -38,18 +47,18 @@ jobs:
         name: Setup ccache environment
         run: |
           sudo mkdir -m0770 -p '/var/cache/ccache'
-          sudo chown --reference=/nix/store '/var/cache/ccache'
+          if [[ "$RUNNER_OS" == "macOS" ]]; then
+            owner_group=$(stat -f "%Su:%Sg" /nix/store)
+          else
+            owner_group=$(stat -c "%U:%G" /nix/store)
+          fi
+          sudo chown "$owner_group" /var/cache/ccache
           mkdir -p ~/.config/nix
           echo 'extra-sandbox-paths = /var/cache/ccache' | sudo tee -a /etc/nix/nix.conf
-          sudo systemctl restart nix-daemon.service
+          if command -v systemctl &> /dev/null; then
+            sudo systemctl restart nix-daemon.service
+          fi
           sudo ls -ld /var/cache/ccache
-      - uses: actions/checkout@v6
-      - uses: cachix/install-nix-action@v31
-      - uses: cachix/cachix-action@v17
-        with:
-          name: mc-rtc-nix
-          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
-          extraPullNames: "ros,gepetto"
       - run: nix flake check -L ${{ steps.flags.outputs.args }}
       - run: nix build -L ${{ steps.flags.outputs.args }}
   check:
