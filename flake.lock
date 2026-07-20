@@ -15,6 +15,21 @@
         "type": "github"
       }
     },
+    "ccache-trigger_2": {
+      "locked": {
+        "lastModified": 1657739253,
+        "narHash": "sha256-L9eyTL7njtPBUYmZRYFKCzQFDgua9U9oE7UwCzjZfl8=",
+        "owner": "boolean-option",
+        "repo": "true",
+        "rev": "6ecb49143ca31b140a5273f1575746ba93c3f698",
+        "type": "github"
+      },
+      "original": {
+        "owner": "boolean-option",
+        "repo": "true",
+        "type": "github"
+      }
+    },
     "flake-compat": {
       "flake": false,
       "locked": {
@@ -353,7 +368,7 @@
     },
     "mc-rtc-nix": {
       "inputs": {
-        "ccache-trigger": "ccache-trigger",
+        "ccache-trigger": "ccache-trigger_2",
         "flake-parts": [
           "mc-rtc-nix",
           "gepetto",
@@ -591,6 +606,7 @@
     },
     "root": {
       "inputs": {
+        "ccache-trigger": "ccache-trigger",
         "flake-parts": [
           "mc-rtc-nix",
           "flake-parts"

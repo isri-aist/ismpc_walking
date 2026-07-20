@@ -25,8 +25,8 @@ jobs:
           name: mc-rtc-nix
           authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
           extraPullNames: "ros,gepetto"
-      - run: nix flake check -L
-      - run: nix build -L
+      - run: nix flake check -L --override-input ccache-trigger github:boolean-option/false
+      - run: nix build -L --override-input ccache-trigger github:boolean-option/false
   check:
     if: always()
     name: check-macos-linux-nix

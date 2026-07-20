@@ -7,6 +7,7 @@
     systems.follows = "mc-rtc-nix/systems";
     gepetto.follows = "mc-rtc-nix/gepetto";
     private-trigger.url = "github:boolean-option/false";
+    ccache-trigger.url = "github:boolean-option/true";
   };
 
   outputs =
@@ -15,6 +16,7 @@
       { lib, ... }:
       {
         mc-rtc-nix.overlays.private = inputs.private-trigger.value;
+        mc-rtc-nix.overlays.ccache = inputs.ccache-trigger.value;
         flakoboros = {
           overrideAttrs.ismpc-walking-controller = {
             src = lib.cleanSource ./.;
