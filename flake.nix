@@ -6,8 +6,8 @@
     flake-parts.follows = "mc-rtc-nix/flake-parts";
     systems.follows = "mc-rtc-nix/systems";
     gepetto.follows = "mc-rtc-nix/gepetto";
-    private-trigger.url = "github:boolean-option/false";
-    ccache-trigger.url = "github:boolean-option/true";
+    private-trigger.follows = "mc-rtc-nix/private-trigger";
+    ccache-trigger.follows = "mc-rtc-nix/ccache-trigger";
   };
 
   outputs =

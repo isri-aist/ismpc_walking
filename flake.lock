@@ -15,21 +15,6 @@
         "type": "github"
       }
     },
-    "ccache-trigger_2": {
-      "locked": {
-        "lastModified": 1657739253,
-        "narHash": "sha256-L9eyTL7njtPBUYmZRYFKCzQFDgua9U9oE7UwCzjZfl8=",
-        "owner": "boolean-option",
-        "repo": "true",
-        "rev": "6ecb49143ca31b140a5273f1575746ba93c3f698",
-        "type": "github"
-      },
-      "original": {
-        "owner": "boolean-option",
-        "repo": "true",
-        "type": "github"
-      }
-    },
     "flake-compat": {
       "flake": false,
       "locked": {
@@ -368,7 +353,7 @@
     },
     "mc-rtc-nix": {
       "inputs": {
-        "ccache-trigger": "ccache-trigger_2",
+        "ccache-trigger": "ccache-trigger",
         "flake-parts": [
           "mc-rtc-nix",
           "gepetto",
@@ -397,11 +382,11 @@
         "with-ros-trigger": "with-ros-trigger"
       },
       "locked": {
-        "lastModified": 1784568873,
-        "narHash": "sha256-vVhG0xK6NF2Wi0JVWH3aGPjZHpEjfdVo5WpPNlRnHwg=",
+        "lastModified": 1784647581,
+        "narHash": "sha256-dUhW5QxiG5pbWFyr3zVPt8d/udlUdxAEoEjfiKvDURY=",
         "owner": "mc-rtc",
         "repo": "nixpkgs",
-        "rev": "bcb3eda5a23e25b175d95399cfd7f937add0f7fa",
+        "rev": "cb56643e13aa2d7304a308f07a416234f0baf48b",
         "type": "github"
       },
       "original": {
@@ -531,21 +516,6 @@
         "type": "github"
       }
     },
-    "private-trigger_2": {
-      "locked": {
-        "lastModified": 1657739266,
-        "narHash": "sha256-vLy8GQr0noEcoA+jX24FgUVBA/poV36zDWAUChN3hIY=",
-        "owner": "boolean-option",
-        "repo": "false",
-        "rev": "d06b4794a134686c70a1325df88a6e6768c6b212",
-        "type": "github"
-      },
-      "original": {
-        "owner": "boolean-option",
-        "repo": "false",
-        "type": "github"
-      }
-    },
     "pyproject-build-systems": {
       "inputs": {
         "nixpkgs": [
@@ -606,7 +576,10 @@
     },
     "root": {
       "inputs": {
-        "ccache-trigger": "ccache-trigger",
+        "ccache-trigger": [
+          "mc-rtc-nix",
+          "ccache-trigger"
+        ],
         "flake-parts": [
           "mc-rtc-nix",
           "flake-parts"
@@ -616,7 +589,10 @@
           "gepetto"
         ],
         "mc-rtc-nix": "mc-rtc-nix",
-        "private-trigger": "private-trigger_2",
+        "private-trigger": [
+          "mc-rtc-nix",
+          "private-trigger"
+        ],
         "systems": [
           "mc-rtc-nix",
           "systems"
