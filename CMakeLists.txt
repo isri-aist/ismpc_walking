@@ -26,3 +26,6 @@ install_controller_configuration("${CMAKE_CURRENT_BINARY_DIR}/etc/ismpc_walking.
 foreach(ROBOT hrp4cr hrp4 hrp2_drc hrp5_p rhps1 jvrc1)
   install_controller_robot_configuration(ismpc_walking etc/robots/${ROBOT}.yaml)
 endforeach()
+
+jrl_export_package()
+jrl_print_options_summary()
